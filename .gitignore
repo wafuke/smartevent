@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+venv/
+__pycache__/
+*.pyc
+
+# Environment variables / credentials
+.env
+*/.env
+backend/serviceAccountKey.json
+
+# Model artifacts and datasets (kept in Google Drive instead)
+*.pkl
+*.joblib
+ml-service/models/*
+!ml-service/models/.gitkeep
+data/
+datasets/
+*.csv
+
+# Build output
+/frontend/build/
+/frontend/dist/
+/mobile/.expo/
+
+# OS / editor
+.DS_Store
+.vscode/*
+!.vscode/settings.json
