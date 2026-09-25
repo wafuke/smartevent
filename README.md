@@ -1,7 +1,5 @@
 # SmartEvent — Environment Setup
 
-Scaffold matching Chapter 5, Section 5.2 (Implementation Environment).
-
 ## Folder structure
 ```
 smartevent/
