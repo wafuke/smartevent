@@ -1,0 +1,57 @@
+================================================================================
+  SMARTEVENT - STEP-BY-STEP INSTRUCTIONS TO RUN ALL SERVICES SIDE-BY-SIDE
+  Strathmore University Capstone Project | Elvis Wanyama Wafuke (154210)
+================================================================================
+
+HOW TO OPEN 3 TERMINALS IN VS CODE:
+------------------------------------
+1. Press Ctrl + ~ (or click Terminal -> New Terminal).
+2. Click the '+' button in the top-right corner of the terminal window TWICE to open 3 terminal tabs.
+
+--------------------------------------------------------------------------------
+TERMINAL 1: NODE.JS BACKEND REST API & PRIORITY SMS ENGINE (PORT 5000)
+--------------------------------------------------------------------------------
+Commands to run:
+  cd backend
+  npm install
+  npm run dev
+
+Access Points:
+  - Backend Root / API Gateway: http://localhost:5000
+  - Full Database Inspection:   http://localhost:5000/api/db
+  - Events API:                 http://localhost:5000/api/events
+  - Student RSVPs API:          http://localhost:5000/api/registrations
+  - Priority SMS Logs API:      http://localhost:5000/api/sms/logs
+
+--------------------------------------------------------------------------------
+TERMINAL 2: PYTHON FASTAPI MACHINE LEARNING ENGINE (PORT 8000)
+--------------------------------------------------------------------------------
+Commands to run:
+  cd ml-service
+  pip install -r requirements.txt
+  python train_model.py
+  python main.py
+
+Access Points:
+  - ML Prediction API Health:   http://localhost:8000/health
+  - Interactive Swagger Docs:   http://localhost:8000/docs
+  - ML Prediction Endpoint:     POST http://localhost:8000/predict
+
+--------------------------------------------------------------------------------
+TERMINAL 3: REACT + VITE FRONTEND WEB DASHBOARD & STUDENT MOBILE APP (PORT 5173)
+--------------------------------------------------------------------------------
+Commands to run:
+  cd frontend
+  npm install
+  npm run dev
+
+Access Points:
+  - SmartEvent Web & Mobile App: http://localhost:5173
+
+--------------------------------------------------------------------------------
+GOOGLE COLAB NOTEBOOK LINK (GOOGLE DRIVE INTEGRATION)
+--------------------------------------------------------------------------------
+To run the ML training model in Google Colab with Google Drive sync, open:
+https://colab.research.google.com/github/wafuke/smartevent/blob/main/notebooks/SmartEvent_ML_Attendance_Prediction.ipynb
+
+================================================================================

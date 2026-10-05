@@ -80,5 +80,44 @@
       "cost": "KES 0.80",
       "sentAt": "2026-09-24T08:15:00Z"
     }
+  ],
+  "users": [
+    {
+      "id": "usr-admin-1",
+      "name": "System Administrator",
+      "email": "admin@strathmore.edu",
+      "password": "password123",
+      "role": "admin",
+      "department": "ICT Infrastructure",
+      "createdAt": "2026-09-25T05:52:51.185Z"
+    },
+    {
+      "id": "usr-org-1",
+      "name": "SCES Event Organizer",
+      "email": "organizer@strathmore.edu",
+      "password": "password123",
+      "role": "organizer",
+      "department": "School of Computing & Engineering Sciences",
+      "createdAt": "2026-09-25T05:52:51.191Z"
+    },
+    {
+      "id": "usr-stud-1",
+      "name": "Elvis Wanyama Wafuke",
+      "email": "student@strathmore.edu",
+      "studentId": "154210",
+      "password": "password123",
+      "role": "student",
+      "department": "Informatics and Computer Science",
+      "createdAt": "2026-09-25T05:52:51.191Z"
+    },
+    {
+      "id": "usr-1790315872520",
+      "name": "elvis Wanyama",
+      "email": "elvis.wafuke@strathmore.edu",
+      "password": "Elvy2004",
+      "role": "organizer",
+      "department": "School of Computing & Engineering Sciences",
+      "createdAt": "2026-09-25T05:57:52.520Z"
+    }
   ]
 }

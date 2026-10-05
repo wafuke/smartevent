@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "SmartEvent Strathmore",
+    "slug": "smartevent-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#003366"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "edu.strathmore.smartevent"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#003366"
+      },
+      "package": "edu.strathmore.smartevent"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}

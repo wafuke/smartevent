@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Brain, Calendar, MapPin, Users, Send, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { X, Brain, Calendar, AlertCircle } from 'lucide-react';
 
 export default function EventCreationModal({ isOpen, onClose, onCreateEvent }) {
   const [formData, setFormData] = useState({
@@ -11,20 +11,16 @@ export default function EventCreationModal({ isOpen, onClose, onCreateEvent }) {
     time: '14:00',
     venue: 'Auditorium A, Sir Thomas More Building',
     venueCapacity: 150,
-    smsPriority: 2, // 1: Low, 2: Medium, 3: High
+    smsPriority: 2,
     estimatedRegistrations: 110
   });
 
   const [mlResult, setMlResult] = useState(null);
-  const [isPredicting, setIsPredicting] = useState(false);
 
-  // Trigger real-time ML prediction simulator whenever key parameters change
   useEffect(() => {
     if (!isOpen) return;
     
-    setIsPredicting(true);
     const timer = setTimeout(() => {
-      // Calculate realistic turnout prediction based on features
       const cap = Number(formData.venueCapacity) || 100;
       const reg = Number(formData.estimatedRegistrations) || 80;
       const smsBoost = formData.smsPriority === 3 ? 0.12 : formData.smsPriority === 2 ? 0.05 : 0.0;
@@ -54,10 +50,8 @@ export default function EventCreationModal({ isOpen, onClose, onCreateEvent }) {
         capacityUtilization: capUtilization,
         riskLevel,
         recommendation: recMessage,
-        smsImpactBoostPct: smsBoost * 100
       });
-      setIsPredicting(false);
-    }, 250);
+    }, 200);
 
     return () => clearTimeout(timer);
   }, [formData, isOpen]);
@@ -76,48 +70,48 @@ export default function EventCreationModal({ isOpen, onClose, onCreateEvent }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md overflow-y-auto">
-      <div className="relative w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-6 md:p-8 space-y-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
+      <div className="relative w-full max-w-2xl bg-white border border-slate-200 rounded-2xl shadow-xl p-6 md:p-8 space-y-6">
         
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+        <div className="flex items-center justify-between border-b border-slate-200 pb-4">
           <div className="flex items-center space-x-3">
-            <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20">
+            <div className="p-2.5 rounded-xl bg-blue-900 text-white">
               <Calendar className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-white">Create University Event</h3>
-              <p className="text-xs text-slate-400">Specify details to receive real-time ML turnout predictions</p>
+              <h3 className="text-xl font-bold text-blue-950">Create University Event</h3>
+              <p className="text-xs text-slate-500">Fill in event parameters for instant ML turnout estimation</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Title & Category */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-2 space-y-1.5">
-              <label className="text-xs font-semibold text-slate-300">Event Title</label>
+            <div className="md:col-span-2 space-y-1">
+              <label className="text-xs font-bold text-slate-700">Event Title</label>
               <input
                 type="text"
                 required
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 placeholder="e.g. Strathmore FinTech Symposium 2026"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:outline-none focus:border-blue-500"
+                className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-xs focus:outline-none focus:border-blue-600"
               />
             </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-300">Category</label>
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-700">Category</label>
               <select
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:outline-none focus:border-blue-500"
+                className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-xs focus:outline-none focus:border-blue-600"
               >
                 <option value="Academic">Academic</option>
                 <option value="Workshop">Workshop</option>
@@ -129,75 +123,70 @@ export default function EventCreationModal({ isOpen, onClose, onCreateEvent }) {
             </div>
           </div>
 
-          {/* Description */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-slate-300">Event Description</label>
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-slate-700">Description</label>
             <textarea
               rows="2"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Provide a brief summary of the event agenda and target audience..."
-              className="w-full px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:outline-none focus:border-blue-500"
+              placeholder="Provide event details..."
+              className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-xs focus:outline-none focus:border-blue-600"
             ></textarea>
           </div>
 
-          {/* Venue & Capacity */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="md:col-span-2 space-y-1.5">
-              <label className="text-xs font-semibold text-slate-300">Venue</label>
+            <div className="md:col-span-2 space-y-1">
+              <label className="text-xs font-bold text-slate-700">Venue</label>
               <input
                 type="text"
                 required
                 value={formData.venue}
                 onChange={(e) => setFormData({ ...formData, venue: e.target.value })}
-                placeholder="e.g. SCES Lab 2 or Student Center Hall"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:outline-none focus:border-blue-500"
+                className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-xs focus:outline-none focus:border-blue-600"
               />
             </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-300">Venue Capacity</label>
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-700">Venue Capacity</label>
               <input
                 type="number"
                 required
                 min="10"
-                max="1000"
                 value={formData.venueCapacity}
                 onChange={(e) => setFormData({ ...formData, venueCapacity: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:outline-none focus:border-blue-500"
+                className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-xs focus:outline-none focus:border-blue-600"
               />
             </div>
           </div>
 
-          {/* Date, Time Slot, SMS Priority */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-300">Date</label>
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-700">Date</label>
               <input
                 type="date"
                 required
                 value={formData.date}
                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:outline-none focus:border-blue-500"
+                className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-xs focus:outline-none focus:border-blue-600"
               />
             </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-300">Time Slot</label>
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-700">Time Slot</label>
               <select
                 value={formData.timeSlot}
                 onChange={(e) => setFormData({ ...formData, timeSlot: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:outline-none focus:border-blue-500"
+                className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-xs focus:outline-none focus:border-blue-600"
               >
-                <option value="Morning">Morning (8:00 AM - 12:00 PM)</option>
-                <option value="Afternoon">Afternoon (12:00 PM - 5:00 PM)</option>
-                <option value="Evening">Evening (5:00 PM - 8:00 PM)</option>
+                <option value="Morning">Morning</option>
+                <option value="Afternoon">Afternoon</option>
+                <option value="Evening">Evening</option>
               </select>
             </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-300">SMS Notification Urgency</label>
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-700">SMS Priority Urgency</label>
               <select
                 value={formData.smsPriority}
                 onChange={(e) => setFormData({ ...formData, smsPriority: Number(e.target.value) })}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-sm focus:outline-none focus:border-blue-500"
+                className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-xs focus:outline-none focus:border-blue-600"
               >
                 <option value={3}>High Priority (Urgent)</option>
                 <option value={2}>Medium Priority (Standard)</option>
@@ -206,59 +195,56 @@ export default function EventCreationModal({ isOpen, onClose, onCreateEvent }) {
             </div>
           </div>
 
-          {/* Real-Time ML Prediction Feedback Card */}
-          <div className="p-4 rounded-xl bg-indigo-950/40 border border-indigo-500/30 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2 text-xs font-bold text-indigo-300">
-                <Brain className="w-4 h-4 text-indigo-400 animate-pulse" />
-                <span>Live ML Attendance Forecast & Planning Advice</span>
+          {/* ML Live Forecast Card */}
+          {mlResult && (
+            <div className="p-4 rounded-xl bg-blue-50 border border-blue-200 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-blue-900 flex items-center space-x-1.5">
+                  <Brain className="w-4 h-4 text-blue-700" />
+                  <span>ML Attendance Prediction</span>
+                </span>
+                <span className="text-[10px] font-semibold text-blue-700">Random Forest Model</span>
               </div>
-              <span className="text-[10px] text-slate-400">Model: Scikit-Learn Random Forest</span>
-            </div>
 
-            {mlResult && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-1">
-                <div className="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800">
-                  <span className="text-[10px] text-slate-400 uppercase font-semibold block">Predicted Turnout</span>
-                  <span className="text-lg font-extrabold text-amber-400">{mlResult.predictedAttendance} <span className="text-xs text-slate-400 font-normal">students</span></span>
+              <div className="grid grid-cols-3 gap-2 pt-1 text-center">
+                <div className="bg-white p-2 rounded-lg border border-blue-200">
+                  <span className="text-[10px] text-slate-500 uppercase font-semibold block">Predicted</span>
+                  <span className="text-base font-extrabold text-blue-950">{mlResult.predictedAttendance}</span>
                 </div>
-                <div className="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800">
-                  <span className="text-[10px] text-slate-400 uppercase font-semibold block">Turnout Rate</span>
-                  <span className="text-lg font-extrabold text-emerald-400">{Math.round(mlResult.predictedTurnoutRate * 100)}%</span>
+                <div className="bg-white p-2 rounded-lg border border-blue-200">
+                  <span className="text-[10px] text-slate-500 uppercase font-semibold block">Turnout</span>
+                  <span className="text-base font-extrabold text-emerald-700">{Math.round(mlResult.predictedTurnoutRate * 100)}%</span>
                 </div>
-                <div className="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800 col-span-2 sm:col-span-1">
-                  <span className="text-[10px] text-slate-400 uppercase font-semibold block">Capacity Utilization</span>
-                  <span className="text-lg font-extrabold text-blue-400">{mlResult.capacityUtilization}%</span>
+                <div className="bg-white p-2 rounded-lg border border-blue-200">
+                  <span className="text-[10px] text-slate-500 uppercase font-semibold block">Capacity Fill</span>
+                  <span className="text-base font-extrabold text-blue-800">{mlResult.capacityUtilization}%</span>
                 </div>
               </div>
-            )}
 
-            {mlResult && (
-              <p className="text-xs text-indigo-200/90 leading-relaxed bg-indigo-900/30 p-2.5 rounded-lg border border-indigo-500/20 flex items-start space-x-2">
-                <AlertCircle className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+              <p className="text-xs text-blue-900 flex items-start space-x-1.5 pt-1">
+                <AlertCircle className="w-3.5 h-3.5 text-blue-700 shrink-0 mt-0.5" />
                 <span>{mlResult.recommendation}</span>
               </p>
-            )}
-          </div>
+            </div>
+          )}
 
-          {/* Submit Actions */}
-          <div className="flex items-center justify-end space-x-3 pt-3 border-t border-slate-800">
+          <div className="flex items-center justify-end space-x-2 pt-2 border-t border-slate-200">
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-blue-600/30 transition-all"
+              className="px-5 py-2 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs shadow-md"
             >
               Create & Publish Event
             </button>
           </div>
-        </form>
 
+        </form>
       </div>
     </div>
   );
