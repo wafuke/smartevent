@@ -129,6 +129,22 @@ export default function App() {
     }).catch(e => console.log('Backend save error:', e.message));
   };
 
+  const handleUpdateEvent = (updatedEvt) => {
+    setEvents(events.map(e => e.id === updatedEvt.id ? updatedEvt : e));
+    fetch(`/api/events/${updatedEvt.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updatedEvt)
+    }).catch(e => console.log('Backend update error:', e.message));
+  };
+
+  const handleDeleteEvent = (eventId) => {
+    setEvents(events.filter(e => e.id !== eventId));
+    fetch(`/api/events/${eventId}`, {
+      method: 'DELETE'
+    }).catch(e => console.log('Backend delete error:', e.message));
+  };
+
   const handleRegisterEvent = (eventId) => {
     if (!registeredEventIds.includes(eventId)) {
       setRegisteredEventIds([...registeredEventIds, eventId]);
@@ -207,6 +223,8 @@ export default function App() {
             onOpenCreateModal={() => setIsCreateModalOpen(true)}
             onOpenSmsModal={handleOpenSmsModal}
             onPredictEvent={(evt) => setSelectedPredictEvent(evt)}
+            onUpdateEvent={handleUpdateEvent}
+            onDeleteEvent={handleDeleteEvent}
           />
         )}
 

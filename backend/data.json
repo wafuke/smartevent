@@ -118,6 +118,16 @@
       "role": "organizer",
       "department": "School of Computing & Engineering Sciences",
       "createdAt": "2026-09-25T05:57:52.520Z"
+    },
+    {
+      "id": "usr-1791195500812",
+      "name": "elvis wanyama",
+      "email": "wafukeelvis@strathmore.edu",
+      "password": "elvy2004",
+      "role": "student",
+      "studentId": "160000",
+      "department": "School of Computing & Engineering Sciences",
+      "createdAt": "2026-10-05T10:18:20.813Z"
     }
   ]
 }

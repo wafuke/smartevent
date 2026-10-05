@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
-import { Plus, Users, Calendar, MessageSquare, Brain, Send, Clock, MapPin } from 'lucide-react';
+import { Plus, Users, Calendar, MessageSquare, Brain, Send, Clock, MapPin, Edit3, Trash2, UserCheck } from 'lucide-react';
+import AttendeeRosterModal from './AttendeeRosterModal';
+import EventEditModal from './EventEditModal';
 
-export default function OrganizerDashboard({ events, setEvents, onOpenCreateModal, onOpenSmsModal, onPredictEvent }) {
+export default function OrganizerDashboard({ events, setEvents, onOpenCreateModal, onOpenSmsModal, onPredictEvent, onUpdateEvent, onDeleteEvent }) {
   const [filterCategory, setFilterCategory] = useState('All');
+  const [editingEvent, setEditingEvent] = useState(null);
+  const [rosterEvent, setRosterEvent] = useState(null);
 
   const categories = ['All', 'Academic', 'Workshop', 'Seminar', 'Sports', 'Career Fair'];
 
@@ -11,6 +15,24 @@ export default function OrganizerDashboard({ events, setEvents, onOpenCreateModa
     : events.filter(e => e.category === filterCategory);
 
   const totalRegistrations = events.reduce((sum, e) => sum + (e.registrationCount || 0), 0);
+
+  const handleSaveEdit = (updatedEvt) => {
+    if (onUpdateEvent) {
+      onUpdateEvent(updatedEvt);
+    } else {
+      setEvents(events.map(e => e.id === updatedEvt.id ? updatedEvt : e));
+    }
+  };
+
+  const handleDelete = (eventId, eventTitle) => {
+    if (window.confirm(`Are you sure you want to cancel and delete "${eventTitle}"? Priority SMS notifications will be dispatched to all registered students.`)) {
+      if (onDeleteEvent) {
+        onDeleteEvent(eventId);
+      } else {
+        setEvents(events.filter(e => e.id !== eventId));
+      }
+    }
+  };
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
@@ -28,7 +50,7 @@ export default function OrganizerDashboard({ events, setEvents, onOpenCreateModa
 
         <button
           onClick={onOpenCreateModal}
-          className="inline-flex items-center justify-center space-x-2 px-5 py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs shadow-md transition-all hover:scale-[1.01]"
+          className="inline-flex items-center justify-center space-x-2 px-5 py-2.5 rounded-xl bg-[#003366] hover:bg-[#002244] text-white font-bold text-xs shadow-md transition-all hover:scale-[1.01]"
         >
           <Plus className="w-4 h-4" />
           <span>Create New Event</span>
@@ -90,7 +112,7 @@ export default function OrganizerDashboard({ events, setEvents, onOpenCreateModa
                 onClick={() => setFilterCategory(cat)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                   filterCategory === cat
-                    ? 'bg-blue-900 text-white shadow-sm'
+                    ? 'bg-[#003366] text-white shadow-sm'
                     : 'text-slate-700 hover:text-blue-900'
                 }`}
               >
@@ -110,16 +132,35 @@ export default function OrganizerDashboard({ events, setEvents, onOpenCreateModa
               <div key={evt.id} className="clean-card p-6 flex flex-col justify-between space-y-4">
                 <div className="space-y-3">
                   
-                  {/* Category & Priority Badge */}
+                  {/* Category & Priority Badge & Actions */}
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold px-2.5 py-1 rounded-md bg-blue-50 text-blue-900 border border-blue-200">
-                      {evt.category}
-                    </span>
-                    <span className={`text-[11px] font-bold px-2.5 py-1 rounded-md ${
-                      evt.smsPriority === 3 ? 'badge-priority-high' : evt.smsPriority === 2 ? 'badge-priority-medium' : 'badge-priority-low'
-                    }`}>
-                      {evt.smsPriority === 3 ? 'High Priority' : evt.smsPriority === 2 ? 'Medium Priority' : 'Low Priority'}
-                    </span>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-[11px] font-bold px-2.5 py-1 rounded-md bg-blue-50 text-blue-900 border border-blue-200">
+                        {evt.category}
+                      </span>
+                      <span className={`text-[11px] font-bold px-2.5 py-1 rounded-md ${
+                        evt.smsPriority === 3 ? 'badge-priority-high' : evt.smsPriority === 2 ? 'badge-priority-medium' : 'badge-priority-low'
+                      }`}>
+                        {evt.smsPriority === 3 ? 'High Priority' : evt.smsPriority === 2 ? 'Medium Priority' : 'Low Priority'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center space-x-1">
+                      <button
+                        onClick={() => setEditingEvent(evt)}
+                        title="Edit Event Details"
+                        className="p-1.5 text-slate-400 hover:text-[#003366] hover:bg-slate-100 rounded-lg transition-colors"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(evt.id, evt.title)}
+                        title="Cancel/Delete Event"
+                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Title & Description */}
@@ -161,22 +202,30 @@ export default function OrganizerDashboard({ events, setEvents, onOpenCreateModa
                   </div>
                 </div>
 
-                {/* Clean Actions */}
-                <div className="flex items-center space-x-2 pt-2">
+                {/* Actions Row */}
+                <div className="grid grid-cols-3 gap-2 pt-2">
+                  <button
+                    onClick={() => setRosterEvent(evt)}
+                    className="py-2 px-2.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 text-xs font-bold transition-all flex items-center justify-center space-x-1"
+                  >
+                    <UserCheck className="w-3.5 h-3.5 text-emerald-700" />
+                    <span>View Roster</span>
+                  </button>
+
                   <button
                     onClick={() => onPredictEvent(evt)}
-                    className="flex-1 py-2 px-3 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 text-xs font-bold transition-all flex items-center justify-center space-x-1.5"
+                    className="py-2 px-2.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 text-xs font-bold transition-all flex items-center justify-center space-x-1"
                   >
                     <Brain className="w-3.5 h-3.5 text-blue-700" />
-                    <span>Run ML Predictor</span>
+                    <span>ML Turnout</span>
                   </button>
 
                   <button
                     onClick={() => onOpenSmsModal(evt)}
-                    className="flex-1 py-2 px-3 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-bold transition-all flex items-center justify-center space-x-1.5"
+                    className="py-2 px-2.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-bold transition-all flex items-center justify-center space-x-1"
                   >
                     <Send className="w-3.5 h-3.5 text-amber-700" />
-                    <span>Send Priority SMS</span>
+                    <span>Send SMS</span>
                   </button>
                 </div>
 
@@ -187,6 +236,22 @@ export default function OrganizerDashboard({ events, setEvents, onOpenCreateModa
 
       </div>
 
+      {/* Roster Modal */}
+      <AttendeeRosterModal
+        isOpen={Boolean(rosterEvent)}
+        onClose={() => setRosterEvent(null)}
+        event={rosterEvent}
+      />
+
+      {/* Edit Event Modal */}
+      <EventEditModal
+        isOpen={Boolean(editingEvent)}
+        onClose={() => setEditingEvent(null)}
+        event={editingEvent}
+        onSaveEvent={handleSaveEdit}
+      />
+
     </div>
   );
 }
+
