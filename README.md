@@ -10,6 +10,8 @@
 
 SmartEvent consists of three main services designed to run side-by-side:
 
+### 📂 Folder Structure
+
 ```text
 smartevent/
 ├── frontend/     # React.js + Vite Web Dashboard & Student Mobile App (Port 5173)
