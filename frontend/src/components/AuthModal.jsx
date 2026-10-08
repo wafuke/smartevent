@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShieldCheck, Calendar, GraduationCap, Lock, Mail, User, Building, CheckCircle2, AlertCircle, ArrowRight } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { authApi } from '../services/api';
 
-export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
-  const [isLogin, setIsLogin] = useState(true);
-  const [selectedRole, setSelectedRole] = useState('organizer'); // 'admin', 'organizer', 'student'
+export default function AuthModal({ isOpen, initialTab = 'login', onClose }) {
+  const { login } = useAuth();
+  const [isLogin, setIsLogin] = useState(initialTab === 'login');
+  const [selectedRole, setSelectedRole] = useState('student'); // 'admin', 'organizer', 'student'
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -13,6 +16,10 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
   });
   const [errorMsg, setErrorMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    setIsLogin(initialTab === 'login');
+  }, [initialTab]);
 
   if (!isOpen) return null;
 
@@ -35,7 +42,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
     }
 
     const demoUser = {
-      id: `usr-${role}-${Date.now()}`,
+      id: `usr-${role}-1`,
       name,
       email,
       role,
@@ -43,8 +50,8 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
       department: 'Strathmore University'
     };
 
-    localStorage.setItem('smartevent_user', JSON.stringify(demoUser));
-    onAuthSuccess(demoUser);
+    const token = `token_${demoUser.id}_${Date.now()}`;
+    login(demoUser, token);
     onClose();
   };
 
@@ -53,224 +60,191 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
     setIsLoading(true);
     setErrorMsg('');
 
-    const endpoint = isLogin ? '/api/auth/login' : '/api/auth/signup';
-
     try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
+      if (isLogin) {
+        const res = await authApi.login({
+          email: formData.email,
+          password: formData.password,
           role: selectedRole
-        })
-      });
-
-      const data = await response.json();
-      setIsLoading(false);
-
-      if (data.success) {
-        localStorage.setItem('smartevent_user', JSON.stringify(data.user));
-        if (data.token) localStorage.setItem('smartevent_token', data.token);
-        onAuthSuccess(data.user);
-        onClose();
+        });
+        login(res.user, res.token);
       } else {
-        setErrorMsg(data.error || 'Authentication failed. Please check credentials.');
+        const res = await authApi.signup({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          role: selectedRole,
+          studentId: formData.studentId,
+          department: formData.department
+        });
+        login(res.user, res.token);
       }
-    } catch (err) {
-      setIsLoading(false);
-      // Fallback demo authentication if offline
-      const localUser = {
-        id: `usr-${selectedRole}-${Date.now()}`,
-        name: formData.name || (selectedRole === 'admin' ? 'System Administrator' : selectedRole === 'organizer' ? 'Event Organizer' : 'Strathmore Student'),
-        email: formData.email || `${selectedRole}@strathmore.edu`,
-        role: selectedRole,
-        studentId: formData.studentId || '154210',
-        department: formData.department
-      };
-      localStorage.setItem('smartevent_user', JSON.stringify(localUser));
-      onAuthSuccess(localUser);
       onClose();
+    } catch (err) {
+      setErrorMsg(err.message || 'Authentication request failed.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-md overflow-y-auto">
-      <div className="relative w-full max-w-md bg-white border border-slate-200 rounded-3xl shadow-2xl p-6 md:p-8 space-y-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+      <div className="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-5 shadow-2xl overflow-hidden relative">
         
-        {/* Header */}
-        <div className="text-center space-y-2">
-          <div className="w-12 h-12 rounded-2xl bg-blue-900 text-amber-400 mx-auto flex items-center justify-center shadow-lg">
-            <Calendar className="w-6 h-6" />
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 text-sm font-bold p-1 rounded-full hover:bg-slate-100"
+        >
+          ✕
+        </button>
+
+        {/* Modal Title */}
+        <div className="text-center space-y-1">
+          <div className="w-10 h-10 rounded-2xl bg-[#003366] text-white flex items-center justify-center mx-auto font-black text-sm mb-2 shadow-sm">
+            SE
           </div>
-          <h2 className="text-xl font-extrabold text-blue-950 tracking-tight">SmartEvent Portal Authentication</h2>
-          <p className="text-xs text-slate-500 font-medium">Select your role to access system permissions</p>
+          <h3 className="text-xl font-black text-slate-900 tracking-tight">
+            {isLogin ? 'Sign In to SmartEvent' : 'Create SmartEvent Account'}
+          </h3>
+          <p className="text-xs text-slate-500 font-medium">
+            Select your university role to proceed
+          </p>
         </div>
 
-        {/* Role Selector Pills */}
-        <div className="space-y-1.5">
-          <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">Select Access Role</label>
+        {/* Quick Role Preset Pills */}
+        <div className="space-y-2 pt-1">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 block text-center">
+            Quick One-Tap Role Preset Login
+          </span>
           <div className="grid grid-cols-3 gap-2">
             <button
               type="button"
-              onClick={() => setSelectedRole('admin')}
-              className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all flex flex-col items-center space-y-1 ${
-                selectedRole === 'admin'
-                  ? 'bg-blue-900 text-white border-blue-900 shadow-sm'
-                  : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300'
-              }`}
+              onClick={() => handleQuickDemoLogin('student')}
+              className="py-2 px-2.5 rounded-xl border border-blue-200 bg-blue-50/70 hover:bg-blue-100 text-blue-900 text-xs font-bold transition-all text-center"
             >
-              <ShieldCheck className="w-4 h-4" />
-              <span>Admin</span>
+              🎓 Student
             </button>
-
             <button
               type="button"
-              onClick={() => setSelectedRole('organizer')}
-              className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all flex flex-col items-center space-y-1 ${
-                selectedRole === 'organizer'
-                  ? 'bg-blue-900 text-white border-blue-900 shadow-sm'
-                  : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300'
-              }`}
+              onClick={() => handleQuickDemoLogin('organizer')}
+              className="py-2 px-2.5 rounded-xl border border-amber-200 bg-amber-50/70 hover:bg-amber-100 text-amber-900 text-xs font-bold transition-all text-center"
             >
-              <Calendar className="w-4 h-4" />
-              <span>Organizer</span>
+              📢 Organizer
             </button>
-
             <button
               type="button"
-              onClick={() => setSelectedRole('student')}
-              className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all flex flex-col items-center space-y-1 ${
-                selectedRole === 'student'
-                  ? 'bg-blue-900 text-white border-blue-900 shadow-sm'
-                  : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300'
-              }`}
+              onClick={() => handleQuickDemoLogin('admin')}
+              className="py-2 px-2.5 rounded-xl border border-purple-200 bg-purple-50/70 hover:bg-purple-100 text-purple-900 text-xs font-bold transition-all text-center"
             >
-              <GraduationCap className="w-4 h-4" />
-              <span>Student</span>
+              👑 Admin
             </button>
           </div>
         </div>
 
-        {/* Sign In vs Sign Up Tabs */}
-        <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200">
-          <button
-            type="button"
-            onClick={() => setIsLogin(true)}
-            className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${isLogin ? 'bg-white text-blue-950 shadow-sm' : 'text-slate-500'}`}
-          >
-            Sign In
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsLogin(false)}
-            className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${!isLogin ? 'bg-white text-blue-950 shadow-sm' : 'text-slate-500'}`}
-          >
-            Create Account
-          </button>
+        <div className="relative flex py-1 items-center">
+          <div className="flex-grow border-t border-slate-200"></div>
+          <span className="flex-shrink mx-3 text-[10px] text-slate-400 font-bold uppercase">or enter credentials</span>
+          <div className="flex-grow border-t border-slate-200"></div>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Error Alert */}
+        {errorMsg && (
+          <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold flex items-center space-x-2">
+            <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+            <span>{errorMsg}</span>
+          </div>
+        )}
+
+        {/* Auth Form */}
+        <form onSubmit={handleSubmit} className="space-y-3">
+          
+          {/* Role selector dropdown */}
+          <div>
+            <label className="block text-[11px] font-bold uppercase text-slate-700 mb-1">Select Role</label>
+            <select
+              value={selectedRole}
+              onChange={(e) => setSelectedRole(e.target.value)}
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none focus:ring-2 focus:ring-[#003366]"
+            >
+              <option value="student">Student Account</option>
+              <option value="organizer">Event Organizer Account</option>
+              <option value="admin">System Administrator Account</option>
+            </select>
+          </div>
+
           {!isLogin && (
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-700">Full Name</label>
-              <div className="relative">
-                <User className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                <input
-                  type="text"
-                  required
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g. Dr. Allan Vikiru"
-                  className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-xs focus:outline-none focus:border-blue-600"
-                />
-              </div>
-            </div>
-          )}
-
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-700">Strathmore Email</label>
-            <div className="relative">
-              <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-              <input
-                type="email"
-                required
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="user@strathmore.edu"
-                className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-xs focus:outline-none focus:border-blue-600"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-700">Password</label>
-            <div className="relative">
-              <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-              <input
-                type="password"
-                required
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                placeholder="••••••••"
-                className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-xs focus:outline-none focus:border-blue-600"
-              />
-            </div>
-          </div>
-
-          {selectedRole === 'student' && !isLogin && (
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-700">Admission Number</label>
+            <div>
+              <label className="block text-[11px] font-bold uppercase text-slate-700 mb-1">Full Name</label>
               <input
                 type="text"
-                value={formData.studentId}
-                onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
-                placeholder="e.g. 154210"
-                className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-xs focus:outline-none focus:border-blue-600"
+                required
+                placeholder="e.g. Elvis Wanyama Wafuke"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-[#003366]"
               />
             </div>
           )}
 
-          {errorMsg && (
-            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center space-x-2">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>{errorMsg}</span>
+          <div>
+            <label className="block text-[11px] font-bold uppercase text-slate-700 mb-1">University Email</label>
+            <input
+              type="email"
+              required
+              placeholder="e.g. student@strathmore.edu"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-[#003366]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold uppercase text-slate-700 mb-1">Password</label>
+            <input
+              type="password"
+              required
+              placeholder="••••••••"
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-[#003366]"
+            />
+          </div>
+
+          {!isLogin && selectedRole === 'student' && (
+            <div>
+              <label className="block text-[11px] font-bold uppercase text-slate-700 mb-1">Student ID</label>
+              <input
+                type="text"
+                placeholder="e.g. 154210"
+                value={formData.studentId}
+                onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
+                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-[#003366]"
+              />
             </div>
           )}
 
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-2.5 rounded-xl bg-blue-900 hover:bg-blue-800 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center space-x-2"
+            className="w-full py-3 rounded-xl bg-[#003366] hover:bg-[#002244] text-white text-xs font-bold transition-all shadow-md mt-2 flex items-center justify-center space-x-2"
           >
-            <span>{isLoading ? 'Processing...' : isLogin ? `Sign In as ${selectedRole.toUpperCase()}` : 'Complete Registration'}</span>
+            <span>{isLoading ? 'Authenticating...' : isLogin ? 'Sign In' : 'Create Account'}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
 
-        {/* 1-Click Demo Login Shortcuts */}
-        <div className="pt-2 border-t border-slate-200 space-y-2 text-center">
-          <span className="text-[11px] font-semibold text-slate-500">Quick 1-Click Demo Logins:</span>
-          <div className="flex items-center justify-center space-x-2 text-[11px]">
-            <button
-              onClick={() => handleQuickDemoLogin('admin')}
-              className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-blue-900 font-bold border border-slate-200"
-            >
-              Demo Admin
-            </button>
-            <button
-              onClick={() => handleQuickDemoLogin('organizer')}
-              className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-blue-900 font-bold border border-slate-200"
-            >
-              Demo Organizer
-            </button>
-            <button
-              onClick={() => handleQuickDemoLogin('student')}
-              className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-blue-900 font-bold border border-slate-200"
-            >
-              Demo Student
-            </button>
-          </div>
+        {/* Modal Footer Toggle */}
+        <div className="pt-2 text-center border-t border-slate-100 text-xs">
+          <span className="text-slate-500">
+            {isLogin ? "Don't have an account? " : "Already have an account? "}
+          </span>
+          <button
+            onClick={() => { setIsLogin(!isLogin); setErrorMsg(''); }}
+            className="font-bold text-[#003366] hover:underline"
+          >
+            {isLogin ? 'Sign Up' : 'Log In'}
+          </button>
         </div>
 
       </div>

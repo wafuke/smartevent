@@ -2,17 +2,26 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const { readLocalData, isFirestoreEnabled } = require("./db");
+const { verifyToken } = require("./middleware/auth");
 
-const predictRoute = require("./routes/predict");
+const authRoute = require("./routes/auth");
+const usersRoute = require("./routes/users");
 const eventsRoute = require("./routes/events");
+const categoriesRoute = require("./routes/categories");
 const registrationsRoute = require("./routes/registrations");
+const favoritesRoute = require("./routes/favorites");
+const notificationsRoute = require("./routes/notifications");
+const adminRoute = require("./routes/admin");
 const smsRoute = require("./routes/sms");
 const analyticsRoute = require("./routes/analytics");
-const authRoute = require("./routes/auth");
+const predictRoute = require("./routes/predict");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Apply Auth Middleware globally (populates req.user if token provided)
+app.use(verifyToken);
 
 // Root URL Route - HTML API & Database Status Inspector Page
 app.get("/", (req, res) => {
@@ -38,33 +47,45 @@ app.get("/", (req, res) => {
     <body>
       <div class="card">
         <span class="badge badge-green">SYSTEM ONLINE</span>
-        <span class="badge">Strathmore SmartEvent API</span>
-        <h1>SmartEvent Enterprise API & Auth Gateway</h1>
-        <p>Running on <strong>port ${process.env.PORT || 5000}</strong> with role-based authentication (Admin, Organizer, Student).</p>
+        <span class="badge">Strathmore SmartEvent Enterprise REST API</span>
+        <h1>SmartEvent REST API & Authentication Gateway</h1>
+        <p>Running on <strong>port ${process.env.PORT || 5000}</strong> with role-based authorization guards (Admin, Organizer, Student).</p>
       </div>
 
       <div class="card">
-        <h2>Active API & Database Endpoints</h2>
+        <h2>Active API Endpoints</h2>
         <ul class="endpoint-list">
           <li>
-            <span>🔐 <strong>Auth Endpoints:</strong> POST /api/auth/login, POST /api/auth/signup</span>
-            <a href="/api/auth/users" target="_blank">View Users &rarr;</a>
+            <span>🔐 <strong>Auth API:</strong> POST /api/auth/login, POST /api/auth/signup</span>
+            <a href="/api/auth/users" target="_blank">Users &rarr;</a>
           </li>
           <li>
-            <span>📅 <strong>Events Database:</strong> GET /api/events</span>
-            <a href="/api/events" target="_blank">View Events JSON &rarr;</a>
+            <span>👥 <strong>User Management:</strong> GET /api/users</span>
+            <a href="/api/users" target="_blank">View Users JSON &rarr;</a>
           </li>
           <li>
-            <span>📝 <strong>Student Registrations:</strong> GET /api/registrations</span>
-            <a href="/api/registrations" target="_blank">View RSVPs JSON &rarr;</a>
+            <span>📅 <strong>Events REST API:</strong> GET /api/events</span>
+            <a href="/api/events" target="_blank">View Events &rarr;</a>
+          </li>
+          <li>
+            <span>🏷️ <strong>Categories API:</strong> GET /api/categories</span>
+            <a href="/api/categories" target="_blank">Categories &rarr;</a>
+          </li>
+          <li>
+            <span>📝 <strong>Registrations API:</strong> GET /api/registrations</span>
+            <a href="/api/registrations" target="_blank">RSVPs &rarr;</a>
+          </li>
+          <li>
+            <span>👑 <strong>Admin Dashboard API:</strong> GET /api/admin/overview</span>
+            <a href="/api/admin/overview" target="_blank">Admin Stats &rarr;</a>
           </li>
           <li>
             <span>📱 <strong>Priority SMS Gateway Logs:</strong> GET /api/sms/logs</span>
-            <a href="/api/sms/logs" target="_blank">View SMS Logs &rarr;</a>
+            <a href="/api/sms/logs" target="_blank">SMS Logs &rarr;</a>
           </li>
           <li>
             <span>📊 <strong>System Analytics & ML Metrics:</strong> GET /api/analytics</span>
-            <a href="/api/analytics" target="_blank">View Analytics &rarr;</a>
+            <a href="/api/analytics" target="_blank">Analytics &rarr;</a>
           </li>
         </ul>
       </div>
@@ -73,7 +94,7 @@ app.get("/", (req, res) => {
   `);
 });
 
-// Database Inspection
+// Database Dump Endpoint
 app.get("/api/db", (req, res) => {
   const data = readLocalData();
   res.json({
@@ -88,15 +109,20 @@ app.get("/health", (req, res) => {
   res.json({
     status: "ok",
     service: "SmartEvent Express Backend",
-    authSystem: "Active (JWT / Firebase Ready)",
+    authSystem: "Active (JWT / Role Middleware Guarded)",
     timestamp: new Date().toISOString()
   });
 });
 
-// API Routes
+// API Routes Registration
 app.use("/api/auth", authRoute);
+app.use("/api/users", usersRoute);
 app.use("/api/events", eventsRoute);
+app.use("/api/categories", categoriesRoute);
 app.use("/api/registrations", registrationsRoute);
+app.use("/api/favorites", favoritesRoute);
+app.use("/api/notifications", notificationsRoute);
+app.use("/api/admin", adminRoute);
 app.use("/api/sms", smsRoute);
 app.use("/api/analytics", analyticsRoute);
 app.use("/api/predict", predictRoute);
