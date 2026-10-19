@@ -1,0 +1,77 @@
+{
+  "source": "Attendance_Prediction.csv",
+  "raw_audit": {
+    "rows": 20000,
+    "columns": 15,
+    "missing_cells": 0,
+    "exact_duplicate_rows": 0,
+    "attendance_rate": 0.5163
+  },
+  "leakage": {
+    "rows_with_reason_and_attended": 0,
+    "accuracy_of_rule_reason_is_none": 0.9333
+  },
+  "cleaning_log": [
+    {
+      "step": "drop student_id",
+      "rows_before": 20000,
+      "rows_after": 20000,
+      "detail": "corrupted identifier (398 repeated values); never a predictor"
+    },
+    {
+      "step": "drop absence_reason",
+      "rows_before": 20000,
+      "rows_after": 20000,
+      "detail": "target leakage: only filled in after the student was absent"
+    },
+    {
+      "step": "normalise text",
+      "rows_before": 20000,
+      "rows_after": 20000,
+      "detail": "trim whitespace, lower-case all categorical values"
+    },
+    {
+      "step": "remove duplicates",
+      "rows_before": 20000,
+      "rows_after": 20000,
+      "detail": "exact duplicate rows after dropping the identifier"
+    },
+    {
+      "step": "range validation",
+      "rows_before": 20000,
+      "rows_after": 20000,
+      "detail": "drop rows outside plausible ranges {'age': (16, 40), 'study_hours': (0, 16), 'sleep_hours': (2, 14), 'travel_time_minutes': (0, 240)}"
+    },
+    {
+      "step": "missing values",
+      "rows_before": 20000,
+      "rows_after": 20000,
+      "detail": "rows with any missing value (none expected in this file)"
+    }
+  ],
+  "clean_rows": 20000,
+  "effects": {
+    "holdout_accuracy": 0.617,
+    "holdout_f1": 0.6405,
+    "holdout_roc_auc": 0.6678,
+    "log_odds_per_unit": {
+      "travel_time_minutes": -0.0114,
+      "hostel_resident": -0.02299,
+      "year_of_study": 0.02137,
+      "study_hours": 0.25119,
+      "sleep_hours": 0.16916,
+      "is_online": 0.53247,
+      "weather_rainy": -0.59372,
+      "weather_hot": -0.07283,
+      "weather_cold": -0.05044,
+      "weather_cloudy": -0.08201
+    },
+    "attendance_rate_by_weather": {
+      "cloudy": 0.5397,
+      "cold": 0.5472,
+      "hot": 0.5331,
+      "rainy": 0.4157,
+      "sunny": 0.5455
+    }
+  }
+}

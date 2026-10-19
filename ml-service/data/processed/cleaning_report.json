@@ -1,0 +1,48 @@
+{
+  "raw_rows": 153657,
+  "clean_rows": 149892,
+  "log": [
+    {
+      "step": "remove double submissions",
+      "rows_before": 153657,
+      "rows_after": 150645,
+      "detail": "duplicate registration_id (same student, same event)"
+    },
+    {
+      "step": "standardise spellings",
+      "rows_before": 150645,
+      "rows_after": 150645,
+      "detail": "values rewritten to canonical form: {'event_category': 15064, 'time_slot': 12051, 'sms_priority': 12051}"
+    },
+    {
+      "step": "drop unmappable categories",
+      "rows_before": 150645,
+      "rows_after": 150645,
+      "detail": "category/time slot not recognisable after standardising"
+    },
+    {
+      "step": "impossible values -> missing",
+      "rows_before": 150645,
+      "rows_after": 150645,
+      "detail": "out-of-range values set to NaN for imputation: {'travel_time_minutes': 753, 'venue_capacity': 451, 'lead_days': 0, 'year_of_study': 0, 'day_of_week': 0}"
+    },
+    {
+      "step": "recover venue capacity",
+      "rows_before": 150645,
+      "rows_after": 150645,
+      "detail": "451 missing capacities filled from the same event's other registrations"
+    },
+    {
+      "step": "drop unrecorded outcomes",
+      "rows_before": 150645,
+      "rows_after": 149892,
+      "detail": "a row without the label cannot be used for supervised training"
+    }
+  ],
+  "missing_left_for_pipeline_imputation": {
+    "weather": 5976,
+    "travel_time_minutes": 5233,
+    "past_attendance_rate": 2489
+  },
+  "note": "past_attendance_rate is missing by design for a student's first event (no history yet)."
+}

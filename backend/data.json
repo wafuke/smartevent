@@ -10,9 +10,9 @@
       "time": "09:00 AM",
       "venue": "Sir Thomas More Building, Auditorium A",
       "venueCapacity": 350,
-      "registrationCount": 240,
+      "registrationCount": 239,
       "pastAttendanceRate": 0.82,
-      "predictedAttendance": 215,
+      "predictedAttendance": 196,
       "smsPriority": 3,
       "status": "Upcoming",
       "organizer": "School of Computing and Engineering Sciences",
@@ -28,9 +28,9 @@
       "time": "02:00 PM",
       "venue": "Lab 3, SCES Complex",
       "venueCapacity": 80,
-      "registrationCount": 65,
+      "registrationCount": 66,
       "pastAttendanceRate": 0.78,
-      "predictedAttendance": 56,
+      "predictedAttendance": 51,
       "smsPriority": 2,
       "status": "Upcoming",
       "organizer": "Strathmore Tech Club",
@@ -57,13 +57,14 @@
   ],
   "registrations": [
     {
-      "id": "reg-1",
-      "eventId": "evt-101",
-      "studentName": "Elvis Wanyama Wafuke",
-      "studentId": "154210",
+      "id": "reg-1791795320947",
+      "eventId": "evt-102",
+      "userId": "usr-1791795301456",
+      "studentName": "kelvin ouma",
+      "studentId": "160101",
       "phone": "+254712345678",
-      "email": "elvis.wafuke@strathmore.edu",
-      "registeredAt": "2026-09-21T09:30:00Z"
+      "email": "kelvinouma@strathmore.edu",
+      "registeredAt": "2026-10-12T08:55:20.947Z"
     }
   ],
   "smsLogs": [
@@ -128,6 +129,60 @@
       "studentId": "160000",
       "department": "School of Computing & Engineering Sciences",
       "createdAt": "2026-10-05T10:18:20.813Z"
+    },
+    {
+      "id": "usr-1791795301456",
+      "name": "kelvin ouma",
+      "email": "kelvinouma@strathmore.edu",
+      "password": "Elvy2004",
+      "role": "student",
+      "studentId": "160101",
+      "department": "School of Computing & Engineering Sciences",
+      "createdAt": "2026-10-12T08:55:01.456Z"
+    }
+  ],
+  "categories": [
+    {
+      "id": "cat-1",
+      "name": "Academic",
+      "description": "Conferences, symposia, research showcases, and faculty lectures",
+      "icon": "BookOpen",
+      "count": 12
+    },
+    {
+      "id": "cat-2",
+      "name": "Workshop",
+      "description": "Hands-on technical coding sessions, lab experiments, and skills training",
+      "icon": "Code",
+      "count": 8
+    },
+    {
+      "id": "cat-3",
+      "name": "Seminar",
+      "description": "Industry expert panels, career advice, and keynote presentations",
+      "icon": "Users",
+      "count": 5
+    },
+    {
+      "id": "cat-4",
+      "name": "Sports",
+      "description": "Inter-faculty tournaments, athletics, football, and fitness sessions",
+      "icon": "Trophy",
+      "count": 9
+    },
+    {
+      "id": "cat-5",
+      "name": "Career Fair",
+      "description": "Networking with corporate partners, resume reviews, and internship hiring",
+      "icon": "Briefcase",
+      "count": 4
+    },
+    {
+      "id": "cat-6",
+      "name": "Social & Cultural",
+      "description": "Music concerts, drama club performances, movie nights, and art workshops",
+      "icon": "Film",
+      "count": 6
     }
   ]
 }

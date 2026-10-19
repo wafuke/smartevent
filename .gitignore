@@ -9,12 +9,19 @@ __pycache__/
 */.env
 backend/serviceAccountKey.json
 
-# Model artifacts and datasets (kept in Google Drive instead)
+# Model artifacts and datasets (large CSVs ignored; lightweight model & JSON reports tracked)
 *.pkl
-*.joblib
 ml-service/models/*
 !ml-service/models/.gitkeep
+!ml-service/models/attendance_model.joblib
+!ml-service/models/model_metadata.json
 data/
+!ml-service/data/
+ml-service/data/*
+!ml-service/data/processed/
+ml-service/data/processed/*
+!ml-service/data/processed/kaggle_summary.json
+!ml-service/data/processed/cleaning_report.json
 datasets/
 *.csv
 

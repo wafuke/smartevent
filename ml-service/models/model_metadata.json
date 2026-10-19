@@ -1,0 +1,96 @@
+{
+  "model_name": "SmartEvent attendance model",
+  "algorithm": "LogisticRegression",
+  "version": "202610181900",
+  "trained_at": "2026-10-18T19:00:58.584810+00:00",
+  "sklearn_version": "1.9.1",
+  "input_columns": [
+    "event_category",
+    "time_slot",
+    "weather",
+    "sms_priority",
+    "day_of_week",
+    "venue_capacity",
+    "registered_count",
+    "lead_days",
+    "exam_period",
+    "year_of_study",
+    "hostel_resident",
+    "travel_time_minutes",
+    "past_attendance_rate",
+    "past_events_count",
+    "gender",
+    "parent_education"
+  ],
+  "dropped_by_selection": [
+    "hostel_resident",
+    "venue_capacity",
+    "year_of_study"
+  ],
+  "decision_threshold": 0.4,
+  "best_params": {
+    "C": 0.01,
+    "class_weight": null,
+    "penalty": "l2"
+  },
+  "training_turnout_rate": 0.6618,
+  "default_registrant_profile": {
+    "year_of_study": 3,
+    "hostel_resident": 1,
+    "travel_time_minutes": 45.0,
+    "lead_days": 4,
+    "past_attendance_rate": null,
+    "past_events_count": 0,
+    "gender": "other",
+    "parent_education": "graduate",
+    "weather": "sunny",
+    "exam_period": 0,
+    "sms_priority": "none"
+  },
+  "split": {
+    "train_rows": 121533,
+    "test_rows": 28359,
+    "train_events": 560,
+    "test_events": 140,
+    "train_period": [
+      "2024-01-08",
+      "2026-01-22"
+    ],
+    "test_period": [
+      "2026-01-26",
+      "2026-06-30"
+    ],
+    "train_turnout": 0.6618,
+    "test_turnout": 0.658
+  },
+  "test_metrics": {
+    "threshold_0_5": {
+      "accuracy": 0.6944,
+      "precision": 0.6938,
+      "recall": 0.9587,
+      "f1": 0.805,
+      "roc_auc": 0.7301,
+      "log_loss": 0.578,
+      "brier": 0.1975,
+      "event_mae": 13.61
+    },
+    "tuned_threshold": {
+      "accuracy": 0.6753,
+      "precision": 0.6725,
+      "recall": 0.9871,
+      "f1": 0.8,
+      "roc_auc": 0.7301,
+      "log_loss": 0.578,
+      "brier": 0.1975
+    },
+    "event_level": {
+      "events": 140,
+      "mae_attendees": 13.607,
+      "mape_pct": 10.988,
+      "within_10pct_share": 0.543,
+      "bias_attendees": 13.505
+    },
+    "baseline_flat_rate_event_mae": 15.31,
+    "baseline_history_event_mae": 15.1
+  }
+}

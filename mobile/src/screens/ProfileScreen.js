@@ -1,11 +1,11 @@
 import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, ScrollView } from 'react-native';
+import { getBackendUrl } from '../services/api';
 
-export default function ProfileScreen({ user, onSignOut }) {
+export default function ProfileScreen({ user, registeredCount = 0, savedCount = 0, onSignOut }) {
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        
+      <ScrollView contentContainerStyle={styles.content}>
         {/* Profile Card */}
         <View style={styles.profileHeader}>
           <View style={styles.avatar}>
@@ -14,23 +14,47 @@ export default function ProfileScreen({ user, onSignOut }) {
           <Text style={styles.name}>{user?.name || 'Elvis Wanyama Wafuke'}</Text>
           <Text style={styles.idText}>Admission No: {user?.studentId || '154210'}</Text>
           <View style={styles.roleBadge}>
-            <Text style={styles.roleText}>STRATHMORE STUDENT</Text>
+            <Text style={styles.roleText}>STRATHMORE STUDENT PASS</Text>
           </View>
         </View>
 
-        {/* Info Card */}
+        {/* Activity Stats Row */}
+        <View style={styles.statsRow}>
+          <View style={styles.statBox}>
+            <Text style={styles.statValue}>{registeredCount}</Text>
+            <Text style={styles.statLabel}>Active RSVPs</Text>
+          </View>
+          <View style={styles.statBox}>
+            <Text style={styles.statValue}>{savedCount}</Text>
+            <Text style={styles.statLabel}>Saved Events</Text>
+          </View>
+          <View style={styles.statBox}>
+            <Text style={styles.statValue}>SMS ✓</Text>
+            <Text style={styles.statLabel}>Priority Alerts</Text>
+          </View>
+        </View>
+
+        {/* Academic & Contact Info Card */}
         <View style={styles.card}>
           <View style={styles.row}>
             <Text style={styles.label}>School / Faculty</Text>
-            <Text style={styles.value}>School of Computing & Engineering Sciences</Text>
+            <Text style={styles.value}>School of Computing & Engineering Sciences (SCES)</Text>
           </View>
           <View style={styles.row}>
             <Text style={styles.label}>Degree Program</Text>
             <Text style={styles.value}>BSc Informatics & Computer Science</Text>
           </View>
           <View style={styles.row}>
-            <Text style={styles.label}>Email Address</Text>
+            <Text style={styles.label}>Strathmore Email</Text>
             <Text style={styles.value}>{user?.email || 'student@strathmore.edu'}</Text>
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.label}>Priority SMS Phone</Text>
+            <Text style={styles.value}>{user?.phone || '+254712345678'}</Text>
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.label}>Connected API Endpoint</Text>
+            <Text style={styles.value}>{getBackendUrl()}</Text>
           </View>
         </View>
 
@@ -38,8 +62,7 @@ export default function ProfileScreen({ user, onSignOut }) {
         <TouchableOpacity style={styles.signOutButton} onPress={onSignOut}>
           <Text style={styles.signOutText}>Sign Out of Mobile App</Text>
         </TouchableOpacity>
-
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -50,7 +73,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc',
   },
   content: {
-    padding: 24,
+    padding: 20,
+    paddingBottom: 32,
   },
   profileHeader: {
     alignItems: 'center',
@@ -59,7 +83,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#e2e8f0',
-    marginBottom: 16,
+    marginBottom: 14,
   },
   avatar: {
     width: 64,
@@ -73,7 +97,7 @@ const styles = StyleSheet.create({
   avatarText: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: '#f59e0b',
   },
   name: {
     fontSize: 18,
@@ -98,6 +122,31 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: 'bold',
     color: '#b45309',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 14,
+  },
+  statBox: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+    borderRadius: 14,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  statValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#003366',
+  },
+  statLabel: {
+    fontSize: 10,
+    color: '#64748b',
+    marginTop: 2,
+    fontWeight: '600',
   },
   card: {
     backgroundColor: '#ffffff',

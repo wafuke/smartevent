@@ -1,5 +1,15 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, SafeAreaView, Image } from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  View,
+  TextInput,
+  TouchableOpacity,
+  SafeAreaView,
+  ScrollView,
+  ActivityIndicator
+} from 'react-native';
+import { loginStudent, signupStudent, getBackendUrl, setBackendUrl } from '../services/api';
 
 export default function AuthScreen({ onAuthenticate }) {
   const [isLogin, setIsLogin] = useState(true);
@@ -7,40 +17,66 @@ export default function AuthScreen({ onAuthenticate }) {
   const [password, setPassword] = useState('password123');
   const [studentId, setStudentId] = useState('154210');
   const [name, setName] = useState('Elvis Wanyama Wafuke');
+  const [phone, setPhone] = useState('+254712345678');
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [showServerConfig, setShowServerConfig] = useState(false);
+  const [apiUrl, setApiUrl] = useState(getBackendUrl());
 
-  const handleSubmit = () => {
-    onAuthenticate({
-      name: name || 'Strathmore Student',
-      email,
-      studentId: studentId || '154210',
-      role: 'student'
-    });
+  const handleSubmit = async () => {
+    setErrorMsg('');
+    if (!email || !password) {
+      setErrorMsg('Please enter your Strathmore email and password.');
+      return;
+    }
+
+    setLoading(true);
+    setBackendUrl(apiUrl);
+
+    const res = isLogin
+      ? await loginStudent(email, password)
+      : await signupStudent({ name, email, password, studentId, phone });
+
+    setLoading(false);
+
+    if (res && res.success) {
+      onAuthenticate({
+        ...(res.user || {}),
+        name: res.user?.name || name || 'Elvis Wanyama Wafuke',
+        email: res.user?.email || email,
+        studentId: res.user?.studentId || studentId || '154210',
+        phone: res.user?.phone || phone || '+254712345678',
+        role: 'student',
+        offline: Boolean(res.offline)
+      });
+    } else {
+      setErrorMsg(res?.error || 'Authentication failed. Check your credentials.');
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {/* Brand Logo & Title */}
         <View style={styles.header}>
           <View style={styles.logoBadge}>
             <Text style={styles.logoText}>S</Text>
           </View>
           <Text style={styles.title}>SmartEvent Strathmore</Text>
-          <Text style={styles.subtitle}>Official Student Portal</Text>
+          <Text style={styles.subtitle}>Student Mobile Companion • SCES</Text>
         </View>
 
         {/* Tab Switcher */}
         <View style={styles.tabContainer}>
           <TouchableOpacity
             style={[styles.tab, isLogin && styles.activeTab]}
-            onPress={() => setIsLogin(true)}
+            onPress={() => { setIsLogin(true); setErrorMsg(''); }}
           >
             <Text style={[styles.tabText, isLogin && styles.activeTabText]}>Sign In</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.tab, !isLogin && styles.activeTab]}
-            onPress={() => setIsLogin(false)}
+            onPress={() => { setIsLogin(false); setErrorMsg(''); }}
           >
             <Text style={[styles.tabText, !isLogin && styles.activeTabText]}>Sign Up</Text>
           </TouchableOpacity>
@@ -48,6 +84,12 @@ export default function AuthScreen({ onAuthenticate }) {
 
         {/* Form Inputs */}
         <View style={styles.form}>
+          {errorMsg ? (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>{errorMsg}</Text>
+            </View>
+          ) : null}
+
           {!isLogin && (
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Full Name</Text>
@@ -85,6 +127,20 @@ export default function AuthScreen({ onAuthenticate }) {
             />
           </View>
 
+          {!isLogin && (
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Phone Number (for Priority SMS)</Text>
+              <TextInput
+                style={styles.input}
+                value={phone}
+                onChangeText={setPhone}
+                placeholder="+254712345678"
+                keyboardType="phone-pad"
+                placeholderTextColor="#94a3b8"
+              />
+            </View>
+          )}
+
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Password</Text>
             <TextInput
@@ -97,16 +153,46 @@ export default function AuthScreen({ onAuthenticate }) {
             />
           </View>
 
-          <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-            <Text style={styles.buttonText}>{isLogin ? 'Sign In to Portal' : 'Register Account'}</Text>
+          <TouchableOpacity style={styles.button} onPress={handleSubmit} disabled={loading}>
+            {loading ? (
+              <ActivityIndicator color="#ffffff" size="small" />
+            ) : (
+              <Text style={styles.buttonText}>
+                {isLogin ? 'Sign In to Student Portal' : 'Create Student Account'}
+              </Text>
+            )}
           </TouchableOpacity>
+
+          {/* Optional API Server Endpoint Config for Physical Phone Testing */}
+          <TouchableOpacity
+            style={styles.configToggle}
+            onPress={() => setShowServerConfig(!showServerConfig)}
+          >
+            <Text style={styles.configToggleText}>
+              {showServerConfig ? '▲ Hide API Server Settings' : '⚙️ Configure Backend API URL (Expo Go LAN)'}
+            </Text>
+          </TouchableOpacity>
+
+          {showServerConfig && (
+            <View style={styles.configBox}>
+              <Text style={styles.configHint}>
+                On a physical phone, replace localhost with your computer's Wi-Fi IPv4 address (e.g. http://192.168.1.100:5000/api):
+              </Text>
+              <TextInput
+                style={styles.input}
+                value={apiUrl}
+                onChangeText={setApiUrl}
+                autoCapitalize="none"
+                placeholder="http://192.168.1.100:5000/api"
+              />
+            </View>
+          )}
         </View>
 
         <Text style={styles.footerText}>
-          School of Computing & Engineering Sciences • Strathmore
+          School of Computing & Engineering Sciences • Strathmore University
         </Text>
-
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -117,7 +203,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc',
   },
   content: {
-    flex: 1,
+    flexGrow: 1,
     padding: 24,
     justifyContent: 'center',
   },
@@ -126,16 +212,16 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   logoBadge: {
-    width: 60,
-    height: 60,
-    borderRadius: 16,
+    width: 64,
+    height: 64,
+    borderRadius: 18,
     backgroundColor: '#003366',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 12,
   },
   logoText: {
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: 'bold',
     color: '#f59e0b',
   },
@@ -164,10 +250,6 @@ const styles = StyleSheet.create({
   },
   activeTab: {
     backgroundColor: '#ffffff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
     elevation: 2,
   },
   tabText: {
@@ -185,6 +267,19 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#e2e8f0',
+  },
+  errorBox: {
+    backgroundColor: '#fef2f2',
+    borderColor: '#fca5a5',
+    borderWidth: 1,
+    padding: 10,
+    borderRadius: 10,
+    marginBottom: 12,
+  },
+  errorText: {
+    color: '#dc2626',
+    fontSize: 12,
+    fontWeight: '600',
   },
   inputGroup: {
     marginBottom: 14,
@@ -210,12 +305,33 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 8,
   },
   buttonText: {
     color: '#ffffff',
     fontWeight: 'bold',
     fontSize: 14,
+  },
+  configToggle: {
+    marginTop: 14,
+    alignItems: 'center',
+  },
+  configToggleText: {
+    fontSize: 11,
+    color: '#0284c7',
+    fontWeight: '600',
+  },
+  configBox: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+  },
+  configHint: {
+    fontSize: 11,
+    color: '#64748b',
+    marginBottom: 8,
+    lineHeight: 16,
   },
   footerText: {
     textAlign: 'center',
