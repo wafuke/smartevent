@@ -1,5 +1,5 @@
 // SmartEvent Frontend API Service Client
-const API_BASE_URL = '/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 function getAuthHeaders() {
   const token = localStorage.getItem('smartevent_token');
@@ -25,8 +25,8 @@ export async function apiRequest(endpoint, options = {}) {
   try {
     const res = await fetch(url, config);
     const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.error || `HTTP ${res.status}: Failed request`);
+    if (!res.ok || data.success === false) {
+      throw new Error(data.error || `HTTP ${res.status}: Request failed`);
     }
     return data;
   } catch (err) {
@@ -39,6 +39,8 @@ export async function apiRequest(endpoint, options = {}) {
 export const authApi = {
   login: (credentials) => apiRequest('/auth/login', { method: 'POST', body: JSON.stringify(credentials) }),
   signup: (userData) => apiRequest('/auth/signup', { method: 'POST', body: JSON.stringify(userData) }),
+  googleLogin: (googleData) => apiRequest('/auth/google', { method: 'POST', body: JSON.stringify(googleData) }),
+  me: () => apiRequest('/auth/me'),
   getUsers: () => apiRequest('/users')
 };
 
@@ -79,13 +81,29 @@ export const favoritesApi = {
   toggle: (eventId) => apiRequest(`/favorites/${eventId}`, { method: 'POST' })
 };
 
-// Admin API
+// Africa's Talking Priority SMS API
+export const smsApi = {
+  getStatus: () => apiRequest('/sms/status'),
+  getLogs: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return apiRequest(`/sms/logs${query ? `?${query}` : ''}`);
+  },
+  send: (smsPayload) => apiRequest('/sms/send', { method: 'POST', body: JSON.stringify(smsPayload) })
+};
+
+// ML Turnout Prediction API
+export const predictApi = {
+  forecast: (payload) => apiRequest('/predict', { method: 'POST', body: JSON.stringify(payload) })
+};
+
+// Admin & Users CRUD API
 export const adminApi = {
   getOverview: () => apiRequest('/admin/overview'),
   getUsers: (params = {}) => {
     const query = new URLSearchParams(params).toString();
     return apiRequest(`/users${query ? `?${query}` : ''}`);
   },
+  createUser: (userData) => apiRequest('/users', { method: 'POST', body: JSON.stringify(userData) }),
   updateUser: (id, userData) => apiRequest(`/users/${id}`, { method: 'PUT', body: JSON.stringify(userData) }),
   deleteUser: (id) => apiRequest(`/users/${id}`, { method: 'DELETE' })
 };

@@ -4,7 +4,6 @@ import {
   Text,
   View,
   TouchableOpacity,
-  SafeAreaView,
   ScrollView,
   Alert,
   ActivityIndicator
@@ -19,6 +18,7 @@ export default function EventDetailScreen({
   onRegisterSuccess,
   onCancelRegistration,
   onToggleSave,
+  onRequireAuth,
   onBack
 }) {
   const [submitting, setSubmitting] = useState(false);
@@ -44,8 +44,12 @@ export default function EventDetailScreen({
   if (!event) return null;
 
   const handleRSVP = async () => {
+    if (!user) {
+      if (onRequireAuth) onRequireAuth('login');
+      return;
+    }
     setSubmitting(true);
-    const result = await registerStudentForEvent(event.id, user || {});
+    const result = await registerStudentForEvent(event.id, user);
     setSubmitting(false);
 
     if (result.success) {
@@ -67,15 +71,15 @@ export default function EventDetailScreen({
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+    <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Top Bar: Back + Save */}
         <View style={styles.topRow}>
           <TouchableOpacity style={styles.backButton} onPress={onBack}>
-            <Text style={styles.backText}>← Back to Events</Text>
+            <Text style={styles.backText}>← Back</Text>
           </TouchableOpacity>
 
-          {onToggleSave && (
+          {user && onToggleSave && (
             <TouchableOpacity style={styles.savePill} onPress={() => onToggleSave(event.id)}>
               <Text style={styles.savePillText}>
                 {isSaved ? '★ Saved' : '☆ Save Event'}
@@ -134,7 +138,7 @@ export default function EventDetailScreen({
                   <Text style={styles.mlMetricLabel}>Expected Turnout</Text>
                 </View>
                 <View style={styles.mlMetricBox}>
-                  <Text style={styles.mlMetricVal}>{Math.round((prediction.predictedTurnoutRate || 0.72) * 100)}%</Text>
+                  <Text style={styles.mlMetricVal}>{Math.round((prediction.predictedTurnoutRate || 0.78) * 100)}%</Text>
                   <Text style={styles.mlMetricLabel}>Show-Up Prob</Text>
                 </View>
                 <View style={styles.mlMetricBox}>
@@ -166,7 +170,9 @@ export default function EventDetailScreen({
           disabled={isRegistered || submitting}
         >
           <Text style={[styles.rsvpButtonText, isRegistered && styles.rsvpSuccessText]}>
-            {isRegistered
+            {!user
+              ? "🔐 Log In / Sign Up to Register"
+              : isRegistered
               ? "✓ Registered / Digital Pass Active"
               : submitting
               ? "Confirming RSVP..."
@@ -174,13 +180,13 @@ export default function EventDetailScreen({
           </Text>
         </TouchableOpacity>
 
-        {isRegistered && onCancelRegistration && (
+        {user && isRegistered && onCancelRegistration && (
           <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
             <Text style={styles.cancelButtonText}>Cancel My RSVP</Text>
           </TouchableOpacity>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -190,20 +196,23 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc',
   },
   content: {
-    padding: 20,
-    paddingBottom: 36,
+    padding: 16,
+    paddingBottom: 32,
   },
   topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   backButton: {
-    paddingVertical: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    backgroundColor: '#e2e8f0',
+    borderRadius: 8,
   },
   backText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: 'bold',
     color: '#003366',
   },
@@ -223,71 +232,71 @@ const styles = StyleSheet.create({
   categoryBadge: {
     alignSelf: 'flex-start',
     backgroundColor: '#f0f9ff',
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 8,
+    borderRadius: 6,
     borderWidth: 1,
     borderColor: '#bae6fd',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   categoryText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: 'bold',
     color: '#0284c7',
   },
   title: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#0f172a',
-    marginBottom: 10,
-    lineHeight: 26,
+    marginBottom: 8,
+    lineHeight: 24,
   },
   description: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#475569',
-    lineHeight: 20,
-    marginBottom: 18,
+    lineHeight: 18,
+    marginBottom: 14,
   },
   infoCard: {
     backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 14,
+    padding: 14,
     borderWidth: 1,
     borderColor: '#e2e8f0',
-    marginBottom: 16,
-    gap: 12,
+    marginBottom: 12,
+    gap: 10,
   },
   infoRow: {
     flexDirection: 'column',
     gap: 2,
   },
   infoLabel: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: 'bold',
     color: '#64748b',
     textTransform: 'uppercase',
   },
   infoValue: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: 'bold',
     color: '#0f172a',
   },
   mlCard: {
     backgroundColor: '#f0f9ff',
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 14,
+    padding: 14,
     borderWidth: 1,
     borderColor: '#bae6fd',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   mlHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   mlTitle: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: 'bold',
     color: '#003366',
   },
@@ -305,25 +314,25 @@ const styles = StyleSheet.create({
   mlMetricsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   mlMetricBox: {
     flex: 1,
     backgroundColor: '#ffffff',
-    paddingVertical: 10,
+    paddingVertical: 8,
     marginHorizontal: 3,
-    borderRadius: 10,
+    borderRadius: 8,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#e0f2fe',
   },
   mlMetricVal: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#003366',
   },
   mlMetricLabel: {
-    fontSize: 10,
+    fontSize: 9,
     color: '#64748b',
     marginTop: 2,
   },
@@ -335,13 +344,13 @@ const styles = StyleSheet.create({
   smsNotice: {
     backgroundColor: '#fffbeb',
     borderRadius: 12,
-    padding: 14,
+    padding: 12,
     borderWidth: 1,
     borderColor: '#fde68a',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   smsNoticeTitle: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: 'bold',
     color: '#b45309',
     marginBottom: 2,
@@ -349,11 +358,11 @@ const styles = StyleSheet.create({
   smsNoticeText: {
     fontSize: 11,
     color: '#78350f',
-    lineHeight: 16,
+    lineHeight: 15,
   },
   rsvpButton: {
     backgroundColor: '#003366',
-    paddingVertical: 14,
+    paddingVertical: 13,
     borderRadius: 12,
     alignItems: 'center',
   },
@@ -365,14 +374,14 @@ const styles = StyleSheet.create({
   rsvpButtonText: {
     color: '#ffffff',
     fontWeight: 'bold',
-    fontSize: 14,
+    fontSize: 13,
   },
   rsvpSuccessText: {
     color: '#047857',
   },
   cancelButton: {
     marginTop: 10,
-    paddingVertical: 12,
+    paddingVertical: 11,
     borderRadius: 12,
     alignItems: 'center',
     borderWidth: 1,
@@ -382,6 +391,6 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     color: '#dc2626',
     fontWeight: 'bold',
-    fontSize: 13,
+    fontSize: 12,
   }
 });

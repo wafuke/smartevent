@@ -1,55 +1,79 @@
 import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
 import { getBackendUrl } from '../services/api';
 
 export default function ProfileScreen({ user, registeredCount = 0, savedCount = 0, onSignOut }) {
+  const role = (user?.role || 'STUDENT').toUpperCase();
+
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+    <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Profile Card */}
         <View style={styles.profileHeader}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{(user?.name || 'S').charAt(0)}</Text>
+            <Text style={styles.avatarText}>{(user?.name || 'S').charAt(0).toUpperCase()}</Text>
           </View>
-          <Text style={styles.name}>{user?.name || 'Elvis Wanyama Wafuke'}</Text>
-          <Text style={styles.idText}>Admission No: {user?.studentId || '154210'}</Text>
-          <View style={styles.roleBadge}>
-            <Text style={styles.roleText}>STRATHMORE STUDENT PASS</Text>
+          <Text style={styles.name}>{user?.name || 'SmartEvent User'}</Text>
+          <Text style={styles.idText}>
+            {role === 'ADMIN'
+              ? `Staff ID: ${user?.staffId || 'ADM-001'} • ${user?.clearanceLevel || 'Super Admin'}`
+              : role === 'ORGANIZER'
+                ? `${user?.organizationName || 'Campus Organizer'} • ${user?.department || 'SCES'}`
+                : `Admission No: ${user?.studentId || '154210'}`}
+          </Text>
+          <View
+            style={[
+              styles.roleBadge,
+              role === 'ADMIN' && { backgroundColor: '#fee2e2', borderColor: '#fca5a5' },
+              role === 'ORGANIZER' && { backgroundColor: '#e0f2fe', borderColor: '#7dd3fc' }
+            ]}
+          >
+            <Text
+              style={[
+                styles.roleText,
+                role === 'ADMIN' && { color: '#b91c1c' },
+                role === 'ORGANIZER' && { color: '#0369a1' }
+              ]}
+            >
+              {role} PORTAL ACCOUNT
+            </Text>
           </View>
         </View>
 
         {/* Activity Stats Row */}
         <View style={styles.statsRow}>
           <View style={styles.statBox}>
-            <Text style={styles.statValue}>{registeredCount}</Text>
-            <Text style={styles.statLabel}>Active RSVPs</Text>
+            <Text style={styles.statValue}>{role === 'STUDENT' ? registeredCount : 'Active'}</Text>
+            <Text style={styles.statLabel}>{role === 'STUDENT' ? 'Active RSVPs' : 'Portal Status'}</Text>
           </View>
           <View style={styles.statBox}>
-            <Text style={styles.statValue}>{savedCount}</Text>
-            <Text style={styles.statLabel}>Saved Events</Text>
+            <Text style={styles.statValue}>{role === 'STUDENT' ? savedCount : 'JWT ✓'}</Text>
+            <Text style={styles.statLabel}>{role === 'STUDENT' ? 'Saved Events' : 'RBAC Auth'}</Text>
           </View>
           <View style={styles.statBox}>
-            <Text style={styles.statValue}>SMS ✓</Text>
+            <Text style={styles.statValue}>AT SMS ✓</Text>
             <Text style={styles.statLabel}>Priority Alerts</Text>
           </View>
         </View>
 
-        {/* Academic & Contact Info Card */}
+        {/* Details Card */}
         <View style={styles.card}>
           <View style={styles.row}>
-            <Text style={styles.label}>School / Faculty</Text>
-            <Text style={styles.value}>School of Computing & Engineering Sciences (SCES)</Text>
+            <Text style={styles.label}>Account Role</Text>
+            <Text style={styles.value}>{role}</Text>
           </View>
           <View style={styles.row}>
-            <Text style={styles.label}>Degree Program</Text>
-            <Text style={styles.value}>BSc Informatics & Computer Science</Text>
+            <Text style={styles.label}>Department / Faculty</Text>
+            <Text style={styles.value}>
+              {user?.department || 'School of Computing & Engineering Sciences (SCES)'}
+            </Text>
           </View>
           <View style={styles.row}>
             <Text style={styles.label}>Strathmore Email</Text>
             <Text style={styles.value}>{user?.email || 'student@strathmore.edu'}</Text>
           </View>
           <View style={styles.row}>
-            <Text style={styles.label}>Priority SMS Phone</Text>
+            <Text style={styles.label}>Africa's Talking SMS Phone</Text>
             <Text style={styles.value}>{user?.phone || '+254712345678'}</Text>
           </View>
           <View style={styles.row}>
@@ -60,129 +84,131 @@ export default function ProfileScreen({ user, registeredCount = 0, savedCount = 
 
         {/* Sign Out Button */}
         <TouchableOpacity style={styles.signOutButton} onPress={onSignOut}>
-          <Text style={styles.signOutText}>Sign Out of Mobile App</Text>
+          <Text style={styles.signOutText}>Sign Out & Return to Public Home</Text>
         </TouchableOpacity>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#f8fafc'
   },
   content: {
-    padding: 20,
-    paddingBottom: 32,
+    padding: 14,
+    paddingBottom: 28
   },
   profileHeader: {
     alignItems: 'center',
     backgroundColor: '#ffffff',
-    padding: 24,
-    borderRadius: 20,
+    padding: 18,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: '#e2e8f0',
-    marginBottom: 14,
+    marginBottom: 12
   },
   avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: '#003366',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: 10
   },
   avatarText: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
-    color: '#f59e0b',
+    color: '#f59e0b'
   },
   name: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#0f172a',
+    textAlign: 'center'
   },
   idText: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#64748b',
     marginTop: 2,
+    textAlign: 'center'
   },
   roleBadge: {
     backgroundColor: '#fef3c7',
     paddingHorizontal: 12,
     paddingVertical: 4,
-    borderRadius: 12,
-    marginTop: 10,
+    borderRadius: 10,
+    marginTop: 8,
     borderWidth: 1,
-    borderColor: '#fde68a',
+    borderColor: '#fde68a'
   },
   roleText: {
     fontSize: 10,
     fontWeight: 'bold',
-    color: '#b45309',
+    color: '#b45309'
   },
   statsRow: {
     flexDirection: 'row',
-    gap: 10,
-    marginBottom: 14,
+    gap: 8,
+    marginBottom: 12
   },
   statBox: {
     flex: 1,
     backgroundColor: '#ffffff',
-    borderRadius: 14,
-    paddingVertical: 14,
+    borderRadius: 12,
+    paddingVertical: 12,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: '#e2e8f0'
   },
   statValue: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
-    color: '#003366',
+    color: '#003366'
   },
   statLabel: {
     fontSize: 10,
     color: '#64748b',
     marginTop: 2,
-    fontWeight: '600',
+    fontWeight: '600'
   },
   card: {
     backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 14,
+    padding: 14,
     borderWidth: 1,
     borderColor: '#e2e8f0',
-    gap: 12,
-    marginBottom: 20,
+    gap: 10,
+    marginBottom: 16
   },
   row: {
     flexDirection: 'column',
-    gap: 2,
+    gap: 2
   },
   label: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: 'bold',
     color: '#94a3b8',
-    textTransform: 'uppercase',
+    textTransform: 'uppercase'
   },
   value: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: 'bold',
-    color: '#0f172a',
+    color: '#0f172a'
   },
   signOutButton: {
     backgroundColor: '#fef2f2',
     borderWidth: 1,
     borderColor: '#fca5a5',
-    paddingVertical: 14,
+    paddingVertical: 13,
     borderRadius: 12,
-    alignItems: 'center',
+    alignItems: 'center'
   },
   signOutText: {
     color: '#dc2626',
     fontWeight: 'bold',
-    fontSize: 13,
+    fontSize: 12
   }
 });

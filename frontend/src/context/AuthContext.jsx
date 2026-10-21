@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { authApi } from '../services/api';
 
 const AuthContext = createContext(null);
 
@@ -16,7 +17,7 @@ export function AuthProvider({ children }) {
     return localStorage.getItem('smartevent_token') || null;
   });
 
-  const [currentPath, setCurrentPath] = useState(window.location.pathname);
+  const [currentPath, setCurrentPath] = useState(window.location.pathname || '/');
 
   useEffect(() => {
     const handlePopState = () => {
@@ -24,6 +25,31 @@ export function AuthProvider({ children }) {
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Verify stored JWT token against backend on initial mount
+  useEffect(() => {
+    if (token) {
+      authApi
+        .me()
+        .then((res) => {
+          if (res?.user) {
+            setUser(res.user);
+            localStorage.setItem('smartevent_user', JSON.stringify(res.user));
+          }
+        })
+        .catch(() => {
+          // Clear invalid or forged token and return to public home screen
+          setUser(null);
+          setToken(null);
+          localStorage.removeItem('smartevent_user');
+          localStorage.removeItem('smartevent_token');
+          if (window.location.pathname !== '/') {
+            window.history.pushState({}, '', '/');
+            setCurrentPath('/');
+          }
+        });
+    }
   }, []);
 
   const navigate = (path) => {
@@ -38,7 +64,7 @@ export function AuthProvider({ children }) {
     localStorage.setItem('smartevent_user', JSON.stringify(authenticatedUser));
     localStorage.setItem('smartevent_token', authToken);
 
-    // Redirect to role dashboard
+    // Redirect to respective role dashboard after login/signup
     if (authenticatedUser.role === 'admin') {
       navigate('/admin/dashboard');
     } else if (authenticatedUser.role === 'organizer') {
@@ -46,6 +72,11 @@ export function AuthProvider({ children }) {
     } else {
       navigate('/student/dashboard');
     }
+  };
+
+  const updateCurrentUser = (updatedUser) => {
+    setUser(updatedUser);
+    localStorage.setItem('smartevent_user', JSON.stringify(updatedUser));
   };
 
   const logout = () => {
@@ -71,6 +102,7 @@ export function AuthProvider({ children }) {
         currentPath,
         navigate,
         login,
+        updateCurrentUser,
         logout,
         getRoleDashboardPath,
         isAuthenticated: !!user
