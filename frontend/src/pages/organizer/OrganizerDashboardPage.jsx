@@ -22,6 +22,7 @@ export default function OrganizerDashboardPage() {
   const { user } = useAuth();
   const [events, setEvents] = useState([]);
   const [smsLogs, setSmsLogs] = useState([]);
+  const [eventScope, setEventScope] = useState('mine'); // 'mine' or 'all'
   const [filterCategory, setFilterCategory] = useState('All');
   const [viewMode, setViewMode] = useState('cards'); // 'cards' or 'table'
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -61,7 +62,12 @@ export default function OrganizerDashboardPage() {
 
   const handleCreateEvent = async (newEventData) => {
     try {
-      await eventsApi.create(newEventData);
+      await eventsApi.create({
+        ...newEventData,
+        organizerId: user?.id,
+        organizerName: user?.name,
+        organizer: user?.name
+      });
       setIsCreateModalOpen(false);
       await loadOrganizerData();
     } catch (err) {
@@ -156,10 +162,20 @@ export default function OrganizerDashboardPage() {
     }
   };
 
-  const filteredEvents =
-    filterCategory === 'All' ? events : events.filter((e) => e.category === filterCategory);
+  const myEvents = events.filter(
+    (e) =>
+      e.organizerId === user?.id ||
+      (user?.name && (e.organizerName === user.name || e.organizer === user.name))
+  );
 
-  const totalRegistrations = events.reduce((sum, e) => sum + (e.registrationCount || 0), 0);
+  const scopedEvents = eventScope === 'mine' && myEvents.length > 0 ? myEvents : events;
+
+  const filteredEvents =
+    filterCategory === 'All'
+      ? scopedEvents
+      : scopedEvents.filter((e) => e.category === filterCategory);
+
+  const totalRegistrations = scopedEvents.reduce((sum, e) => sum + (e.registrationCount || 0), 0);
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto pb-12">
@@ -174,7 +190,22 @@ export default function OrganizerDashboardPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div className="bg-slate-200/70 p-1 rounded-xl flex text-xs font-bold">
+            <button
+              onClick={() => setEventScope('mine')}
+              className={`px-3 py-1.5 rounded-lg ${eventScope === 'mine' ? 'bg-[#003366] text-white shadow-2xs' : 'text-slate-600'}`}
+            >
+              My Listed Events ({myEvents.length})
+            </button>
+            <button
+              onClick={() => setEventScope('all')}
+              className={`px-3 py-1.5 rounded-lg ${eventScope === 'all' ? 'bg-[#003366] text-white shadow-2xs' : 'text-slate-600'}`}
+            >
+              All Campus Events ({events.length})
+            </button>
+          </div>
+
           <div className="bg-slate-200/70 p-1 rounded-xl flex text-xs font-bold">
             <button
               onClick={() => setViewMode('cards')}

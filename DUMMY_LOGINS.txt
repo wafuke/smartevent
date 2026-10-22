@@ -1,0 +1,269 @@
+================================================================================
+SMARTEVENT STRATHMORE UNIVERSITY — DUMMY LOGIN CREDENTIALS & LISTED EVENTS
+================================================================================
+Author:      Elvis Wanyama Wafuke (154210)
+Supervisor:  Mr. Allan Vikiru
+Institution: Strathmore University — School of Computing & Engineering Sciences
+================================================================================
+
+NOTE ON SECURITY:
+- Public login and Google Sign-In screens do NOT expose or list other users'
+  credentials on the UI.
+- Use this reference file to test role-based access control (RBAC) across the
+  Student, Event Organizer, and Admin portals on both Web and Mobile.
+- Default Password for all seeded dummy accounts: password123
+
+
+================================================================================
+1. ADMIN ACCOUNTS (2 ACCOUNTS)
+================================================================================
+
+[ADMIN 1]
+Name:             Elvis Wanyama Wafuke
+Staff ID:         ADM-001
+Clearance Level:  Super Admin (Full CRUD & Gateway Control)
+Department:       ICT & Campus Operations Directorate
+Email:            admin@strathmore.edu
+Password:         password123
+Phone:            +254712345678
+
+[ADMIN 2]
+Name:             Mr. Allan Vikiru
+Staff ID:         ADM-002
+Clearance Level:  Executive Admin (Academic & System Auditor)
+Department:       School of Computing & Engineering Sciences (SCES)
+Email:            allan.vikiru@strathmore.edu
+Password:         password123
+Phone:            +254722998877
+
+
+================================================================================
+2. EVENT ORGANIZER ACCOUNTS (10 ACCOUNTS + THEIR LISTED EVENTS)
+================================================================================
+
+[ORGANIZER 1]
+Organizer Name:   Dr. Joseph Orero (SCES Dean's Office)
+Organizer Code:   ORG-001
+Organization:     SCES Academic & Research Colloquium
+Department:       School of Computing & Engineering Sciences
+Email:            organizer@strathmore.edu
+Password:         password123
+Phone:            +254711223344
+Events Listed (2):
+  1. [evt-101] Strathmore AI & Machine Learning Annual Colloquium
+     - Category: Academic | Date: 2026-11-12 (14:00 - 17:00) | Venue: Main Auditorium (Cap: 500)
+  2. [evt-102] Final Year IS Project Defense & Poster Exhibition
+     - Category: Academic | Date: 2026-11-26 (08:30 - 13:00) | Venue: SCES Lecture Theatre 4 (LT4) (Cap: 180)
+
+--------------------------------------------------------------------------------
+[ORGANIZER 2]
+Organizer Name:   @iLabAfrica Innovation Centre
+Organizer Code:   ORG-002
+Organization:     @iLabAfrica Research & Incubation Hub
+Department:       Directorate of Research & Tech Innovation
+Email:            ilab@strathmore.edu
+Password:         password123
+Phone:            +254722334455
+Events Listed (2):
+  1. [evt-103] Cybersecurity & Cloud Threat Hunting Bootcamp
+     - Category: Workshop | Date: 2026-11-15 (09:00 - 13:00) | Venue: iLab Africa Innovation Room 302 (Cap: 120)
+  2. [evt-104] Fintech & Africa's Talking API Developer Hackathon
+     - Category: Workshop | Date: 2026-11-21 (08:30 - 17:30) | Venue: iLab Africa Innovation Room 302 (Cap: 120)
+
+--------------------------------------------------------------------------------
+[ORGANIZER 3]
+Organizer Name:   Strathmore Career Development Services
+Organizer Code:   ORG-003
+Organization:     Strathmore Career & Industry Liaison Office
+Department:       Career Placement & Alumni Relations
+Email:            careers@strathmore.edu
+Password:         password123
+Phone:            +254733556677
+Events Listed (2):
+  1. [evt-105] Annual Engineering & Tech Graduate Career Fair
+     - Category: Career Fair | Date: 2026-11-18 (10:00 - 16:00) | Venue: Student Center Graduation Square (Cap: 600)
+  2. [evt-106] Global Tech CV Clinic & Mock Technical Interviews
+     - Category: Career Fair | Date: 2026-11-29 (14:00 - 17:00) | Venue: SCES Lecture Theatre 4 (LT4) (Cap: 180)
+
+--------------------------------------------------------------------------------
+[ORGANIZER 4]
+Organizer Name:   Strathmore Sports & Athletics Council
+Organizer Code:   ORG-004
+Organization:     Strathmore Blades & Scorpions Sports Directorate
+Department:       Sports & Student Welfare Department
+Email:            sports@strathmore.edu
+Password:         password123
+Phone:            +254710887766
+Events Listed (1):
+  1. [evt-107] Inter-Faculty Chancellor's Cup Football & Rugby Finals
+     - Category: Sports | Date: 2026-11-28 (15:00 - 18:30) | Venue: Strathmore Sports Complex Main Pitch (Cap: 800)
+
+--------------------------------------------------------------------------------
+[ORGANIZER 5]
+Organizer Name:   Strathmore Business School (SBS) Executive Events
+Organizer Code:   ORG-005
+Organization:     Strathmore Business School Leadership Forum
+Department:       Strathmore Business School (SBS)
+Email:            sbs.events@strathmore.edu
+Password:         password123
+Phone:            +254721445566
+Events Listed (2):
+  1. [evt-108] East Africa Quantitative Finance & Data Science Summit
+     - Category: Seminar | Date: 2026-11-24 (14:00 - 16:30) | Venue: Strathmore Business School (SBS) Auditorium (Cap: 300)
+  2. [evt-109] CEO Fireside Chat: Leading Digital Transformation in Africa
+     - Category: Seminar | Date: 2026-12-03 (17:30 - 19:30) | Venue: Strathmore Business School (SBS) Auditorium (Cap: 300)
+
+--------------------------------------------------------------------------------
+[ORGANIZER 6]
+Organizer Name:   Strathmore Law Clinic & Moot Society
+Organizer Code:   ORG-006
+Organization:     Strathmore Law School Moot & Legal Aid Society
+Department:       Strathmore Law School (SLS)
+Email:            lawsociety@strathmore.edu
+Password:         password123
+Phone:            +254734667788
+Events Listed (1):
+  1. [evt-110] Data Privacy, AI Regulation & Kenya Data Protection Act Symposium
+     - Category: Academic | Date: 2026-12-01 (14:00 - 17:00) | Venue: SLS Moot Court Chambers (Cap: 150)
+
+--------------------------------------------------------------------------------
+[ORGANIZER 7]
+Organizer Name:   Strathmore Student Council (SSC)
+Organizer Code:   ORG-007
+Organization:     Strathmore University Student Council (SSC)
+Department:       Dean of Students Office
+Email:            studentcouncil@strathmore.edu
+Password:         password123
+Phone:            +254715778899
+Events Listed (2):
+  1. [evt-111] Strathmore Annual Cultural Week Gala & Concert
+     - Category: Cultural | Date: 2026-12-04 (16:00 - 20:00) | Venue: Student Center Graduation Square (Cap: 600)
+  2. [evt-112] Student Townhall & Campus Welfare Open Forum
+     - Category: Seminar | Date: 2026-11-19 (11:00 - 13:00) | Venue: Main Auditorium (Cap: 500)
+
+--------------------------------------------------------------------------------
+[ORGANIZER 8]
+Organizer Name:   Google Developer Student Club (GDSC Strathmore)
+Organizer Code:   ORG-008
+Organization:     GDSC & IEEE Strathmore Tech Chapter
+Department:       SCES Student Tech Communities
+Email:            gdsc@strathmore.edu
+Password:         password123
+Phone:            +254726889900
+Events Listed (2):
+  1. [evt-113] Kotlin, Flutter & Gemini Android DevFest Strathmore
+     - Category: Workshop | Date: 2026-11-27 (09:00 - 15:00) | Venue: iLab Africa Innovation Room 302 (Cap: 120)
+  2. [evt-114] Open Source & Kubernetes Cloud Native Study Jam
+     - Category: Workshop | Date: 2026-12-06 (10:00 - 14:00) | Venue: SCES Lecture Theatre 4 (LT4) (Cap: 180)
+
+--------------------------------------------------------------------------------
+[ORGANIZER 9]
+Organizer Name:   Strathmore Enterprise Development Centre (SEDC)
+Organizer Code:   ORG-009
+Organization:     SEDC Entrepreneurship & SME Hub
+Department:       Strathmore Enterprise Development Centre
+Email:            sedc@strathmore.edu
+Password:         password123
+Phone:            +254737990011
+Events Listed (1):
+  1. [evt-115] Student Startup Pitch Deck & Venture Capital Demo Day
+     - Category: Career Fair | Date: 2026-12-08 (14:00 - 17:30) | Venue: Strathmore Business School (SBS) Auditorium (Cap: 300)
+
+--------------------------------------------------------------------------------
+[ORGANIZER 10]
+Organizer Name:   Strathmore Community Outreach & Sustainability Club
+Organizer Code:   ORG-010
+Organization:     Community Service Centre & Green Campus Initiative
+Department:       Community Outreach Programme (COP)
+Email:            community@strathmore.edu
+Password:         password123
+Phone:            +254718112244
+Events Listed (1):
+  1. [evt-116] Green Campus Solar & E-Waste Recycling Innovation Drive
+     - Category: Cultural | Date: 2026-12-10 (09:00 - 14:00) | Venue: Student Center Graduation Square (Cap: 600)
+
+
+================================================================================
+3. STUDENT ACCOUNTS (10 ACCOUNTS)
+================================================================================
+
+[STUDENT 1]
+Name:             Elvis Wanyama Wafuke
+Admission No:     154210
+Program:          BSc Informatics & Computer Science (Year 4, SCES)
+Email:            student@strathmore.edu
+Password:         password123
+Phone:            +254712345678
+
+[STUDENT 2]
+Name:             Amina Hassan
+Admission No:     154382
+Program:          BSc Computer Networks & Cyber Security (Year 3, SCES)
+Email:            amina.hassan@strathmore.edu
+Password:         password123
+Phone:            +254722112233
+
+[STUDENT 3]
+Name:             Brian Kiprop
+Admission No:     153904
+Program:          BSc Business Information Technology - BBIT (Year 4, SCES)
+Email:            brian.kiprop@strathmore.edu
+Password:         password123
+Phone:            +254733445566
+
+[STUDENT 4]
+Name:             Grace Wanjiku
+Admission No:     155102
+Program:          Bachelor of Commerce - Finance (Year 2, SIMS)
+Email:            grace.wanjiku@strathmore.edu
+Password:         password123
+Phone:            +254715998811
+
+[STUDENT 5]
+Name:             Kevin Omondi
+Admission No:     154771
+Program:          BSc Electrical & Electronics Engineering (Year 3, SCES)
+Email:            kevin.omondi@strathmore.edu
+Password:         password123
+Phone:            +254728776655
+
+[STUDENT 6]
+Name:             Faith Mutua
+Admission No:     155419
+Program:          Bachelor of Laws - LLB (Year 1, SLS)
+Email:            faith.mutua@strathmore.edu
+Password:         password123
+Phone:            +254799112244
+
+[STUDENT 7]
+Name:             David Njoroge
+Admission No:     154615
+Program:          BSc Financial Engineering (Year 3, SIMS)
+Email:            david.njoroge@strathmore.edu
+Password:         password123
+Phone:            +254714556677
+
+[STUDENT 8]
+Name:             Cynthia Chebet
+Admission No:     155288
+Program:          BSc Informatics & Computer Science (Year 2, SCES)
+Email:            cynthia.chebet@strathmore.edu
+Password:         password123
+Phone:            +254725667788
+
+[STUDENT 9]
+Name:             Samuel Mwangi
+Admission No:     153812
+Program:          BSc Supply Chain & Operations Management (Year 4, SBS)
+Email:            samuel.mwangi@strathmore.edu
+Password:         password123
+Phone:            +254736778899
+
+[STUDENT 10]
+Name:             Michelle Akinyi
+Admission No:     155604
+Program:          BSc Data Science & Analytics (Year 1, SCES)
+Email:            michelle.akinyi@strathmore.edu
+Password:         password123
+Phone:            +254719889900
+================================================================================

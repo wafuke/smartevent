@@ -1,27 +1,100 @@
 // SmartEvent Mobile API Service Layer
-// Automatically uses EXPO_PUBLIC_API_URL or defaults to http://localhost:5000/api
 let BACKEND_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:5000/api";
 let authToken = null;
 
-// Seeded Strathmore accounts for strict offline credential validation when backend is unreachable
+// Device-local remembered Google accounts (only accounts the user has signed into on THIS device)
+let deviceGoogleAccountsMemory = [];
+
+export function getDeviceGoogleAccounts() {
+  try {
+    if (typeof localStorage !== "undefined") {
+      const raw = localStorage.getItem("smartevent_mobile_device_google_accounts");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    }
+  } catch (e) {
+    // ignore storage errors on native
+  }
+  return deviceGoogleAccountsMemory;
+}
+
+export function saveDeviceGoogleAccount(account) {
+  if (!account || !account.email) return deviceGoogleAccountsMemory;
+  const current = getDeviceGoogleAccounts().filter(
+    (a) => a.email.toLowerCase() !== account.email.toLowerCase()
+  );
+  const updated = [
+    {
+      email: account.email.toLowerCase(),
+      name: account.name || account.email.split("@")[0],
+      role: account.role || "student",
+      lastUsed: new Date().toISOString()
+    },
+    ...current
+  ].slice(0, 5);
+  deviceGoogleAccountsMemory = updated;
+  try {
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem("smartevent_mobile_device_google_accounts", JSON.stringify(updated));
+    }
+  } catch (e) {
+    // ignore
+  }
+  return updated;
+}
+
+export function removeDeviceGoogleAccount(email) {
+  const updated = getDeviceGoogleAccounts().filter(
+    (a) => a.email.toLowerCase() !== String(email || "").toLowerCase()
+  );
+  deviceGoogleAccountsMemory = updated;
+  try {
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem("smartevent_mobile_device_google_accounts", JSON.stringify(updated));
+    }
+  } catch (e) {
+    // ignore
+  }
+  return updated;
+}
+
+// Offline verification store matching the 22 backend accounts (2 Admins, 10 Organizers, 10 Students)
 const SEEDED_ACCOUNTS = [
-  { id: "usr-admin-1", name: "Elvis Wanyama Wafuke (Admin)", email: "admin@strathmore.edu", password: "password123", role: "admin", adminCode: "ADM-001", phone: "+254712345678", department: "ICT Infrastructure & Enterprise Systems" },
-  { id: "usr-admin-2", name: "Mr. Allan Vikiru", email: "allan.vikiru@strathmore.edu", password: "password123", role: "admin", adminCode: "ADM-002", phone: "+254720998811", department: "School of Computing & Engineering Sciences (Supervisor)" },
-  { id: "usr-org-1", name: "Dr. Joseph Orero (SCES Dean's Office)", email: "organizer@strathmore.edu", password: "password123", role: "organizer", organizerCode: "ORG-001", phone: "+254721001122", department: "School of Computing & Engineering Sciences" },
-  { id: "usr-org-2", name: "@iLabAfrica Innovation Centre", email: "ilab@strathmore.edu", password: "password123", role: "organizer", organizerCode: "ORG-002", phone: "+254722334455", department: "Directorate of Research & Tech Innovation" },
-  { id: "usr-org-3", name: "Strathmore Career Development Services", email: "careers@strathmore.edu", password: "password123", role: "organizer", organizerCode: "ORG-003", phone: "+254733556677", department: "Career Placement & Industry Relations" },
-  { id: "usr-org-4", name: "Strathmore Sports & Athletics Council", email: "sports@strathmore.edu", password: "password123", role: "organizer", organizerCode: "ORG-004", phone: "+254710887766", department: "Sports & Student Welfare Department" },
+  // 2 Admins
+  { id: "usr-admin-1", name: "Elvis Wanyama Wafuke", email: "admin@strathmore.edu", password: "password123", role: "admin", staffId: "ADM-001", clearanceLevel: "Super Admin", phone: "+254712345678", department: "ICT & Campus Operations Directorate" },
+  { id: "usr-admin-2", name: "Mr. Allan Vikiru", email: "allan.vikiru@strathmore.edu", password: "password123", role: "admin", staffId: "ADM-002", clearanceLevel: "Academic & System Auditor", phone: "+254722998877", department: "School of Computing & Engineering Sciences (SCES)" },
+
+  // 10 Organizers
+  { id: "usr-org-1", name: "Dr. Joseph Orero (SCES Dean's Office)", email: "organizer@strathmore.edu", password: "password123", role: "organizer", organizerCode: "ORG-001", organizationName: "SCES Academic & Research Colloquium", phone: "+254711223344", department: "School of Computing & Engineering Sciences" },
+  { id: "usr-org-2", name: "@iLabAfrica Innovation Centre", email: "ilab@strathmore.edu", password: "password123", role: "organizer", organizerCode: "ORG-002", organizationName: "@iLabAfrica Research & Incubation Hub", phone: "+254722334455", department: "Directorate of Research & Tech Innovation" },
+  { id: "usr-org-3", name: "Strathmore Career Development Services", email: "careers@strathmore.edu", password: "password123", role: "organizer", organizerCode: "ORG-003", organizationName: "Strathmore Career & Industry Liaison Office", phone: "+254733556677", department: "Career Placement & Alumni Relations" },
+  { id: "usr-org-4", name: "Strathmore Sports & Athletics Council", email: "sports@strathmore.edu", password: "password123", role: "organizer", organizerCode: "ORG-004", organizationName: "Strathmore Blades & Scorpions Sports Directorate", phone: "+254710887766", department: "Sports & Student Welfare Department" },
+  { id: "usr-org-5", name: "Strathmore Business School (SBS) Executive Events", email: "sbs.events@strathmore.edu", password: "password123", role: "organizer", organizerCode: "ORG-005", organizationName: "Strathmore Business School Leadership Forum", phone: "+254721445566", department: "Strathmore Business School (SBS)" },
+  { id: "usr-org-6", name: "Strathmore Law Clinic & Moot Society", email: "lawsociety@strathmore.edu", password: "password123", role: "organizer", organizerCode: "ORG-006", organizationName: "Strathmore Law School Moot & Legal Aid Society", phone: "+254734667788", department: "Strathmore Law School (SLS)" },
+  { id: "usr-org-7", name: "Strathmore Student Council (SSC)", email: "studentcouncil@strathmore.edu", password: "password123", role: "organizer", organizerCode: "ORG-007", organizationName: "Strathmore University Student Council (SSC)", phone: "+254715778899", department: "Dean of Students Office" },
+  { id: "usr-org-8", name: "Google Developer Student Club (GDSC Strathmore)", email: "gdsc@strathmore.edu", password: "password123", role: "organizer", organizerCode: "ORG-008", organizationName: "GDSC & IEEE Strathmore Tech Chapter", phone: "+254726889900", department: "SCES Student Tech Communities" },
+  { id: "usr-org-9", name: "Strathmore Enterprise Development Centre (SEDC)", email: "sedc@strathmore.edu", password: "password123", role: "organizer", organizerCode: "ORG-009", organizationName: "SEDC Entrepreneurship & SME Hub", phone: "+254737990011", department: "Strathmore Enterprise Development Centre" },
+  { id: "usr-org-10", name: "Strathmore Community Outreach & Sustainability Club", email: "community@strathmore.edu", password: "password123", role: "organizer", organizerCode: "ORG-010", organizationName: "Community Service Centre & Green Campus Initiative", phone: "+254718112244", department: "Community Outreach Programme (COP)" },
+
+  // 10 Students
   { id: "usr-stud-1", name: "Elvis Wanyama Wafuke", email: "student@strathmore.edu", password: "password123", role: "student", studentId: "154210", phone: "+254712345678", department: "BSc Informatics & Computer Science" },
   { id: "usr-stud-2", name: "Amina Hassan", email: "amina.hassan@strathmore.edu", password: "password123", role: "student", studentId: "154382", phone: "+254722112233", department: "BSc Computer Networks & Cyber Security" },
-  { id: "usr-stud-3", name: "Kevin Otieno", email: "kevin.otieno@strathmore.edu", password: "password123", role: "student", studentId: "153910", phone: "+254733445566", department: "BSc Business Information Technology" },
-  { id: "usr-stud-4", name: "Grace Wanjiku", email: "grace.wanjiku@strathmore.edu", password: "password123", role: "student", studentId: "155104", phone: "+254711998877", department: "BSc Informatics & Computer Science" },
-  { id: "usr-stud-5", name: "Brian Kiprop", email: "brian.kiprop@strathmore.edu", password: "password123", role: "student", studentId: "154890", phone: "+254745667788", department: "BSc Telecommunications & Electrical Engineering" },
-  { id: "usr-stud-6", name: "Faith Mutua", email: "faith.mutua@strathmore.edu", password: "password123", role: "student", studentId: "155220", phone: "+254701234567", department: "Bachelor of Financial Services" }
+  { id: "usr-stud-3", name: "Brian Kiprop", email: "brian.kiprop@strathmore.edu", password: "password123", role: "student", studentId: "153904", phone: "+254733445566", department: "BSc Business Information Technology (BBIT)" },
+  { id: "usr-stud-4", name: "Grace Wanjiku", email: "grace.wanjiku@strathmore.edu", password: "password123", role: "student", studentId: "155102", phone: "+254715998811", department: "Bachelor of Commerce (Finance)" },
+  { id: "usr-stud-5", name: "Kevin Omondi", email: "kevin.omondi@strathmore.edu", password: "password123", role: "student", studentId: "154771", phone: "+254728776655", department: "BSc Electrical & Electronics Engineering" },
+  { id: "usr-stud-6", name: "Faith Mutua", email: "faith.mutua@strathmore.edu", password: "password123", role: "student", studentId: "155419", phone: "+254799112244", department: "Bachelor of Laws (LLB)" },
+  { id: "usr-stud-7", name: "David Njoroge", email: "david.njoroge@strathmore.edu", password: "password123", role: "student", studentId: "154615", phone: "+254714556677", department: "BSc Financial Engineering" },
+  { id: "usr-stud-8", name: "Cynthia Chebet", email: "cynthia.chebet@strathmore.edu", password: "password123", role: "student", studentId: "155288", phone: "+254725667788", department: "BSc Informatics & Computer Science" },
+  { id: "usr-stud-9", name: "Samuel Mwangi", email: "samuel.mwangi@strathmore.edu", password: "password123", role: "student", studentId: "153812", phone: "+254736778899", department: "BSc Supply Chain & Operations Management" },
+  { id: "usr-stud-10", name: "Michelle Akinyi", email: "michelle.akinyi@strathmore.edu", password: "password123", role: "student", studentId: "155604", phone: "+254719889900", department: "BSc Data Science & Analytics" }
 ];
 
 let localUsersCache = [...SEEDED_ACCOUNTS];
 let localEventsCache = null;
 let localSmsCache = null;
+let failedLoginMap = {};
 
 export function setBackendUrl(url) {
   if (url && url.trim()) {
@@ -37,22 +110,33 @@ export function setAuthToken(token) {
   authToken = token;
 }
 
-function getHeaders() {
+function getHeaders(tokenOverride) {
   const headers = { "Content-Type": "application/json" };
-  if (authToken) {
-    headers["Authorization"] = `Bearer ${authToken}`;
+  const t = tokenOverride || authToken;
+  if (t) {
+    headers["Authorization"] = `Bearer ${t}`;
   }
   return headers;
 }
 
 /**
- * Strict Login: verifies email, password, and role against backend or offline seeded accounts.
+ * Strict Login: verifies email & password (with brute-force protection).
  * Rejects invalid credentials!
  */
-export async function loginUser({ email, password, role }) {
+export async function loginUser({ email, password, role = "auto" }) {
   const normalizedEmail = String(email || "").trim().toLowerCase();
   if (!normalizedEmail || !password) {
     return { success: false, error: "Email address and password are required." };
+  }
+
+  // Brute-force lockout check
+  const failInfo = failedLoginMap[normalizedEmail];
+  if (failInfo && failInfo.count >= 5 && Date.now() - failInfo.last < 60000) {
+    const secs = Math.ceil((60000 - (Date.now() - failInfo.last)) / 1000);
+    return {
+      success: false,
+      error: `Too many failed attempts. Please wait ${secs}s before trying again.`
+    };
   }
 
   try {
@@ -63,8 +147,13 @@ export async function loginUser({ email, password, role }) {
     });
     const data = await response.json();
     if (!response.ok || !data.success) {
+      failedLoginMap[normalizedEmail] = {
+        count: ((failInfo && failInfo.count) || 0) + 1,
+        last: Date.now()
+      };
       return { success: false, error: data.error || "Invalid email or password credentials." };
     }
+    delete failedLoginMap[normalizedEmail];
     if (data.token) {
       authToken = data.token;
     }
@@ -72,25 +161,27 @@ export async function loginUser({ email, password, role }) {
   } catch (networkErr) {
     // Offline validation: strictly check against localUsersCache
     const account = localUsersCache.find((u) => u.email.toLowerCase() === normalizedEmail);
-    if (!account) {
-      return { success: false, error: "Invalid credentials: No account found with that email address." };
+    if (!account || account.password !== password) {
+      failedLoginMap[normalizedEmail] = {
+        count: ((failInfo && failInfo.count) || 0) + 1,
+        last: Date.now()
+      };
+      return { success: false, error: "Invalid email or password credentials." };
     }
-    if (account.password !== password) {
-      return { success: false, error: "Invalid credentials: Incorrect password." };
-    }
-    if (role && account.role !== role) {
+    if (role && role !== "auto" && account.role.toLowerCase() !== String(role).toLowerCase()) {
       return {
         success: false,
-        error: `Role mismatch: '${account.email}' is registered as '${account.role.toUpperCase()}', not '${role.toUpperCase()}'.`
+        error: `Access Denied: This account is registered as '${account.role.toUpperCase()}', not '${String(role).toUpperCase()}'.`
       };
     }
+    delete failedLoginMap[normalizedEmail];
     const { password: _, ...safeUser } = account;
     authToken = `offline_jwt_${account.id}_${Date.now()}`;
     return {
       success: true,
       offline: true,
       token: authToken,
-      user: safeUser
+      user: { ...safeUser, token: authToken }
     };
   }
 }
@@ -100,8 +191,18 @@ export async function signupUser({ name, email, password, role, studentId, phone
   if (!name || !normalizedEmail || !password) {
     return { success: false, error: "Full name, email, and password are required." };
   }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+    return { success: false, error: "Please enter a valid email address." };
+  }
   if (String(password).length < 6) {
     return { success: false, error: "Password must be at least 6 characters long." };
+  }
+  const requestedRole = String(role || "student").toLowerCase();
+  if (requestedRole === "admin") {
+    return {
+      success: false,
+      error: "Security Restriction: Administrator accounts cannot be self-registered publicly."
+    };
   }
 
   try {
@@ -109,10 +210,10 @@ export async function signupUser({ name, email, password, role, studentId, phone
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        name,
+        name: String(name).trim(),
         email: normalizedEmail,
         password,
-        role: role || "student",
+        role: requestedRole,
         studentId: studentId || "154210",
         phone: phone || "+254712345678",
         department: department || "BSc Informatics & Computer Science"
@@ -130,14 +231,16 @@ export async function signupUser({ name, email, password, role, studentId, phone
     if (localUsersCache.some((u) => u.email.toLowerCase() === normalizedEmail)) {
       return { success: false, error: "An account with this email already exists." };
     }
-    const validRole = ["admin", "organizer", "student"].includes(role) ? role : "student";
+    const validRole = requestedRole === "organizer" ? "organizer" : "student";
     const newUser = {
       id: `usr-${validRole}-${Date.now()}`,
       name: String(name).trim(),
       email: normalizedEmail,
       password,
       role: validRole,
-      studentId: validRole === "student" ? (studentId || "154210") : undefined,
+      studentId: validRole === "student" ? (studentId || "155910") : undefined,
+      organizerCode: validRole === "organizer" ? `ORG-${Math.floor(100 + Math.random() * 900)}` : undefined,
+      organizationName: validRole === "organizer" ? String(name).trim() : undefined,
       phone: phone || "+254712345678",
       department: department || "BSc Informatics & Computer Science"
     };
@@ -148,22 +251,25 @@ export async function signupUser({ name, email, password, role, studentId, phone
       success: true,
       offline: true,
       token: authToken,
-      user: safeUser
+      user: { ...safeUser, token: authToken }
     };
   }
 }
 
-export async function googleSignInMobile({ email, name, role }) {
+export async function googleSignInMobile({ email, name, password, role = "auto" }) {
   const normalizedEmail = String(email || "").trim().toLowerCase();
-  if (!normalizedEmail) {
-    return { success: false, error: "Please select or enter a valid Google account email." };
+  if (!normalizedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+    return { success: false, error: "Please enter a valid Google Workspace (@strathmore.edu) or Gmail address." };
+  }
+  if (!password) {
+    return { success: false, error: "Please enter your Google account password to verify ownership." };
   }
 
   try {
     const response = await fetch(`${BACKEND_URL}/auth/google`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: normalizedEmail, name, role })
+      body: JSON.stringify({ email: normalizedEmail, name, password, role })
     });
     const data = await response.json();
     if (!response.ok || !data.success) {
@@ -172,38 +278,64 @@ export async function googleSignInMobile({ email, name, role }) {
     if (data.token) {
       authToken = data.token;
     }
+    saveDeviceGoogleAccount(data.user);
     return data;
   } catch (networkErr) {
     const existing = localUsersCache.find((u) => u.email.toLowerCase() === normalizedEmail);
     if (existing) {
-      if (role && existing.role !== role) {
+      if (existing.password !== password) {
         return {
           success: false,
-          error: `Google account ${existing.email} is registered as '${existing.role.toUpperCase()}', not '${role.toUpperCase()}'.`
+          error: "Incorrect password for this Google Workspace account."
+        };
+      }
+      if (role && role !== "auto" && existing.role.toLowerCase() !== String(role).toLowerCase()) {
+        return {
+          success: false,
+          error: `Google account ${existing.email} is registered as '${existing.role.toUpperCase()}', not '${String(role).toUpperCase()}'.`
         };
       }
       const { password: _, ...safeUser } = existing;
       authToken = `offline_google_${existing.id}_${Date.now()}`;
-      return { success: true, offline: true, token: authToken, user: safeUser };
+      saveDeviceGoogleAccount(safeUser);
+      return { success: true, offline: true, token: authToken, user: { ...safeUser, token: authToken } };
     }
-    if (role === "admin") {
+
+    if (String(role).toLowerCase() === "admin") {
       return {
         success: false,
-        error: "Admin accounts cannot be self-created. Use admin@strathmore.edu or allan.vikiru@strathmore.edu."
+        error: "Administrator accounts cannot be self-created via Google Sign-In."
       };
     }
+    if (String(password).length < 6) {
+      return {
+        success: false,
+        error: "Google password must be at least 6 characters."
+      };
+    }
+
+    const validRole = String(role).toLowerCase() === "organizer" ? "organizer" : "student";
+    const formattedName =
+      name ||
+      normalizedEmail
+        .split("@")[0]
+        .replace(/[._-]/g, " ")
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+
     const newUser = {
       id: `usr-google-${Date.now()}`,
-      name: name || normalizedEmail.split("@")[0],
+      name: formattedName,
       email: normalizedEmail,
-      role: role || "student",
-      studentId: "155901",
+      role: validRole,
+      studentId: validRole === "student" ? "155901" : undefined,
+      organizerCode: validRole === "organizer" ? "ORG-105" : undefined,
       phone: "+254712345678",
       department: "BSc Informatics & Computer Science"
     };
-    localUsersCache.push({ ...newUser, password: "password123" });
+    localUsersCache.push({ ...newUser, password });
     authToken = `offline_google_${newUser.id}_${Date.now()}`;
-    return { success: true, offline: true, token: authToken, user: newUser };
+    saveDeviceGoogleAccount(newUser);
+    return { success: true, offline: true, token: authToken, user: { ...newUser, token: authToken } };
   }
 }
 
@@ -224,11 +356,11 @@ export async function fetchEvents() {
   return localEventsCache;
 }
 
-export async function createMobileEvent(eventPayload) {
+export async function createEventMobile(eventPayload, tokenOverride) {
   try {
     const response = await fetch(`${BACKEND_URL}/events`, {
       method: "POST",
-      headers: getHeaders(),
+      headers: getHeaders(tokenOverride),
       body: JSON.stringify(eventPayload)
     });
     const data = await response.json();
@@ -251,11 +383,13 @@ export async function createMobileEvent(eventPayload) {
   return { success: true, data: newEvt };
 }
 
-export async function deleteMobileEvent(eventId) {
+export const createMobileEvent = createEventMobile;
+
+export async function deleteEventMobile(eventId, tokenOverride) {
   try {
     await fetch(`${BACKEND_URL}/events/${eventId}`, {
       method: "DELETE",
-      headers: getHeaders()
+      headers: getHeaders(tokenOverride)
     });
   } catch (err) {
     // Offline fallback
@@ -264,6 +398,26 @@ export async function deleteMobileEvent(eventId) {
     localEventsCache = localEventsCache.filter((e) => e.id !== eventId);
   }
   return { success: true };
+}
+
+export const deleteMobileEvent = deleteEventMobile;
+
+export async function fetchAdminOverview(tokenOverride) {
+  try {
+    const response = await fetch(`${BACKEND_URL}/admin/overview`, {
+      headers: getHeaders(tokenOverride)
+    });
+    const data = await response.json();
+    if (data && data.success) {
+      return data.data || data;
+    }
+  } catch (err) {
+    // Offline fallback
+  }
+  return {
+    users: localUsersCache.map(({ password, ...u }) => u),
+    events: localEventsCache || getFallbackEvents()
+  };
 }
 
 export async function fetchEventPrediction(event) {
@@ -345,17 +499,17 @@ export async function fetchPriorityNotifications() {
   return localSmsCache;
 }
 
-export async function sendPrioritySmsMobile({ eventId, eventTitle, priority, message, recipients }) {
+export async function sendPrioritySmsMobile({ eventId, eventTitle, priority, message, phoneNumbers, broadcastToEventRoster }, tokenOverride) {
   try {
     const response = await fetch(`${BACKEND_URL}/sms/send`, {
       method: "POST",
-      headers: getHeaders(),
+      headers: getHeaders(tokenOverride),
       body: JSON.stringify({
         eventId,
         eventTitle,
         priority: priority || "HIGH",
-        broadcastToEventRoster: true,
-        recipients: recipients ? recipients.split(",").map((s) => s.trim()).filter(Boolean) : [],
+        broadcastToEventRoster: Boolean(broadcastToEventRoster),
+        phoneNumbers: Array.isArray(phoneNumbers) ? phoneNumbers : [],
         message
       })
     });
@@ -370,123 +524,264 @@ export async function sendPrioritySmsMobile({ eventId, eventTitle, priority, mes
     id: `sms-${Date.now()}`,
     eventId: eventId || "evt-101",
     eventTitle: eventTitle || "Campus Alert",
-    recipient: recipients || "+254712345678",
-    recipientName: "Event Roster",
+    recipientCount: Array.isArray(phoneNumbers) ? phoneNumbers.length : 1,
     message: `[${priority || "HIGH"} PRIORITY] ${message}`,
     priority: priority || "HIGH",
-    status: "DELIVERED",
-    gatewayResponse: "Africa's Talking Gateway",
-    cost: "KES 0.80",
+    status: "DELIVERED (Africa's Talking Gateway)",
     sentAt: "Just now"
   };
   localSmsCache = [newLog, ...(localSmsCache || getFallbackNotifications())];
-  return { success: true, message: "Dispatched via Africa's Talking API!", logs: [newLog] };
-}
-
-export async function fetchAllUsersMobile() {
-  try {
-    const response = await fetch(`${BACKEND_URL}/users`, { headers: getHeaders() });
-    const data = await response.json();
-    if (data.success && Array.isArray(data.data)) {
-      return data.data;
+  return {
+    success: true,
+    data: {
+      provider: "Africa's Talking Gateway",
+      recipientCount: newLog.recipientCount,
+      status: "SENT"
     }
-  } catch (err) {
-    // Offline fallback
-  }
-  return localUsersCache.map(({ password, ...u }) => u);
+  };
 }
 
 function getFallbackEvents() {
   return [
     {
       id: "evt-101",
-      title: "Strathmore Tech Innovation Summit 2026",
+      title: "Strathmore AI & Machine Learning Annual Colloquium",
       category: "Academic",
-      description: "Annual university technology showcase featuring final-year BSc ICS & BBIT projects, keynote speakers, and industry networking.",
-      date: "2026-10-25",
-      time: "09:00 AM",
-      timeSlot: "Morning",
-      venue: "Sir Thomas More Building, Auditorium A",
-      organizer: "Dr. Joseph Orero (SCES Dean's Office)",
-      venueCapacity: 350,
-      registrationCount: 284,
-      predictedAttendance: 242,
-      smsPriority: 3
+      date: "2026-11-12",
+      time: "14:00 - 17:00",
+      timeSlot: "Afternoon",
+      venue: "Main Auditorium",
+      venueCapacity: 500,
+      registrationCount: 412,
+      smsPriority: 3,
+      organizerId: "usr-org-1",
+      organizerName: "Dr. Joseph Orero (SCES Dean's Office)",
+      description: "Keynote research symposium featuring live demonstrations of predictive campus analytics, computer vision, and NLP systems."
     },
     {
       id: "evt-102",
-      title: "AI & Logistic Regression ML Workshop",
-      category: "Workshop",
-      description: "Hands-on lab session covering data cleaning, synthetic dataset generation, Scikit-learn pipelines, and attendance prediction deployment.",
-      date: "2026-10-28",
-      time: "02:00 PM",
-      timeSlot: "Afternoon",
-      venue: "Lab 3, SCES Complex",
-      organizer: "@iLabAfrica Innovation Centre",
-      venueCapacity: 80,
-      registrationCount: 68,
-      predictedAttendance: 58,
-      smsPriority: 3
+      title: "Final Year IS Project Defense & Poster Exhibition",
+      category: "Academic",
+      date: "2026-11-26",
+      time: "08:30 - 13:00",
+      timeSlot: "Morning",
+      venue: "SCES Lecture Theatre 4 (LT4)",
+      venueCapacity: 180,
+      registrationCount: 164,
+      smsPriority: 3,
+      organizerId: "usr-org-1",
+      organizerName: "Dr. Joseph Orero (SCES Dean's Office)",
+      description: "Official BSc Informatics & Computer Science project defense showcase evaluated by SCES faculty panels."
     },
     {
       id: "evt-103",
-      title: "Annual Graduate Career & Internship Fair 2026",
-      category: "Career Fair",
-      description: "Meet 40+ top employers in software engineering, fintech, consulting, and telecommunications recruiting Strathmore students.",
-      date: "2026-11-02",
-      time: "10:00 AM",
+      title: "Cybersecurity & Cloud Threat Hunting Bootcamp",
+      category: "Workshop",
+      date: "2026-11-15",
+      time: "09:00 - 13:00",
       timeSlot: "Morning",
-      venue: "Student Centre Main Hall",
-      organizer: "Strathmore Career Development Services",
-      venueCapacity: 400,
-      registrationCount: 335,
-      predictedAttendance: 291,
-      smsPriority: 3
+      venue: "iLab Africa Innovation Room 302",
+      venueCapacity: 120,
+      registrationCount: 114,
+      smsPriority: 3,
+      organizerId: "usr-org-2",
+      organizerName: "@iLabAfrica Innovation Centre",
+      description: "Intensive hands-on blue-team defense lab covering zero-trust network architecture and SIEM log analysis."
     },
     {
       id: "evt-104",
-      title: "Zero-Trust Cybersecurity & Cloud FinTech Seminar",
-      category: "Seminar",
-      description: "Industry guest lecture on securing mobile money APIs, cloud infrastructure resilience, and AI threat detection.",
-      date: "2026-11-05",
-      time: "04:00 PM",
-      timeSlot: "Afternoon",
-      venue: "MSB Lecture Theatre 2",
-      organizer: "@iLabAfrica Innovation Centre",
-      venueCapacity: 150,
+      title: "Fintech & Africa's Talking API Developer Hackathon",
+      category: "Workshop",
+      date: "2026-11-21",
+      time: "08:30 - 17:30",
+      timeSlot: "Morning",
+      venue: "iLab Africa Innovation Room 302",
+      venueCapacity: 120,
       registrationCount: 118,
-      predictedAttendance: 96,
-      smsPriority: 2
+      smsPriority: 3,
+      organizerId: "usr-org-2",
+      organizerName: "@iLabAfrica Innovation Centre",
+      description: "24-hour sprint building USSD, Priority SMS, and mobile payment solutions using Africa's Talking APIs."
     },
     {
       id: "evt-105",
-      title: "Inter-Faculty Sports & Fitness Championship",
-      category: "Sports",
-      description: "Annual campus-wide sports competition featuring football, basketball, rugby 7s, athletics, and recreational activities.",
-      date: "2026-11-08",
-      time: "08:30 AM",
+      title: "Annual Engineering & Tech Graduate Career Fair",
+      category: "Career Fair",
+      date: "2026-11-18",
+      time: "10:00 - 16:00",
       timeSlot: "Morning",
-      venue: "Strathmore Sports Complex Grounds",
-      organizer: "Strathmore Sports & Athletics Council",
-      venueCapacity: 500,
-      registrationCount: 365,
-      predictedAttendance: 312,
-      smsPriority: 2
+      venue: "Student Center Graduation Square",
+      venueCapacity: 600,
+      registrationCount: 485,
+      smsPriority: 2,
+      organizerId: "usr-org-3",
+      organizerName: "Strathmore Career Development Services",
+      description: "Connect directly with hiring managers from Safaricom, Microsoft ADC, Google Nairobi, Deloitte, and Equity Bank."
     },
     {
       id: "evt-106",
-      title: "Africa's Talking Developer & IoT Hackathon",
-      category: "Club Activity",
-      description: "24-hour student buildathon building USSD, Priority SMS, Voice, and Airtime APIs for campus and community impact.",
-      date: "2026-11-12",
-      time: "09:00 AM",
+      title: "Global Tech CV Clinic & Mock Technical Interviews",
+      category: "Career Fair",
+      date: "2026-11-29",
+      time: "14:00 - 17:00",
+      timeSlot: "Afternoon",
+      venue: "SCES Lecture Theatre 4 (LT4)",
+      venueCapacity: 180,
+      registrationCount: 132,
+      smsPriority: 2,
+      organizerId: "usr-org-3",
+      organizerName: "Strathmore Career Development Services",
+      description: "One-on-one resume reviews and whiteboard data-structure interview coaching with alumni engineers."
+    },
+    {
+      id: "evt-107",
+      title: "Inter-Faculty Chancellor's Cup Football & Rugby Finals",
+      category: "Sports",
+      date: "2026-11-28",
+      time: "15:00 - 18:30",
+      timeSlot: "Afternoon",
+      venue: "Strathmore Sports Complex Main Pitch",
+      venueCapacity: 800,
+      registrationCount: 640,
+      smsPriority: 2,
+      organizerId: "usr-org-4",
+      organizerName: "Strathmore Sports & Athletics Council",
+      description: "Championship showdown between SCES Titans and SIMS Warriors followed by the trophy presentation."
+    },
+    {
+      id: "evt-108",
+      title: "East Africa Quantitative Finance & Data Science Summit",
+      category: "Seminar",
+      date: "2026-11-24",
+      time: "14:00 - 16:30",
+      timeSlot: "Afternoon",
+      venue: "Strathmore Business School (SBS) Auditorium",
+      venueCapacity: 300,
+      registrationCount: 238,
+      smsPriority: 2,
+      organizerId: "usr-org-5",
+      organizerName: "Strathmore Business School (SBS) Executive Events",
+      description: "Executive panel exploring algorithmic trading, credit risk modeling, and central bank digital currencies."
+    },
+    {
+      id: "evt-109",
+      title: "CEO Fireside Chat: Leading Digital Transformation in Africa",
+      category: "Seminar",
+      date: "2026-12-03",
+      time: "17:30 - 19:30",
+      timeSlot: "Evening",
+      venue: "Strathmore Business School (SBS) Auditorium",
+      venueCapacity: 300,
+      registrationCount: 265,
+      smsPriority: 3,
+      organizerId: "usr-org-5",
+      organizerName: "Strathmore Business School (SBS) Executive Events",
+      description: "Evening executive leadership dialogue with C-suite leaders on scaling enterprise governance and AI adoption."
+    },
+    {
+      id: "evt-110",
+      title: "Data Privacy, AI Regulation & Kenya Data Protection Act Symposium",
+      category: "Academic",
+      date: "2026-12-01",
+      time: "14:00 - 17:00",
+      timeSlot: "Afternoon",
+      venue: "SLS Moot Court Chambers",
+      venueCapacity: 150,
+      registrationCount: 138,
+      smsPriority: 2,
+      organizerId: "usr-org-6",
+      organizerName: "Strathmore Law Clinic & Moot Society",
+      description: "Legal and technical debate with the Office of the Data Protection Commissioner (ODPC) on algorithmic accountability."
+    },
+    {
+      id: "evt-111",
+      title: "Strathmore Annual Cultural Week Gala & Concert",
+      category: "Cultural",
+      date: "2026-12-04",
+      time: "16:00 - 20:00",
+      timeSlot: "Evening",
+      venue: "Student Center Graduation Square",
+      venueCapacity: 600,
+      registrationCount: 540,
+      smsPriority: 1,
+      organizerId: "usr-org-7",
+      organizerName: "Strathmore Student Council (SSC)",
+      description: "Celebration of international diversity featuring culinary showcases, traditional performances, and live campus musical acts."
+    },
+    {
+      id: "evt-112",
+      title: "Student Townhall & Campus Welfare Open Forum",
+      category: "Seminar",
+      date: "2026-11-19",
+      time: "11:00 - 13:00",
       timeSlot: "Morning",
-      venue: "@iLabAfrica Innovation Boardroom",
-      organizer: "@iLabAfrica Innovation Centre",
+      venue: "Main Auditorium",
+      venueCapacity: 500,
+      registrationCount: 320,
+      smsPriority: 3,
+      organizerId: "usr-org-7",
+      organizerName: "Strathmore Student Council (SSC)",
+      description: "Direct Q&A session between the 16th Student Council Executive, Dean of Students, and student body."
+    },
+    {
+      id: "evt-113",
+      title: "Kotlin, Flutter & Gemini Android DevFest Strathmore",
+      category: "Workshop",
+      date: "2026-11-27",
+      time: "09:00 - 15:00",
+      timeSlot: "Morning",
+      venue: "iLab Africa Innovation Room 302",
       venueCapacity: 120,
-      registrationCount: 108,
-      predictedAttendance: 95,
-      smsPriority: 3
+      registrationCount: 116,
+      smsPriority: 3,
+      organizerId: "usr-org-8",
+      organizerName: "Google Developer Student Club (GDSC Strathmore)",
+      description: "Hands-on mobile engineering codelab building cross-platform apps with on-device Gemini Nano and Firebase."
+    },
+    {
+      id: "evt-114",
+      title: "Open Source & Kubernetes Cloud Native Study Jam",
+      category: "Workshop",
+      date: "2026-12-06",
+      time: "10:00 - 14:00",
+      timeSlot: "Morning",
+      venue: "SCES Lecture Theatre 4 (LT4)",
+      venueCapacity: 180,
+      registrationCount: 149,
+      smsPriority: 2,
+      organizerId: "usr-org-8",
+      organizerName: "Google Developer Student Club (GDSC Strathmore)",
+      description: "Practical container orchestration workshop deploying microservices on Google Kubernetes Engine (GKE) and Docker."
+    },
+    {
+      id: "evt-115",
+      title: "Student Startup Pitch Deck & Venture Capital Demo Day",
+      category: "Career Fair",
+      date: "2026-12-08",
+      time: "14:00 - 17:30",
+      timeSlot: "Afternoon",
+      venue: "Strathmore Business School (SBS) Auditorium",
+      venueCapacity: 300,
+      registrationCount: 244,
+      smsPriority: 3,
+      organizerId: "usr-org-9",
+      organizerName: "Strathmore Enterprise Development Centre (SEDC)",
+      description: "Ten student-founded startups pitch to Nairobi angel investors and VC funds for seed grants up to KES 1,500,000."
+    },
+    {
+      id: "evt-116",
+      title: "Green Campus Solar & E-Waste Recycling Innovation Drive",
+      category: "Cultural",
+      date: "2026-12-10",
+      time: "09:00 - 14:00",
+      timeSlot: "Morning",
+      venue: "Student Center Graduation Square",
+      venueCapacity: 600,
+      registrationCount: 385,
+      smsPriority: 2,
+      organizerId: "usr-org-10",
+      organizerName: "Strathmore Community Outreach & Sustainability Club",
+      description: "Campus sustainability drive collecting electronic waste for safe refurbishment and showcasing student clean-energy prototypes."
     }
   ];
 }
@@ -494,31 +789,31 @@ function getFallbackEvents() {
 function getFallbackNotifications() {
   return [
     {
-      id: "sms-101",
-      eventTitle: "Strathmore Tech Innovation Summit 2026",
+      id: "sms-901",
+      eventTitle: "Strathmore AI & Machine Learning Annual Colloquium",
       recipient: "+254712345678",
-      message: "[HIGH PRIORITY] Keynote venue confirmed at Auditorium A (Sir Thomas More Bldg). Doors open at 8:30 AM.",
+      message: "🚨 [URGENT - Strathmore SmartEvent]: AI & ML Annual Colloquium starts at 14:00 in Main Auditorium. Present your Student ID at Entry Gate B.",
       priority: "HIGH",
-      gatewayResponse: "Africa's Talking SMS Gateway",
-      sentAt: "Today, 08:15 AM"
+      status: "DELIVERED",
+      sentAt: "Today, 08:30 AM"
     },
     {
-      id: "sms-102",
-      eventTitle: "AI & Logistic Regression ML Workshop",
-      recipient: "+254722112233",
-      message: "[HIGH PRIORITY] Lab 3 capacity is 85% full! Please bring your laptop with Python 3 & Scikit-learn installed.",
+      id: "sms-902",
+      eventTitle: "Cybersecurity & Cloud Threat Hunting Bootcamp",
+      recipient: "+254712345678",
+      message: "🚨 [URGENT - @iLabAfrica]: Room 302 lab workstations are pre-configured. Bring your laptop charger and QR pass.",
       priority: "HIGH",
-      gatewayResponse: "Africa's Talking SMS Gateway",
-      sentAt: "Today, 10:30 AM"
+      status: "DELIVERED",
+      sentAt: "Today, 11:15 AM"
     },
     {
-      id: "sms-103",
-      eventTitle: "Annual Graduate Career & Internship Fair 2026",
+      id: "sms-903",
+      eventTitle: "Annual Engineering & Tech Graduate Career Fair",
       recipient: "+254733445566",
-      message: "[MEDIUM PRIORITY] Reminder: Upload your updated CV to the Career Services portal before Friday.",
+      message: "📌 [REMINDER - Career Services]: Employer booths open at 10:00 AM at Graduation Square. Upload your CV to the SmartEvent portal.",
       priority: "MEDIUM",
-      gatewayResponse: "Africa's Talking SMS Gateway",
-      sentAt: "Yesterday, 04:20 PM"
+      status: "DELIVERED",
+      sentAt: "Yesterday, 02:00 PM"
     }
   ];
 }

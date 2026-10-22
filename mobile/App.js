@@ -4,7 +4,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  SafeAreaView,
   ScrollView,
   TextInput,
   Alert,
@@ -36,10 +35,14 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('home');
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [registeredIds, setRegisteredIds] = useState(['evt-101']);
-  const [savedIds, setSavedIds] = useState(['evt-102']);
+  const [savedIds, setSavedIds] = useState(['evt-103']);
   const [allEvents, setAllEvents] = useState([]);
   const [adminOverview, setAdminOverview] = useState(null);
   const [smsLogs, setSmsLogs] = useState([]);
+
+  // Organizer Scope ('mine' vs 'all') & Admin User Role Filter
+  const [organizerScope, setOrganizerScope] = useState('mine');
+  const [adminRoleFilter, setAdminRoleFilter] = useState('ALL');
 
   // Organizer / Admin Event Creation Form
   const [newEvt, setNewEvt] = useState({
@@ -127,6 +130,9 @@ export default function App() {
     const res = await createEventMobile(
       {
         ...newEvt,
+        organizerId: user?.id,
+        organizerName: user?.name,
+        organizer: user?.name,
         venueCapacity: Number(newEvt.venueCapacity) || 120
       },
       user?.token
@@ -143,7 +149,8 @@ export default function App() {
         smsPriority: 3,
         description: ''
       });
-      Alert.alert('Event Published ✓', `"${res.data.title}" is now live.`);
+      Alert.alert('Event Published ✓', `"${res.data.title}" is now live under your organizer profile.`);
+      setOrganizerScope('mine');
       setActiveTab('home');
     } else {
       Alert.alert('Error', res.error || 'Could not create event');
@@ -160,7 +167,7 @@ export default function App() {
       Alert.alert('Missing Message', 'Please enter an SMS message.');
       return;
     }
-    setSmsStatusMsg('Dispatching via Africa\'s Talking Gateway...');
+    setSmsStatusMsg("Dispatching via Africa's Talking Gateway...");
     const targetEvt = allEvents.find((e) => e.id === smsForm.eventId) || allEvents[0];
     const phones = smsForm.phoneNumbers
       .split(',')
@@ -191,25 +198,36 @@ export default function App() {
     }
   };
 
-  // 1. If Auth Screen Modal is open, render AuthScreen with a "Back to Public Home" button
+  // 1. Auth Screen Modal
   if (authScreenVisible && !user) {
     return (
-      <SafeAreaView style={styles.outerViewport}>
+      <View style={[styles.rootScreen, { backgroundColor: '#003366' }]}>
         <StatusBar style="light" />
-        <View style={styles.mobileFrame}>
+        <View style={styles.mobileContainer}>
           <AuthScreen
             initialMode={authInitialMode}
             onAuthenticate={handleAuthenticate}
             onBackToPublic={() => setAuthScreenVisible(false)}
           />
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   const role = user ? (user.role || 'STUDENT').toUpperCase() : 'PUBLIC';
   const registeredEvents = allEvents.filter((e) => registeredIds.includes(e.id));
   const savedEvents = allEvents.filter((e) => savedIds.includes(e.id));
+
+  // Filter events belonging to the logged-in Organizer
+  const organizerOwnEvents = allEvents.filter(
+    (e) =>
+      (user?.id && e.organizerId === user.id) ||
+      (user?.name && (e.organizerName === user.name || e.organizer === user.name))
+  );
+  const displayedOrganizerEvents =
+    organizerScope === 'mine' && organizerOwnEvents.length > 0
+      ? organizerOwnEvents
+      : allEvents;
 
   // Render Role-Specific Content
   const renderRoleContent = () => {
@@ -341,23 +359,28 @@ export default function App() {
         return (
           <ScrollView contentContainerStyle={styles.scrollPad} showsVerticalScrollIndicator={false}>
             <View style={styles.roleHeroCard}>
-              <Text style={styles.roleHeroTag}>ORGANIZER HOME DASHBOARD</Text>
+              <Text style={styles.roleHeroTag}>
+                ORGANIZER PORTAL • {user.organizerCode || 'ORG'}
+              </Text>
               <Text style={styles.roleHeroTitle}>{user.name}</Text>
               <Text style={styles.roleHeroSub}>
-                {user.organizationName || 'Strathmore Faculty Organizer'} • {allEvents.length} Active Campus Events
+                {user.department || 'Strathmore University'} • {organizerOwnEvents.length} Listed Event(s)
               </Text>
             </View>
 
             <View style={styles.kpiRow}>
               <View style={styles.kpiBox}>
-                <Text style={styles.kpiVal}>{allEvents.length}</Text>
-                <Text style={styles.kpiLbl}>Events</Text>
+                <Text style={styles.kpiVal}>{organizerOwnEvents.length}</Text>
+                <Text style={styles.kpiLbl}>My Listed</Text>
               </View>
               <View style={styles.kpiBox}>
                 <Text style={styles.kpiVal}>
-                  {allEvents.reduce((s, e) => s + (Number(e.registrationCount) || 0), 0)}
+                  {displayedOrganizerEvents.reduce(
+                    (s, e) => s + (Number(e.registrationCount) || 0),
+                    0
+                  )}
                 </Text>
-                <Text style={styles.kpiLbl}>Total RSVPs</Text>
+                <Text style={styles.kpiLbl}>RSVPs</Text>
               </View>
               <View style={styles.kpiBox}>
                 <Text style={styles.kpiVal}>87%</Text>
@@ -365,7 +388,39 @@ export default function App() {
               </View>
             </View>
 
-            <Text style={styles.sectionHeader}>📋 Events Table (Tap to Inspect)</Text>
+            {/* Toggle between My Listed Events & All Campus Events */}
+            <View style={styles.scopeSwitchRow}>
+              <TouchableOpacity
+                style={[styles.scopeBtn, organizerScope === 'mine' && styles.scopeBtnActive]}
+                onPress={() => setOrganizerScope('mine')}
+              >
+                <Text
+                  style={[
+                    styles.scopeBtnText,
+                    organizerScope === 'mine' && styles.scopeBtnTextActive
+                  ]}
+                >
+                  My Listed Events ({organizerOwnEvents.length})
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.scopeBtn, organizerScope === 'all' && styles.scopeBtnActive]}
+                onPress={() => setOrganizerScope('all')}
+              >
+                <Text
+                  style={[
+                    styles.scopeBtnText,
+                    organizerScope === 'all' && styles.scopeBtnTextActive
+                  ]}
+                >
+                  All Campus Events ({allEvents.length})
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.sectionHeader}>
+              📋 {organizerScope === 'mine' ? 'My Listed Events Table' : 'All Campus Events Table'}
+            </Text>
             <View style={styles.tableCard}>
               <View style={styles.tableHeaderRow}>
                 <Text style={[styles.th, { flex: 2.2 }]}>Event</Text>
@@ -373,7 +428,7 @@ export default function App() {
                 <Text style={[styles.th, { flex: 1 }]}>RSVPs</Text>
                 <Text style={[styles.th, { flex: 0.8, textAlign: 'right' }]}>Action</Text>
               </View>
-              {allEvents.map((evt) => (
+              {displayedOrganizerEvents.map((evt) => (
                 <View key={evt.id} style={styles.tableDataRow}>
                   <TouchableOpacity
                     style={{ flex: 2.2 }}
@@ -408,7 +463,7 @@ export default function App() {
           <ScrollView contentContainerStyle={styles.scrollPad} showsVerticalScrollIndicator={false}>
             <Text style={styles.sectionHeader}>➕ Create New Campus Event</Text>
             <Text style={styles.sectionSub}>
-              Publish an event with ML turnout prediction & Africa's Talking SMS priority
+              Listing as: {user.name} ({user.organizerCode || 'Organizer'})
             </Text>
 
             <View style={styles.formCard}>
@@ -494,6 +549,11 @@ export default function App() {
     if (role === 'ADMIN') {
       if (activeTab === 'home') {
         const usersList = adminOverview?.users || [];
+        const filteredUsers =
+          adminRoleFilter === 'ALL'
+            ? usersList
+            : usersList.filter((u) => String(u.role || '').toUpperCase() === adminRoleFilter);
+
         return (
           <ScrollView contentContainerStyle={styles.scrollPad} showsVerticalScrollIndicator={false}>
             <View style={[styles.roleHeroCard, { backgroundColor: '#0f172a' }]}>
@@ -502,13 +562,13 @@ export default function App() {
               </Text>
               <Text style={styles.roleHeroTitle}>{user.name}</Text>
               <Text style={styles.roleHeroSub}>
-                Full RBAC Control • 12 Seeded Users • 2 Admins • 4 Organizers • 6 Students
+                22 Seeded Users (2 Admins • 10 Organizers • 10 Students) • {allEvents.length} Events
               </Text>
             </View>
 
             <View style={styles.kpiRow}>
               <View style={styles.kpiBox}>
-                <Text style={styles.kpiVal}>{usersList.length || 12}</Text>
+                <Text style={styles.kpiVal}>{usersList.length || 22}</Text>
                 <Text style={styles.kpiLbl}>Users</Text>
               </View>
               <View style={styles.kpiBox}>
@@ -521,16 +581,45 @@ export default function App() {
               </View>
             </View>
 
-            <Text style={styles.sectionHeader}>👥 Users & Role Profiles Table</Text>
+            {/* Role Filter Pills */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{ marginBottom: 8 }}
+            >
+              {['ALL', 'ADMIN', 'ORGANIZER', 'STUDENT'].map((r) => (
+                <TouchableOpacity
+                  key={r}
+                  style={[
+                    styles.filterPill,
+                    adminRoleFilter === r && styles.filterPillActive
+                  ]}
+                  onPress={() => setAdminRoleFilter(r)}
+                >
+                  <Text
+                    style={[
+                      styles.filterPillText,
+                      adminRoleFilter === r && styles.filterPillTextActive
+                    ]}
+                  >
+                    {r}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <Text style={styles.sectionHeader}>
+              👥 Users & Role Profiles Table ({filteredUsers.length})
+            </Text>
             <View style={styles.tableCard}>
               <View style={styles.tableHeaderRow}>
-                <Text style={[styles.th, { flex: 1.7 }]}>Name / Email</Text>
+                <Text style={[styles.th, { flex: 1.8 }]}>Name / Email</Text>
                 <Text style={[styles.th, { flex: 0.9 }]}>Role</Text>
                 <Text style={[styles.th, { flex: 1.1 }]}>Phone</Text>
               </View>
-              {usersList.map((u) => (
+              {filteredUsers.map((u) => (
                 <View key={u.id} style={styles.tableDataRow}>
-                  <View style={{ flex: 1.7 }}>
+                  <View style={{ flex: 1.8 }}>
                     <Text style={styles.tdBold} numberOfLines={1}>
                       {u.name}
                     </Text>
@@ -539,7 +628,9 @@ export default function App() {
                     </Text>
                   </View>
                   <View style={{ flex: 0.9 }}>
-                    <Text style={styles.roleMiniTag}>{u.role}</Text>
+                    <Text style={styles.roleMiniTag}>
+                      {String(u.role || 'student').toUpperCase()}
+                    </Text>
                   </View>
                   <Text style={[styles.td, { flex: 1.1 }]} numberOfLines={1}>
                     {u.phone || '+2547...'}
@@ -554,37 +645,41 @@ export default function App() {
       if (activeTab === 'events_table') {
         return (
           <ScrollView contentContainerStyle={styles.scrollPad} showsVerticalScrollIndicator={false}>
-            <Text style={styles.sectionHeader}>📅 Master Events Database Table</Text>
-            <Text style={styles.sectionSub}>Tap any row to inspect or delete</Text>
+            <Text style={styles.sectionHeader}>
+              📅 Master Events Database Table ({allEvents.length})
+            </Text>
+            <Text style={styles.sectionSub}>
+              16 Events listed across all 10 Strathmore Organizers
+            </Text>
 
             <View style={styles.tableCard}>
               <View style={styles.tableHeaderRow}>
-                <Text style={[styles.th, { flex: 2 }]}>Event & Venue</Text>
-                <Text style={[styles.th, { flex: 1 }]}>Category</Text>
+                <Text style={[styles.th, { flex: 2.2 }]}>Event & Organizer</Text>
+                <Text style={[styles.th, { flex: 0.9 }]}>Category</Text>
                 <Text style={[styles.th, { flex: 0.9 }]}>RSVPs</Text>
-                <Text style={[styles.th, { flex: 0.7, textAlign: 'right' }]}>Del</Text>
+                <Text style={[styles.th, { flex: 0.5, textAlign: 'right' }]}>Del</Text>
               </View>
               {allEvents.map((evt) => (
                 <View key={evt.id} style={styles.tableDataRow}>
                   <TouchableOpacity
-                    style={{ flex: 2 }}
+                    style={{ flex: 2.2 }}
                     onPress={() => setSelectedEvent(evt)}
                   >
                     <Text style={styles.tdBold} numberOfLines={1}>
                       {evt.title}
                     </Text>
                     <Text style={styles.tdSub} numberOfLines={1}>
-                      {evt.date} • {evt.venue}
+                      {evt.organizerName || evt.organizer} • {evt.date}
                     </Text>
                   </TouchableOpacity>
-                  <Text style={[styles.td, { flex: 1 }]} numberOfLines={1}>
+                  <Text style={[styles.td, { flex: 0.9 }]} numberOfLines={1}>
                     {evt.category}
                   </Text>
                   <Text style={[styles.td, { flex: 0.9 }]}>
                     {evt.registrationCount}/{evt.venueCapacity}
                   </Text>
                   <TouchableOpacity
-                    style={{ flex: 0.7, alignItems: 'flex-end' }}
+                    style={{ flex: 0.5, alignItems: 'flex-end' }}
                     onPress={() => handleDeleteEvent(evt)}
                   >
                     <Text style={styles.delLink}>✕</Text>
@@ -617,10 +712,7 @@ export default function App() {
           {['HIGH', 'MEDIUM', 'LOW'].map((p) => (
             <TouchableOpacity
               key={p}
-              style={[
-                styles.prioBtn,
-                smsForm.priority === p && styles.prioBtnActive
-              ]}
+              style={[styles.prioBtn, smsForm.priority === p && styles.prioBtnActive]}
               onPress={() => setSmsForm({ ...smsForm, priority: p })}
             >
               <Text
@@ -703,7 +795,6 @@ export default function App() {
   const renderBottomTabs = () => {
     if (selectedEvent) return null;
 
-    // Public Visitor Bottom Bar
     if (!user) {
       return (
         <View style={styles.tabBar}>
@@ -725,7 +816,7 @@ export default function App() {
 
           <TouchableOpacity style={styles.tabItem} onPress={() => handleOpenAuth('login')}>
             <Text style={styles.tabIcon}>🔐</Text>
-            <Text style={styles.tabLabel}>Log In</Text>
+            <Text style={styles.tabLabel}>Sign In</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.tabItem} onPress={() => handleOpenAuth('register')}>
@@ -736,7 +827,6 @@ export default function App() {
       );
     }
 
-    // Student Bottom Bar
     if (role === 'STUDENT') {
       return (
         <View style={styles.tabBar}>
@@ -773,7 +863,6 @@ export default function App() {
       );
     }
 
-    // Organizer Bottom Bar
     if (role === 'ORGANIZER') {
       return (
         <View style={styles.tabBar}>
@@ -808,7 +897,6 @@ export default function App() {
       );
     }
 
-    // Admin Bottom Bar
     return (
       <View style={styles.tabBar}>
         <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('home')}>
@@ -845,25 +933,30 @@ export default function App() {
   };
 
   return (
-    <SafeAreaView style={styles.outerViewport}>
+    <View style={styles.rootScreen}>
       <StatusBar style="dark" />
-      <View style={styles.mobileFrame}>
+      <View style={styles.mobileContainer}>
         <View style={styles.screenContainer}>{renderRoleContent()}</View>
         {renderBottomTabs()}
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  outerViewport: {
+  rootScreen: {
     flex: 1,
-    backgroundColor: '#0f172a',
-    paddingTop: Platform.OS === 'android' ? RNStatusBar.currentHeight || 0 : 0,
-    alignItems: 'center',
-    justifyContent: 'center'
+    backgroundColor: Platform.OS === 'web' ? '#0f172a' : '#f8fafc',
+    paddingTop:
+      Platform.OS === 'android'
+        ? RNStatusBar.currentHeight || 28
+        : Platform.OS === 'ios'
+        ? 44
+        : 0,
+    alignItems: Platform.OS === 'web' ? 'center' : 'stretch',
+    justifyContent: Platform.OS === 'web' ? 'center' : 'flex-start'
   },
-  mobileFrame: {
+  mobileContainer: {
     flex: 1,
     width: '100%',
     maxWidth: Platform.OS === 'web' ? 430 : '100%',
@@ -916,7 +1009,7 @@ const styles = StyleSheet.create({
   kpiRow: {
     flexDirection: 'row',
     gap: 8,
-    marginBottom: 12
+    marginBottom: 10
   },
   kpiBox: {
     flex: 1,
@@ -936,6 +1029,51 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#64748b',
     fontWeight: '600'
+  },
+  scopeSwitchRow: {
+    flexDirection: 'row',
+    backgroundColor: '#e2e8f0',
+    borderRadius: 10,
+    padding: 3,
+    marginBottom: 10
+  },
+  scopeBtn: {
+    flex: 1,
+    paddingVertical: 7,
+    borderRadius: 8,
+    alignItems: 'center'
+  },
+  scopeBtnActive: {
+    backgroundColor: '#003366'
+  },
+  scopeBtnText: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#475569'
+  },
+  scopeBtnTextActive: {
+    color: '#ffffff'
+  },
+  filterPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    marginRight: 6
+  },
+  filterPillActive: {
+    backgroundColor: '#003366',
+    borderColor: '#003366'
+  },
+  filterPillText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#475569'
+  },
+  filterPillTextActive: {
+    color: '#ffffff'
   },
   tableCard: {
     backgroundColor: '#ffffff',

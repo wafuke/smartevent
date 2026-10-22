@@ -74,6 +74,7 @@ router.post("/", requireRole(["organizer", "admin"]), (req, res) => {
     smsPriority: parseInt(smsPriority, 10) || 2,
     status: "Upcoming",
     organizer: req.user ? req.user.name : "Strathmore Event Organizer",
+    organizerName: req.user ? req.user.name : "Strathmore Event Organizer",
     organizerId: req.user ? req.user.id : "usr-org-1",
     createdAt: new Date().toISOString()
   };

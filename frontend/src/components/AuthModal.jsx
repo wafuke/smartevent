@@ -1,120 +1,202 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, Lock, Mail, User, AlertCircle, ArrowRight, CheckCircle2, Phone } from 'lucide-react';
+import { ShieldCheck, Lock, Mail, User, AlertCircle, ArrowRight, Eye, EyeOff, Phone, Building2, GraduationCap, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { authApi } from '../services/api';
 
-const GOOGLE_WORKSPACE_ACCOUNTS = [
-  { name: 'Elvis Wanyama Wafuke', email: 'student@strathmore.edu', role: 'student', badge: 'Student • 154210' },
-  { name: 'Amina Hassan', email: 'amina.hassan@strathmore.edu', role: 'student', badge: 'Student • 154382' },
-  { name: "Dr. Joseph Orero (SCES Dean's Office)", email: 'organizer@strathmore.edu', role: 'organizer', badge: 'Organizer • ORG-001' },
-  { name: '@iLabAfrica Innovation Centre', email: 'ilab@strathmore.edu', role: 'organizer', badge: 'Organizer • ORG-002' },
-  { name: 'Elvis Wanyama Wafuke (Admin)', email: 'admin@strathmore.edu', role: 'admin', badge: 'Admin • ADM-001' },
-  { name: 'Mr. Allan Vikiru', email: 'allan.vikiru@strathmore.edu', role: 'admin', badge: 'Supervisor Admin • ADM-002' }
-];
+const DEVICE_GOOGLE_STORAGE_KEY = 'smartevent_device_google_accounts';
+
+function getDeviceGoogleAccounts() {
+  try {
+    const raw = localStorage.getItem(DEVICE_GOOGLE_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveDeviceGoogleAccount(account) {
+  try {
+    const existing = getDeviceGoogleAccounts().filter(
+      (a) => a.email.toLowerCase() !== account.email.toLowerCase()
+    );
+    const updated = [
+      {
+        email: account.email.toLowerCase(),
+        name: account.name,
+        role: account.role,
+        lastUsed: new Date().toISOString()
+      },
+      ...existing
+    ].slice(0, 5);
+    localStorage.setItem(DEVICE_GOOGLE_STORAGE_KEY, JSON.stringify(updated));
+    return updated;
+  } catch {
+    return [];
+  }
+}
+
+function removeDeviceGoogleAccount(email) {
+  try {
+    const updated = getDeviceGoogleAccounts().filter(
+      (a) => a.email.toLowerCase() !== email.toLowerCase()
+    );
+    localStorage.setItem(DEVICE_GOOGLE_STORAGE_KEY, JSON.stringify(updated));
+    return updated;
+  } catch {
+    return [];
+  }
+}
 
 export default function AuthModal({ isOpen, initialTab = 'login', onClose }) {
   const { login } = useAuth();
   const [isLogin, setIsLogin] = useState(initialTab === 'login');
-  const [selectedRole, setSelectedRole] = useState('student');
+  const [signupRole, setSignupRole] = useState('student');
+  const [showPassword, setShowPassword] = useState(false);
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
+    confirmPassword: '',
     studentId: '',
-    phone: '+254712345678',
+    phone: '+2547',
     department: 'BSc Informatics & Computer Science'
   });
+
   const [errorMsg, setErrorMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Google Account Chooser state
-  const [showGooglePicker, setShowGooglePicker] = useState(false);
-  const [customGoogleEmail, setCustomGoogleEmail] = useState('');
-  const [customGoogleName, setCustomGoogleName] = useState('');
+  // Google OAuth Account Chooser State (stores ONLY accounts signed in on this user's device)
+  const [showGoogleFlow, setShowGoogleFlow] = useState(false);
+  const [deviceGoogleAccounts, setDeviceGoogleAccounts] = useState([]);
+  const [googleStep, setGoogleStep] = useState('chooser'); // 'chooser' | 'email' | 'password'
+  const [googleEmail, setGoogleEmail] = useState('');
+  const [googleName, setGoogleName] = useState('');
+  const [googlePassword, setGooglePassword] = useState('');
+  const [googleRole, setGoogleRole] = useState('auto');
 
   useEffect(() => {
     setIsLogin(initialTab === 'login');
     setErrorMsg('');
-    setShowGooglePicker(false);
+    setShowGoogleFlow(false);
+    setShowPassword(false);
+    const saved = getDeviceGoogleAccounts();
+    setDeviceGoogleAccounts(saved);
+    setGoogleStep(saved.length > 0 ? 'chooser' : 'email');
   }, [initialTab, isOpen]);
 
   if (!isOpen) return null;
 
-  // Fill verified demo account credentials into the form and authenticate against backend /api/auth/login
-  const handleFillAndLoginDemo = async (email, role) => {
+  const openGoogleSignIn = () => {
     setErrorMsg('');
-    setSelectedRole(role);
-    setFormData((prev) => ({ ...prev, email, password: 'password123' }));
-    setIsLoading(true);
-    try {
-      const res = await authApi.login({
-        email,
-        password: 'password123',
-        role
-      });
-      login(res.user, res.token);
-      onClose();
-    } catch (err) {
-      setErrorMsg(err.message || 'Authentication failed.');
-    } finally {
-      setIsLoading(false);
+    const saved = getDeviceGoogleAccounts();
+    setDeviceGoogleAccounts(saved);
+    setGoogleEmail('');
+    setGooglePassword('');
+    setGoogleStep(saved.length > 0 ? 'chooser' : 'email');
+    setShowGoogleFlow(true);
+  };
+
+  const handleSelectSavedGoogleAccount = (acct) => {
+    setErrorMsg('');
+    setGoogleEmail(acct.email);
+    setGoogleName(acct.name || '');
+    setGooglePassword('');
+    setGoogleStep('password');
+  };
+
+  const handleRemoveSavedGoogleAccount = (e, email) => {
+    e.stopPropagation();
+    const updated = removeDeviceGoogleAccount(email);
+    setDeviceGoogleAccounts(updated);
+    if (updated.length === 0) {
+      setGoogleStep('email');
     }
   };
 
-  const handleGoogleAccountSelect = async (acct) => {
+  const handleGoogleEmailNext = (e) => {
+    e.preventDefault();
     setErrorMsg('');
+    const trimmed = googleEmail.trim().toLowerCase();
+    if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      setErrorMsg('Enter a valid @strathmore.edu Google Workspace or Gmail address.');
+      return;
+    }
+    setGoogleEmail(trimmed);
+    setGoogleStep('password');
+  };
+
+  const handleGooglePasswordSubmit = async (e) => {
+    e.preventDefault();
+    setErrorMsg('');
+    if (!googlePassword) {
+      setErrorMsg('Please enter your Google account password.');
+      return;
+    }
+
     setIsLoading(true);
     try {
       const res = await authApi.googleLogin({
-        email: acct.email,
-        name: acct.name,
-        role: acct.role,
-        googleId: `google_${acct.email}`
+        email: googleEmail.trim().toLowerCase(),
+        name: googleName.trim() || undefined,
+        password: googlePassword,
+        role: googleRole
       });
+      const updated = saveDeviceGoogleAccount(res.user);
+      setDeviceGoogleAccounts(updated);
       login(res.user, res.token);
       onClose();
     } catch (err) {
-      setErrorMsg(err.message || 'Google Sign-In failed.');
+      setErrorMsg(err.message || 'Google authentication failed. Check your password.');
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleCustomGoogleSubmit = async (e) => {
-    e.preventDefault();
-    if (!customGoogleEmail.trim()) {
-      setErrorMsg('Please enter your Google / @strathmore.edu email address.');
-      return;
-    }
-    await handleGoogleAccountSelect({
-      email: customGoogleEmail.trim(),
-      name: customGoogleName.trim() || customGoogleEmail.split('@')[0],
-      role: selectedRole
-    });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
     setErrorMsg('');
 
+    if (isLogin) {
+      if (!formData.email.trim() || !formData.password) {
+        setErrorMsg('Please enter your university email and password.');
+        return;
+      }
+    } else {
+      if (!formData.name.trim() || !formData.email.trim() || !formData.password) {
+        setErrorMsg('Full name, email address, and password are required.');
+        return;
+      }
+      if (formData.password.length < 6) {
+        setErrorMsg('Password must be at least 6 characters long.');
+        return;
+      }
+      if (formData.password !== formData.confirmPassword) {
+        setErrorMsg('Passwords do not match.');
+        return;
+      }
+    }
+
+    setIsLoading(true);
     try {
       if (isLogin) {
         const res = await authApi.login({
-          email: formData.email,
+          email: formData.email.trim(),
           password: formData.password,
-          role: selectedRole
+          role: 'auto'
         });
         login(res.user, res.token);
       } else {
         const res = await authApi.signup({
-          name: formData.name,
-          email: formData.email,
+          name: formData.name.trim(),
+          email: formData.email.trim(),
           password: formData.password,
-          role: selectedRole,
-          studentId: formData.studentId,
-          phone: formData.phone,
-          department: formData.department
+          role: signupRole,
+          studentId: formData.studentId.trim(),
+          phone: formData.phone.trim(),
+          department: formData.department.trim()
         });
         login(res.user, res.token);
       }
@@ -127,113 +209,240 @@ export default function AuthModal({ isOpen, initialTab = 'login', onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto">
-      <div className="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-4 shadow-2xl relative my-8">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/65 backdrop-blur-sm overflow-y-auto">
+      <div className="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-5 shadow-2xl relative my-8">
         {/* Close button */}
         <button
           onClick={onClose}
           className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 text-sm font-bold p-1.5 rounded-full hover:bg-slate-100"
+          aria-label="Close modal"
         >
           ✕
         </button>
 
-        {/* Modal Title */}
-        <div className="text-center space-y-1">
-          <div className="w-10 h-10 rounded-2xl bg-[#003366] text-amber-400 flex items-center justify-center mx-auto font-black text-sm mb-2 shadow-sm">
+        {/* Modal Header */}
+        <div className="text-center space-y-1.5">
+          <div className="w-11 h-11 rounded-2xl bg-[#003366] text-amber-400 flex items-center justify-center mx-auto font-black text-base shadow-sm">
             SE
           </div>
           <h3 className="text-xl font-black text-slate-900 tracking-tight">
-            {showGooglePicker
+            {showGoogleFlow
               ? 'Sign in with Google'
               : isLogin
               ? 'Sign In to SmartEvent'
               : 'Create SmartEvent Account'}
           </h3>
           <p className="text-xs text-slate-500 font-medium">
-            {showGooglePicker
-              ? 'Choose your @strathmore.edu Google Workspace or Gmail account'
-              : 'Authenticated with Bcrypt + JWT Role-Based Access Control'}
+            {showGoogleFlow
+              ? 'Continue to Strathmore University SmartEvent Portal'
+              : isLogin
+              ? 'Enter your Strathmore email & password to access your portal'
+              : 'Register as a Student or Event Organizer'}
           </p>
         </div>
 
         {/* Error Alert */}
         {errorMsg && (
-          <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold flex items-start space-x-2">
-            <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+          <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold flex items-start space-x-2.5">
+            <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
             <span>{errorMsg}</span>
           </div>
         )}
 
-        {showGooglePicker ? (
-          <div className="space-y-3">
-            <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
-              {GOOGLE_WORKSPACE_ACCOUNTS.map((acct) => (
-                <button
-                  key={acct.email}
-                  type="button"
-                  disabled={isLoading}
-                  onClick={() => handleGoogleAccountSelect(acct)}
-                  className="w-full p-3 rounded-2xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50/50 transition-all flex items-center justify-between text-left"
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 rounded-full bg-[#003366] text-amber-400 flex items-center justify-center font-bold text-xs shrink-0">
-                      {acct.name.charAt(0)}
+        {/* GOOGLE OAUTH ACCOUNT CHOOSER FLOW */}
+        {showGoogleFlow ? (
+          <div className="space-y-4">
+            {googleStep === 'chooser' && (
+              <div className="space-y-3">
+                <p className="text-xs font-bold text-slate-600">
+                  Choose an account signed in on this browser:
+                </p>
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {deviceGoogleAccounts.map((acct) => (
+                    <div
+                      key={acct.email}
+                      onClick={() => handleSelectSavedGoogleAccount(acct)}
+                      className="w-full p-3 rounded-2xl border border-slate-200 hover:border-blue-400 hover:bg-blue-50/40 transition-all flex items-center justify-between cursor-pointer"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className="w-9 h-9 rounded-full bg-[#003366] text-amber-400 flex items-center justify-center font-bold text-xs shrink-0">
+                          {(acct.name || acct.email).charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="text-xs font-extrabold text-slate-900">{acct.name || acct.email.split('@')[0]}</div>
+                          <div className="text-[11px] text-slate-500">{acct.email}</div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => handleRemoveSavedGoogleAccount(e, acct.email)}
+                        title="Remove account from this device"
+                        className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
-                    <div>
-                      <div className="text-xs font-extrabold text-slate-900">{acct.name}</div>
-                      <div className="text-[11px] text-slate-500">{acct.email}</div>
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-                    {acct.badge}
-                  </span>
-                </button>
-              ))}
-            </div>
+                  ))}
+                </div>
 
-            <form onSubmit={handleCustomGoogleSubmit} className="pt-2 border-t border-slate-200 space-y-2.5">
-              <span className="block text-[10px] font-bold uppercase text-slate-500">
-                Or use another Google Account ({selectedRole})
-              </span>
-              <input
-                type="text"
-                placeholder="Your Full Name"
-                value={customGoogleName}
-                onChange={(e) => setCustomGoogleName(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none"
-              />
-              <input
-                type="email"
-                required
-                placeholder="your.name@strathmore.edu or @gmail.com"
-                value={customGoogleEmail}
-                onChange={(e) => setCustomGoogleEmail(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none"
-              />
-              <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => { setShowGooglePicker(false); setErrorMsg(''); }}
-                  className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50"
+                  onClick={() => {
+                    setGoogleEmail('');
+                    setGooglePassword('');
+                    setErrorMsg('');
+                    setGoogleStep('email');
+                  }}
+                  className="w-full p-3 rounded-2xl border border-dashed border-slate-300 hover:border-[#003366] hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center justify-center space-x-2"
                 >
-                  ← Back
+                  <User className="w-4 h-4 text-[#003366]" />
+                  <span>Use another Google account</span>
                 </button>
+
                 <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="flex-1 py-2.5 rounded-xl bg-[#003366] text-white text-xs font-bold hover:bg-[#002244]"
+                  type="button"
+                  onClick={() => { setShowGoogleFlow(false); setErrorMsg(''); }}
+                  className="w-full py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50"
                 >
-                  {isLoading ? 'Verifying...' : 'Continue with Google'}
+                  ← Back to Sign In
                 </button>
               </div>
-            </form>
+            )}
+
+            {googleStep === 'email' && (
+              <form onSubmit={handleGoogleEmailNext} className="space-y-3.5">
+                <div>
+                  <label className="block text-[11px] font-bold uppercase text-slate-700 mb-1">
+                    Google Workspace or Gmail Address
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    autoFocus
+                    placeholder="name@strathmore.edu"
+                    value={googleEmail}
+                    onChange={(e) => setGoogleEmail(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-blue-600"
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (deviceGoogleAccounts.length > 0) {
+                        setGoogleStep('chooser');
+                      } else {
+                        setShowGoogleFlow(false);
+                      }
+                      setErrorMsg('');
+                    }}
+                    className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50"
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-sm"
+                  >
+                    Next
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {googleStep === 'password' && (
+              <form onSubmit={handleGooglePasswordSubmit} className="space-y-3.5">
+                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                  <div className="flex items-center space-x-2.5">
+                    <div className="w-7 h-7 rounded-full bg-[#003366] text-amber-400 flex items-center justify-center font-bold text-xs">
+                      {googleEmail.charAt(0).toUpperCase()}
+                    </div>
+                    <span className="text-xs font-bold text-slate-800">{googleEmail}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setGoogleStep('email'); setErrorMsg(''); }}
+                    className="text-[11px] font-bold text-blue-600 hover:underline"
+                  >
+                    Change
+                  </button>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold uppercase text-slate-700 mb-1">
+                    Enter Your Google / Workspace Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      autoFocus
+                      placeholder="Enter your account password"
+                      value={googlePassword}
+                      onChange={(e) => setGooglePassword(e.target.value)}
+                      className="w-full px-3.5 py-2.5 pr-10 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-blue-600"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-700"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setGoogleStep(deviceGoogleAccounts.length > 0 ? 'chooser' : 'email');
+                      setErrorMsg('');
+                    }}
+                    className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50"
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-sm"
+                  >
+                    {isLoading ? 'Verifying...' : 'Sign In'}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         ) : (
           <>
+            {/* Mode Switcher Tabs (Sign In vs Sign Up) */}
+            <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-100 rounded-2xl">
+              <button
+                type="button"
+                onClick={() => { setIsLogin(true); setErrorMsg(''); }}
+                className={`py-2 rounded-xl text-xs font-extrabold transition-all ${
+                  isLogin ? 'bg-[#003366] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                onClick={() => { setIsLogin(false); setErrorMsg(''); }}
+                className={`py-2 rounded-xl text-xs font-extrabold transition-all ${
+                  !isLogin ? 'bg-[#003366] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Sign Up
+              </button>
+            </div>
+
             {/* Google Sign-In Button */}
             <button
               type="button"
-              onClick={() => { setShowGooglePicker(true); setErrorMsg(''); }}
+              onClick={openGoogleSignIn}
               className="w-full py-2.5 px-4 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 text-xs font-bold transition-all shadow-2xs flex items-center justify-center space-x-2.5"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24">
@@ -247,87 +456,162 @@ export default function AuthModal({ isOpen, initialTab = 'login', onClose }) {
 
             <div className="relative flex py-0.5 items-center">
               <div className="flex-grow border-t border-slate-200"></div>
-              <span className="flex-shrink mx-3 text-[10px] text-slate-400 font-bold uppercase">or email & password</span>
+              <span className="flex-shrink mx-3 text-[10px] text-slate-400 font-bold uppercase">
+                or {isLogin ? 'sign in with email' : 'register with email'}
+              </span>
               <div className="flex-grow border-t border-slate-200"></div>
             </div>
 
-            {/* Auth Form */}
-            <form onSubmit={handleSubmit} className="space-y-3">
+            {/* Email & Password Form */}
+            <form onSubmit={handleSubmit} className="space-y-3.5">
+              {!isLogin && (
+                <>
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase text-slate-700 mb-1.5">
+                      Account Type
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSignupRole('student')}
+                        className={`p-2.5 rounded-xl border text-xs font-bold flex items-center justify-center space-x-1.5 transition-all ${
+                          signupRole === 'student'
+                            ? 'border-[#003366] bg-blue-50/70 text-[#003366]'
+                            : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        <GraduationCap className="w-4 h-4" />
+                        <span>Student</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSignupRole('organizer')}
+                        className={`p-2.5 rounded-xl border text-xs font-bold flex items-center justify-center space-x-1.5 transition-all ${
+                          signupRole === 'organizer'
+                            ? 'border-[#003366] bg-blue-50/70 text-[#003366]'
+                            : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        <Building2 className="w-4 h-4" />
+                        <span>Organizer</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase text-slate-700 mb-1">
+                      {signupRole === 'organizer' ? 'Organizer / Society Name' : 'Full Name'}
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder={signupRole === 'organizer' ? 'e.g. Strathmore Robotics Club' : 'e.g. Elvis Wanyama Wafuke'}
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-[#003366]"
+                    />
+                  </div>
+                </>
+              )}
+
               <div>
-                <label className="block text-[11px] font-bold uppercase text-slate-700 mb-1">Select University Role</label>
-                <select
-                  value={selectedRole}
-                  onChange={(e) => setSelectedRole(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none focus:ring-2 focus:ring-[#003366]"
-                >
-                  <option value="student">🎓 Student Account</option>
-                  <option value="organizer">📢 Event Organizer Account</option>
-                  <option value="admin">👑 System Administrator Account</option>
-                </select>
+                <label className="block text-[11px] font-bold uppercase text-slate-700 mb-1">
+                  University Email Address
+                </label>
+                <input
+                  type="email"
+                  required
+                  placeholder="name@strathmore.edu"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-[#003366]"
+                />
               </div>
 
               {!isLogin && (
-                <div>
-                  <label className="block text-[11px] font-bold uppercase text-slate-700 mb-1">Full Name</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Elvis Wanyama Wafuke"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-[#003366]"
-                  />
+                <div className="grid grid-cols-2 gap-2.5">
+                  {signupRole === 'student' ? (
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase text-slate-700 mb-1">
+                        Admission Number
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. 154210"
+                        value={formData.studentId}
+                        onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
+                        className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 outline-none"
+                      />
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase text-slate-700 mb-1">
+                        Department / Faculty
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. SCES"
+                        value={formData.department}
+                        onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                        className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 outline-none"
+                      />
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase text-slate-700 mb-1">
+                      Phone (SMS Alerts)
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="+254712345678"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 outline-none"
+                    />
+                  </div>
                 </div>
               )}
 
               <div>
-                <label className="block text-[11px] font-bold uppercase text-slate-700 mb-1">University Email</label>
-                <input
-                  type="email"
-                  required
-                  placeholder="e.g. student@strathmore.edu"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-[#003366]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold uppercase text-slate-700 mb-1">Password</label>
-                <input
-                  type="password"
-                  required
-                  placeholder="Enter your password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-[#003366]"
-                />
+                <label className="block text-[11px] font-bold uppercase text-slate-700 mb-1">
+                  Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    placeholder="Enter your password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="w-full px-3.5 py-2.5 pr-10 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-[#003366]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-700"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
 
               {!isLogin && (
-                <div className="grid grid-cols-2 gap-2">
-                  {selectedRole === 'student' && (
-                    <div>
-                      <label className="block text-[11px] font-bold uppercase text-slate-700 mb-1">Admission No</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. 154210"
-                        value={formData.studentId}
-                        onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
-                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 outline-none"
-                      />
-                    </div>
-                  )}
-                  <div className={selectedRole === 'student' ? '' : 'col-span-2'}>
-                    <label className="block text-[11px] font-bold uppercase text-slate-700 mb-1">Phone (SMS)</label>
-                    <input
-                      type="text"
-                      placeholder="+254712345678"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 outline-none"
-                    />
-                  </div>
+                <div>
+                  <label className="block text-[11px] font-bold uppercase text-slate-700 mb-1">
+                    Confirm Password
+                  </label>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    placeholder="Re-enter your password"
+                    value={formData.confirmPassword}
+                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-[#003366]"
+                  />
                 </div>
               )}
 
@@ -336,60 +620,21 @@ export default function AuthModal({ isOpen, initialTab = 'login', onClose }) {
                 disabled={isLoading}
                 className="w-full py-3 rounded-xl bg-[#003366] hover:bg-[#002244] text-white text-xs font-bold transition-all shadow-md mt-1 flex items-center justify-center space-x-2"
               >
-                <span>{isLoading ? 'Verifying Credentials...' : isLogin ? 'Sign In' : 'Create Account'}</span>
+                <span>
+                  {isLoading
+                    ? 'Authenticating...'
+                    : isLogin
+                    ? 'Sign In to Dashboard'
+                    : 'Create Account'}
+                </span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </form>
 
-            {/* Seeded Demo Accounts (Verified via Backend API) */}
-            <div className="space-y-1.5 pt-2 border-t border-slate-100">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block text-center">
-                Seeded Strathmore Accounts (Password: password123)
-              </span>
-              <div className="grid grid-cols-2 gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => handleFillAndLoginDemo('student@strathmore.edu', 'student')}
-                  className="py-1.5 px-2 rounded-lg border border-blue-200 bg-blue-50/70 hover:bg-blue-100 text-blue-900 text-[11px] font-bold transition-all text-center truncate"
-                >
-                  🎓 Elvis (154210)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleFillAndLoginDemo('organizer@strathmore.edu', 'organizer')}
-                  className="py-1.5 px-2 rounded-lg border border-amber-200 bg-amber-50/70 hover:bg-amber-100 text-amber-900 text-[11px] font-bold transition-all text-center truncate"
-                >
-                  📢 SCES Organizer
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleFillAndLoginDemo('admin@strathmore.edu', 'admin')}
-                  className="py-1.5 px-2 rounded-lg border border-purple-200 bg-purple-50/70 hover:bg-purple-100 text-purple-900 text-[11px] font-bold transition-all text-center truncate"
-                >
-                  👑 Admin 1 (Elvis)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleFillAndLoginDemo('allan.vikiru@strathmore.edu', 'admin')}
-                  className="py-1.5 px-2 rounded-lg border border-purple-200 bg-purple-50/70 hover:bg-purple-100 text-purple-900 text-[11px] font-bold transition-all text-center truncate"
-                >
-                  👑 Admin 2 (Vikiru)
-                </button>
-              </div>
-            </div>
-
-            {/* Modal Footer Toggle */}
-            <div className="pt-2 text-center border-t border-slate-100 text-xs">
-              <span className="text-slate-500">
-                {isLogin ? "Don't have an account? " : "Already have an account? "}
-              </span>
-              <button
-                type="button"
-                onClick={() => { setIsLogin(!isLogin); setErrorMsg(''); }}
-                className="font-bold text-[#003366] hover:underline"
-              >
-                {isLogin ? 'Sign Up' : 'Log In'}
-              </button>
+            {/* Security Notice */}
+            <div className="pt-2 border-t border-slate-100 flex items-center justify-center space-x-1.5 text-[11px] text-slate-400 font-medium">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Protected by Bcrypt Password Hashing & Signed JWT RBAC</span>
             </div>
           </>
         )}

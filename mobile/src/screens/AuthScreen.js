@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -6,60 +6,164 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  ActivityIndicator
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform
 } from 'react-native';
 import {
   loginUser,
   signupUser,
   googleSignInMobile,
+  getDeviceGoogleAccounts,
+  removeDeviceGoogleAccount,
   getBackendUrl,
   setBackendUrl
 } from '../services/api';
 
-const GOOGLE_ACCOUNTS = [
-  { name: 'Elvis Wanyama Wafuke', email: 'student@strathmore.edu', role: 'student', tag: 'Student • 154210' },
-  { name: 'Amina Hassan', email: 'amina.hassan@strathmore.edu', role: 'student', tag: 'Student • 154382' },
-  { name: "Dr. Joseph Orero (SCES)", email: 'organizer@strathmore.edu', role: 'organizer', tag: 'Organizer • ORG-001' },
-  { name: '@iLabAfrica Centre', email: 'ilab@strathmore.edu', role: 'organizer', tag: 'Organizer • ORG-002' },
-  { name: 'Elvis Wanyama Wafuke (Admin)', email: 'admin@strathmore.edu', role: 'admin', tag: 'Admin 1 • ADM-001' },
-  { name: 'Mr. Allan Vikiru', email: 'allan.vikiru@strathmore.edu', role: 'admin', tag: 'Admin 2 • ADM-002' }
-];
-
-export default function AuthScreen({ initialMode = 'login', onAuthenticate, onBackToHome, onBackToPublic }) {
+export default function AuthScreen({
+  initialMode = 'login',
+  onAuthenticate,
+  onBackToHome,
+  onBackToPublic
+}) {
   const handleBack = onBackToPublic || onBackToHome;
-  const [isLogin, setIsLogin] = useState(initialMode !== 'signup' && initialMode !== 'register');
-  const [role, setRole] = useState('student'); // 'student', 'organizer', 'admin'
+  const [isLogin, setIsLogin] = useState(
+    initialMode !== 'signup' && initialMode !== 'register'
+  );
+  const [signupRole, setSignupRole] = useState('student'); // 'student' | 'organizer'
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Form Fields
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [studentId, setStudentId] = useState('154210');
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('+254712345678');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [studentId, setStudentId] = useState('');
+  const [department, setDepartment] = useState('School of Computing & Engineering Sciences');
+  const [phone, setPhone] = useState('+2547');
+
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [showGoogleModal, setShowGoogleModal] = useState(false);
-  const [customGoogleEmail, setCustomGoogleEmail] = useState('');
+
+  // Device Google Account Chooser State (stores ONLY accounts used on THIS device)
+  const [showGoogleFlow, setShowGoogleFlow] = useState(false);
+  const [deviceAccounts, setDeviceAccounts] = useState([]);
+  const [googleStep, setGoogleStep] = useState('chooser'); // 'chooser' | 'email' | 'password'
+  const [googleEmail, setGoogleEmail] = useState('');
+  const [googlePassword, setGooglePassword] = useState('');
+
+  // Optional Advanced Server IP Config
   const [showServerConfig, setShowServerConfig] = useState(false);
   const [apiUrl, setApiUrl] = useState(getBackendUrl());
 
-  const roles = [
-    { id: 'student', label: '🎓 Student' },
-    { id: 'organizer', label: '📢 Organizer' },
-    { id: 'admin', label: '👑 Admin' }
-  ];
+  useEffect(() => {
+    setIsLogin(initialMode !== 'signup' && initialMode !== 'register');
+    setErrorMsg('');
+    const saved = getDeviceGoogleAccounts();
+    setDeviceAccounts(saved);
+  }, [initialMode]);
+
+  const openGoogleSignIn = () => {
+    setErrorMsg('');
+    const saved = getDeviceGoogleAccounts();
+    setDeviceAccounts(saved);
+    setGoogleEmail('');
+    setGooglePassword('');
+    setGoogleStep(saved.length > 0 ? 'chooser' : 'email');
+    setShowGoogleFlow(true);
+  };
+
+  const handleSelectDeviceGoogleAccount = (acct) => {
+    setErrorMsg('');
+    setGoogleEmail(acct.email);
+    setGooglePassword('');
+    setGoogleStep('password');
+  };
+
+  const handleRemoveDeviceGoogleAccount = (emailToRemove) => {
+    const updated = removeDeviceGoogleAccount(emailToRemove);
+    setDeviceAccounts(updated);
+    if (updated.length === 0) {
+      setGoogleStep('email');
+    }
+  };
+
+  const handleGoogleEmailNext = () => {
+    setErrorMsg('');
+    const trimmed = googleEmail.trim().toLowerCase();
+    if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      setErrorMsg('Please enter a valid @strathmore.edu or Gmail address.');
+      return;
+    }
+    setGoogleEmail(trimmed);
+    setGoogleStep('password');
+  };
+
+  const handleGooglePasswordSubmit = async () => {
+    setErrorMsg('');
+    if (!googlePassword) {
+      setErrorMsg('Please enter your Google account password.');
+      return;
+    }
+    setLoading(true);
+    setBackendUrl(apiUrl);
+
+    const res = await googleSignInMobile({
+      email: googleEmail.trim().toLowerCase(),
+      password: googlePassword,
+      role: 'auto'
+    });
+    setLoading(false);
+
+    if (res && res.success && res.user) {
+      setDeviceAccounts(getDeviceGoogleAccounts());
+      onAuthenticate(res.user);
+    } else {
+      setErrorMsg(res?.error || 'Google authentication failed.');
+    }
+  };
 
   const handleSubmit = async () => {
     setErrorMsg('');
-    if (!email.trim() || !password) {
-      setErrorMsg('Please enter both your email address and password.');
-      return;
+
+    if (isLogin) {
+      if (!email.trim() || !password) {
+        setErrorMsg('Please enter both your email address and password.');
+        return;
+      }
+    } else {
+      if (!name.trim() || !email.trim() || !password) {
+        setErrorMsg('Full name, email address, and password are required.');
+        return;
+      }
+      if (password.length < 6) {
+        setErrorMsg('Password must be at least 6 characters long.');
+        return;
+      }
+      if (password !== confirmPassword) {
+        setErrorMsg('Passwords do not match.');
+        return;
+      }
     }
 
     setLoading(true);
     setBackendUrl(apiUrl);
 
     const res = isLogin
-      ? await loginUser({ email: email.trim(), password, role })
-      : await signupUser({ name: name.trim(), email: email.trim(), password, role, studentId, phone });
+      ? await loginUser({
+          email: email.trim(),
+          password,
+          role: 'auto'
+        })
+      : await signupUser({
+          name: name.trim(),
+          email: email.trim(),
+          password,
+          role: signupRole,
+          studentId: studentId.trim(),
+          phone: phone.trim(),
+          department: department.trim()
+        });
 
     setLoading(false);
 
@@ -70,625 +174,899 @@ export default function AuthScreen({ initialMode = 'login', onAuthenticate, onBa
     }
   };
 
-  const handlePresetAccount = async (presetEmail, presetRole) => {
-    setErrorMsg('');
-    setRole(presetRole);
-    setEmail(presetEmail);
-    setPassword('password123');
-    setLoading(true);
-    setBackendUrl(apiUrl);
-
-    const res = await loginUser({ email: presetEmail, password: 'password123', role: presetRole });
-    setLoading(false);
-
-    if (res && res.success && res.user) {
-      onAuthenticate(res.user);
-    } else {
-      setErrorMsg(res?.error || 'Login failed.');
-    }
-  };
-
-  const handleGoogleSelect = async (acct) => {
-    setErrorMsg('');
-    setLoading(true);
-    setBackendUrl(apiUrl);
-    const res = await googleSignInMobile({
-      email: acct.email,
-      name: acct.name,
-      role: acct.role
-    });
-    setLoading(false);
-    if (res && res.success && res.user) {
-      onAuthenticate(res.user);
-    } else {
-      setErrorMsg(res?.error || 'Google Sign-In failed.');
-    }
-  };
-
-  const handleCustomGoogle = async () => {
-    if (!customGoogleEmail.trim()) {
-      setErrorMsg('Enter your @strathmore.edu or Gmail address.');
-      return;
-    }
-    await handleGoogleSelect({
-      email: customGoogleEmail.trim(),
-      name: customGoogleEmail.split('@')[0],
-      role
-    });
-  };
-
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      {/* Top Navigation Bar */}
+      <View style={styles.topNav}>
+        {handleBack ? (
+          <TouchableOpacity style={styles.backBtn} onPress={handleBack} activeOpacity={0.75}>
+            <Text style={styles.backBtnText}>← Public Home</Text>
+          </TouchableOpacity>
+        ) : (
+          <View />
+        )}
+        <TouchableOpacity
+          style={styles.configToggle}
+          onPress={() => setShowServerConfig(!showServerConfig)}
+        >
+          <Text style={styles.configToggleText}>
+            {showServerConfig ? 'Hide API Config' : '⚙️ Server'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Top Navigation Back to Public Home */}
-        {handleBack && (
-          <TouchableOpacity style={styles.backBtn} onPress={handleBack}>
-            <Text style={styles.backBtnText}>← Back to Public Home</Text>
-          </TouchableOpacity>
+        {/* Optional API URL Configuration */}
+        {showServerConfig && (
+          <View style={styles.serverConfigBox}>
+            <Text style={styles.serverConfigTitle}>Backend API Endpoint</Text>
+            <TextInput
+              style={styles.serverInput}
+              value={apiUrl}
+              onChangeText={(val) => {
+                setApiUrl(val);
+                setBackendUrl(val);
+              }}
+              placeholder="http://192.168.1.100:5000/api"
+              autoCapitalize="none"
+            />
+            <Text style={styles.serverHint}>
+              On physical phone, enter your computer's LAN IP if running the local backend server.
+            </Text>
+          </View>
         )}
 
-        {/* Brand Header */}
-        <View style={styles.header}>
-          <View style={styles.logoBadge}>
+        {/* Brand Hero Card */}
+        <View style={styles.brandSection}>
+          <View style={styles.logoCircle}>
             <Text style={styles.logoText}>SE</Text>
           </View>
-          <Text style={styles.title}>SmartEvent Strathmore</Text>
-          <Text style={styles.subtitle}>
-            {showGoogleModal
-              ? 'Choose your @strathmore.edu Google Account'
-              : 'University Event & Priority SMS Platform'}
+          <Text style={styles.brandTitle}>
+            {showGoogleFlow
+              ? 'Sign in with Google'
+              : isLogin
+              ? 'Welcome Back'
+              : 'Create Account'}
+          </Text>
+          <Text style={styles.brandSub}>
+            {showGoogleFlow
+              ? 'Continue to Strathmore University SmartEvent'
+              : isLogin
+              ? 'Sign in with your Strathmore University credentials'
+              : 'Join SmartEvent as a Student or Event Organizer'}
           </Text>
         </View>
 
-        {errorMsg ? (
-          <View style={styles.errorBox}>
-            <Text style={styles.errorText}>⚠️ {errorMsg}</Text>
-          </View>
-        ) : null}
+        {/* Auth Card */}
+        <View style={styles.card}>
+          {/* Error Banner */}
+          {errorMsg ? (
+            <View style={styles.errorBanner}>
+              <Text style={styles.errorText}>⚠️ {errorMsg}</Text>
+            </View>
+          ) : null}
 
-        {showGoogleModal ? (
-          <View style={styles.formCard}>
-            <Text style={styles.sectionLabel}>Select Verified Google Workspace Account</Text>
-            {GOOGLE_ACCOUNTS.map((acct) => (
-              <TouchableOpacity
-                key={acct.email}
-                style={styles.googleAcctRow}
-                onPress={() => handleGoogleSelect(acct)}
-                disabled={loading}
-              >
-                <View style={styles.googleAvatar}>
-                  <Text style={styles.googleAvatarText}>{acct.name.charAt(0)}</Text>
+          {showGoogleFlow ? (
+            /* ================= GOOGLE ACCOUNT CHOOSER FLOW ================= */
+            <View>
+              <View style={styles.googleBadgeHeader}>
+                <View style={styles.googleGIcon}>
+                  <Text style={styles.googleGText}>G</Text>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.googleAcctName}>{acct.name}</Text>
-                  <Text style={styles.googleAcctEmail}>{acct.email}</Text>
+                <Text style={styles.googleHeaderLabel}>Google Workspace Authentication</Text>
+              </View>
+
+              {googleStep === 'chooser' && (
+                <View>
+                  <Text style={styles.chooserPrompt}>
+                    Choose an account signed in on this device:
+                  </Text>
+
+                  {deviceAccounts.map((acct) => (
+                    <TouchableOpacity
+                      key={acct.email}
+                      style={styles.deviceAccountRow}
+                      onPress={() => handleSelectDeviceGoogleAccount(acct)}
+                      activeOpacity={0.8}
+                    >
+                      <View style={styles.deviceAvatar}>
+                        <Text style={styles.deviceAvatarText}>
+                          {(acct.name || acct.email).charAt(0).toUpperCase()}
+                        </Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.deviceAccountName} numberOfLines={1}>
+                          {acct.name || acct.email.split('@')[0]}
+                        </Text>
+                        <Text style={styles.deviceAccountEmail} numberOfLines={1}>
+                          {acct.email}
+                        </Text>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.removeAcctBtn}
+                        onPress={() => handleRemoveDeviceGoogleAccount(acct.email)}
+                      >
+                        <Text style={styles.removeAcctText}>✕</Text>
+                      </TouchableOpacity>
+                    </TouchableOpacity>
+                  ))}
+
+                  <TouchableOpacity
+                    style={styles.anotherAccountBtn}
+                    onPress={() => {
+                      setGoogleEmail('');
+                      setGooglePassword('');
+                      setErrorMsg('');
+                      setGoogleStep('email');
+                    }}
+                  >
+                    <Text style={styles.anotherAccountText}>+ Use another Google account</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.secondaryBtn}
+                    onPress={() => {
+                      setShowGoogleFlow(false);
+                      setErrorMsg('');
+                    }}
+                  >
+                    <Text style={styles.secondaryBtnText}>← Back to Sign In</Text>
+                  </TouchableOpacity>
                 </View>
-                <View style={styles.googleTagBadge}>
-                  <Text style={styles.googleTagText}>{acct.tag}</Text>
+              )}
+
+              {googleStep === 'email' && (
+                <View>
+                  <Text style={styles.fieldLabel}>Google / Strathmore Email</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="name@strathmore.edu"
+                    placeholderTextColor="#94a3b8"
+                    value={googleEmail}
+                    onChangeText={setGoogleEmail}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                  />
+
+                  <View style={styles.buttonRow}>
+                    <TouchableOpacity
+                      style={[styles.secondaryBtn, { flex: 1, marginTop: 0 }]}
+                      onPress={() => {
+                        if (deviceAccounts.length > 0) {
+                          setGoogleStep('chooser');
+                        } else {
+                          setShowGoogleFlow(false);
+                        }
+                        setErrorMsg('');
+                      }}
+                    >
+                      <Text style={styles.secondaryBtnText}>Back</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[styles.primaryBtn, { flex: 1, marginTop: 0 }]}
+                      onPress={handleGoogleEmailNext}
+                    >
+                      <Text style={styles.primaryBtnText}>Next →</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
-              </TouchableOpacity>
-            ))}
+              )}
 
-            <View style={styles.dividerRow}>
-              <Text style={styles.dividerText}>OR ENTER CUSTOM GOOGLE EMAIL ({role.toUpperCase()})</Text>
+              {googleStep === 'password' && (
+                <View>
+                  <View style={styles.selectedEmailPill}>
+                    <View style={styles.deviceAvatarSmall}>
+                      <Text style={styles.deviceAvatarSmallText}>
+                        {googleEmail.charAt(0).toUpperCase()}
+                      </Text>
+                    </View>
+                    <Text style={styles.selectedEmailText} numberOfLines={1}>
+                      {googleEmail}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setGoogleStep('email');
+                        setErrorMsg('');
+                      }}
+                    >
+                      <Text style={styles.changeEmailLink}>Change</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <Text style={styles.fieldLabel}>Enter Your Google Password</Text>
+                  <View style={styles.passwordWrapper}>
+                    <TextInput
+                      style={styles.passwordInput}
+                      placeholder="Enter account password"
+                      placeholderTextColor="#94a3b8"
+                      secureTextEntry={!showPassword}
+                      value={googlePassword}
+                      onChangeText={setGooglePassword}
+                      autoCapitalize="none"
+                    />
+                    <TouchableOpacity
+                      style={styles.eyeBtn}
+                      onPress={() => setShowPassword(!showPassword)}
+                    >
+                      <Text style={styles.eyeText}>{showPassword ? 'Hide' : 'Show'}</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.buttonRow}>
+                    <TouchableOpacity
+                      style={[styles.secondaryBtn, { flex: 1, marginTop: 0 }]}
+                      onPress={() => {
+                        setGoogleStep(deviceAccounts.length > 0 ? 'chooser' : 'email');
+                        setErrorMsg('');
+                      }}
+                    >
+                      <Text style={styles.secondaryBtnText}>Back</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[styles.primaryBtn, { flex: 1, marginTop: 0 }]}
+                      onPress={handleGooglePasswordSubmit}
+                      disabled={loading}
+                    >
+                      {loading ? (
+                        <ActivityIndicator size="small" color="#ffffff" />
+                      ) : (
+                        <Text style={styles.primaryBtnText}>Sign In</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
             </View>
-
-            <TextInput
-              style={styles.input}
-              value={customGoogleEmail}
-              onChangeText={setCustomGoogleEmail}
-              placeholder="your.name@strathmore.edu"
-              autoCapitalize="none"
-              keyboardType="email-address"
-              placeholderTextColor="#94a3b8"
-            />
-
-            <View style={styles.rowBtns}>
-              <TouchableOpacity
-                style={[styles.secondaryBtn, { flex: 1 }]}
-                onPress={() => { setShowGoogleModal(false); setErrorMsg(''); }}
-              >
-                <Text style={styles.secondaryBtnText}>← Back</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.primaryBtn, { flex: 1, marginTop: 0 }]}
-                onPress={handleCustomGoogle}
-                disabled={loading}
-              >
-                <Text style={styles.primaryBtnText}>Continue</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ) : (
-          <View style={styles.formCard}>
-            {/* Sign In / Sign Up Switcher */}
-            <View style={styles.tabContainer}>
-              <TouchableOpacity
-                style={[styles.tab, isLogin && styles.activeTab]}
-                onPress={() => { setIsLogin(true); setErrorMsg(''); }}
-              >
-                <Text style={[styles.tabText, isLogin && styles.activeTabText]}>Log In</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.tab, !isLogin && styles.activeTab]}
-                onPress={() => { setIsLogin(false); setErrorMsg(''); }}
-              >
-                <Text style={[styles.tabText, !isLogin && styles.activeTabText]}>Sign Up</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Google Sign-In Button */}
-            <TouchableOpacity
-              style={styles.googleBtn}
-              onPress={() => { setShowGoogleModal(true); setErrorMsg(''); }}
-            >
-              <Text style={styles.googleG}>G</Text>
-              <Text style={styles.googleBtnText}>Continue with Google (@strathmore.edu)</Text>
-            </TouchableOpacity>
-
-            <View style={styles.dividerRow}>
-              <Text style={styles.dividerText}>OR SELECT ROLE & CREDENTIALS</Text>
-            </View>
-
-            {/* Role Selector */}
-            <Text style={styles.label}>Select University Role</Text>
-            <View style={styles.roleRow}>
-              {roles.map((r) => (
+          ) : (
+            /* ================= STANDARD SIGN IN / SIGN UP FLOW ================= */
+            <View>
+              {/* Mode Switcher (Sign In vs Sign Up) */}
+              <View style={styles.modeSwitchRow}>
                 <TouchableOpacity
-                  key={r.id}
-                  style={[styles.rolePill, role === r.id && styles.activeRolePill]}
-                  onPress={() => { setRole(r.id); setErrorMsg(''); }}
+                  style={[styles.modeTab, isLogin && styles.modeTabActive]}
+                  onPress={() => {
+                    setIsLogin(true);
+                    setErrorMsg('');
+                  }}
                 >
-                  <Text style={[styles.rolePillText, role === r.id && styles.activeRolePillText]}>
-                    {r.label}
+                  <Text style={[styles.modeTabText, isLogin && styles.modeTabTextActive]}>
+                    Sign In
                   </Text>
                 </TouchableOpacity>
-              ))}
-            </View>
-
-            {!isLogin && (
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Full Name</Text>
-                <TextInput
-                  style={styles.input}
-                  value={name}
-                  onChangeText={setName}
-                  placeholder="Elvis Wanyama Wafuke"
-                  placeholderTextColor="#94a3b8"
-                />
+                <TouchableOpacity
+                  style={[styles.modeTab, !isLogin && styles.modeTabActive]}
+                  onPress={() => {
+                    setIsLogin(false);
+                    setErrorMsg('');
+                  }}
+                >
+                  <Text style={[styles.modeTabText, !isLogin && styles.modeTabTextActive]}>
+                    Sign Up
+                  </Text>
+                </TouchableOpacity>
               </View>
-            )}
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Strathmore Email</Text>
+              {/* Continue with Google Button */}
+              <TouchableOpacity
+                style={styles.googleOutlineBtn}
+                onPress={openGoogleSignIn}
+                activeOpacity={0.8}
+              >
+                <View style={styles.googleGIcon}>
+                  <Text style={styles.googleGText}>G</Text>
+                </View>
+                <Text style={styles.googleOutlineBtnText}>
+                  Continue with Google (@strathmore.edu)
+                </Text>
+              </TouchableOpacity>
+
+              <View style={styles.dividerRow}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>
+                  OR {isLogin ? 'EMAIL LOGIN' : 'EMAIL SIGN UP'}
+                </Text>
+                <View style={styles.dividerLine} />
+              </View>
+
+              {/* Sign Up Role Selector (Student or Organizer only) */}
+              {!isLogin && (
+                <View style={{ marginBottom: 12 }}>
+                  <Text style={styles.fieldLabel}>Select Account Type</Text>
+                  <View style={styles.roleSelectorRow}>
+                    <TouchableOpacity
+                      style={[
+                        styles.roleOption,
+                        signupRole === 'student' && styles.roleOptionActive
+                      ]}
+                      onPress={() => setSignupRole('student')}
+                    >
+                      <Text
+                        style={[
+                          styles.roleOptionText,
+                          signupRole === 'student' && styles.roleOptionTextActive
+                        ]}
+                      >
+                        🎓 Student
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.roleOption,
+                        signupRole === 'organizer' && styles.roleOptionActive
+                      ]}
+                      onPress={() => setSignupRole('organizer')}
+                    >
+                      <Text
+                        style={[
+                          styles.roleOptionText,
+                          signupRole === 'organizer' && styles.roleOptionTextActive
+                        ]}
+                      >
+                        🏛️ Organizer
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+
+              {!isLogin && (
+                <View>
+                  <Text style={styles.fieldLabel}>
+                    {signupRole === 'organizer' ? 'Organizer / Department Name' : 'Full Name'}
+                  </Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder={
+                      signupRole === 'organizer'
+                        ? 'e.g. Strathmore Robotics Society'
+                        : 'e.g. Elvis Wanyama Wafuke'
+                    }
+                    placeholderTextColor="#94a3b8"
+                    value={name}
+                    onChangeText={setName}
+                  />
+                </View>
+              )}
+
+              <Text style={styles.fieldLabel}>Strathmore Email Address</Text>
               <TextInput
                 style={styles.input}
+                placeholder="name@strathmore.edu"
+                placeholderTextColor="#94a3b8"
                 value={email}
                 onChangeText={setEmail}
-                placeholder="e.g. student@strathmore.edu"
-                keyboardType="email-address"
                 autoCapitalize="none"
-                placeholderTextColor="#94a3b8"
+                keyboardType="email-address"
               />
-            </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Password</Text>
-              <TextInput
-                style={styles.input}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                placeholder="Enter password (e.g. password123)"
-                placeholderTextColor="#94a3b8"
-              />
-            </View>
+              {!isLogin && (
+                <View style={styles.twoColRow}>
+                  {signupRole === 'student' ? (
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.fieldLabel}>Admission No.</Text>
+                      <TextInput
+                        style={styles.input}
+                        placeholder="e.g. 154210"
+                        placeholderTextColor="#94a3b8"
+                        value={studentId}
+                        onChangeText={setStudentId}
+                        keyboardType="numeric"
+                      />
+                    </View>
+                  ) : (
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.fieldLabel}>Faculty / Office</Text>
+                      <TextInput
+                        style={styles.input}
+                        placeholder="e.g. SCES"
+                        placeholderTextColor="#94a3b8"
+                        value={department}
+                        onChangeText={setDepartment}
+                      />
+                    </View>
+                  )}
 
-            {!isLogin && role === 'student' && (
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Admission Number</Text>
-                <TextInput
-                  style={styles.input}
-                  value={studentId}
-                  onChangeText={setStudentId}
-                  placeholder="154210"
-                  placeholderTextColor="#94a3b8"
-                />
-              </View>
-            )}
-
-            {!isLogin && (
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Mobile Number (Africa's Talking SMS)</Text>
-                <TextInput
-                  style={styles.input}
-                  value={phone}
-                  onChangeText={setPhone}
-                  placeholder="+254712345678"
-                  keyboardType="phone-pad"
-                  placeholderTextColor="#94a3b8"
-                />
-              </View>
-            )}
-
-            <TouchableOpacity style={styles.primaryBtn} onPress={handleSubmit} disabled={loading}>
-              {loading ? (
-                <ActivityIndicator color="#ffffff" size="small" />
-              ) : (
-                <Text style={styles.primaryBtnText}>
-                  {isLogin ? `Sign In as ${role.toUpperCase()}` : `Create ${role.toUpperCase()} Account`}
-                </Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.fieldLabel}>Phone (SMS)</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="+254712345678"
+                      placeholderTextColor="#94a3b8"
+                      value={phone}
+                      onChangeText={setPhone}
+                      keyboardType="phone-pad"
+                    />
+                  </View>
+                </View>
               )}
-            </TouchableOpacity>
 
-            {/* Seeded Demo Accounts (Verified via Backend API) */}
-            <View style={styles.presetSection}>
-              <Text style={styles.presetTitle}>Quick Verified Strathmore Accounts (password123)</Text>
-              <View style={styles.presetGrid}>
+              <Text style={styles.fieldLabel}>Password</Text>
+              <View style={styles.passwordWrapper}>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="Enter your password"
+                  placeholderTextColor="#94a3b8"
+                  secureTextEntry={!showPassword}
+                  value={password}
+                  onChangeText={setPassword}
+                  autoCapitalize="none"
+                />
                 <TouchableOpacity
-                  style={styles.presetBtn}
-                  onPress={() => handlePresetAccount('student@strathmore.edu', 'student')}
+                  style={styles.eyeBtn}
+                  onPress={() => setShowPassword(!showPassword)}
                 >
-                  <Text style={styles.presetBtnText}>🎓 Elvis (154210)</Text>
+                  <Text style={styles.eyeText}>{showPassword ? 'Hide' : 'Show'}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.presetBtn}
-                  onPress={() => handlePresetAccount('organizer@strathmore.edu', 'organizer')}
-                >
-                  <Text style={styles.presetBtnText}>📢 SCES Organizer</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.presetBtn}
-                  onPress={() => handlePresetAccount('admin@strathmore.edu', 'admin')}
-                >
-                  <Text style={styles.presetBtnText}>👑 Admin 1 (Elvis)</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.presetBtn}
-                  onPress={() => handlePresetAccount('allan.vikiru@strathmore.edu', 'admin')}
-                >
-                  <Text style={styles.presetBtnText}>👑 Admin 2 (Vikiru)</Text>
-                </TouchableOpacity>
+              </View>
+
+              {!isLogin && (
+                <View>
+                  <Text style={styles.fieldLabel}>Confirm Password</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Re-enter your password"
+                    placeholderTextColor="#94a3b8"
+                    secureTextEntry={!showPassword}
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    autoCapitalize="none"
+                  />
+                </View>
+              )}
+
+              <TouchableOpacity
+                style={styles.primaryBtn}
+                onPress={handleSubmit}
+                disabled={loading}
+                activeOpacity={0.85}
+              >
+                {loading ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <Text style={styles.primaryBtnText}>
+                    {isLogin ? 'Sign In to Portal →' : 'Create SmartEvent Account →'}
+                  </Text>
+                )}
+              </TouchableOpacity>
+
+              <View style={styles.securityFooter}>
+                <Text style={styles.securityFooterText}>
+                  🔒 Protected by Bcrypt Password Hashing & Signed JWT RBAC
+                </Text>
               </View>
             </View>
-
-            {/* Optional API Server Endpoint Config for Physical Phone Testing */}
-            <TouchableOpacity
-              style={styles.configToggle}
-              onPress={() => setShowServerConfig(!showServerConfig)}
-            >
-              <Text style={styles.configToggleText}>
-                {showServerConfig ? '▲ Hide API Server URL' : '⚙️ Configure Backend API URL (Expo Go LAN)'}
-              </Text>
-            </TouchableOpacity>
-
-            {showServerConfig && (
-              <View style={styles.configBox}>
-                <Text style={styles.configHint}>
-                  On a physical phone, enter your computer's Wi-Fi IPv4 address (e.g. http://192.168.1.100:5000/api):
-                </Text>
-                <TextInput
-                  style={styles.input}
-                  value={apiUrl}
-                  onChangeText={setApiUrl}
-                  autoCapitalize="none"
-                  placeholder="http://192.168.1.100:5000/api"
-                />
-              </View>
-            )}
-          </View>
-        )}
+          )}
+        </View>
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#003366'
   },
-  scrollContent: {
+  topNav: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 32,
+    paddingBottom: 6
   },
   backBtn: {
-    alignSelf: 'flex-start',
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    backgroundColor: '#e2e8f0',
-    borderRadius: 8,
-    marginBottom: 10,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 10
   },
   backBtnText: {
+    color: '#ffffff',
     fontSize: 12,
-    fontWeight: 'bold',
-    color: '#003366',
+    fontWeight: '700'
   },
-  header: {
+  configToggle: {
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8
+  },
+  configToggleText: {
+    color: '#cbd5e1',
+    fontSize: 11,
+    fontWeight: '600'
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 16,
+    paddingBottom: 28,
+    justifyContent: 'center'
+  },
+  serverConfigBox: {
+    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)'
+  },
+  serverConfigTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#f59e0b',
+    marginBottom: 6,
+    textTransform: 'uppercase'
+  },
+  serverInput: {
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: 12,
+    color: '#0f172a'
+  },
+  serverHint: {
+    fontSize: 10,
+    color: '#cbd5e1',
+    marginTop: 5
+  },
+  brandSection: {
     alignItems: 'center',
-    marginBottom: 14,
+    marginVertical: 14
   },
-  logoBadge: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: '#003366',
+  logoCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: '#f59e0b',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: 10
   },
   logoText: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '900',
-    color: '#f59e0b',
+    color: '#0f172a'
   },
-  title: {
-    fontSize: 19,
-    fontWeight: 'bold',
-    color: '#0f172a',
+  brandTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#ffffff',
+    textAlign: 'center'
   },
-  subtitle: {
-    fontSize: 11,
-    color: '#64748b',
-    marginTop: 2,
+  brandSub: {
+    fontSize: 12,
+    color: '#cbd5e1',
     textAlign: 'center',
+    marginTop: 4,
+    paddingHorizontal: 12
   },
-  errorBox: {
+  card: {
+    backgroundColor: '#ffffff',
+    borderRadius: 22,
+    padding: 18,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 5
+  },
+  errorBanner: {
     backgroundColor: '#fef2f2',
-    borderColor: '#fca5a5',
     borderWidth: 1,
-    padding: 10,
+    borderColor: '#fecaca',
     borderRadius: 12,
-    marginBottom: 12,
+    padding: 11,
+    marginBottom: 12
   },
   errorText: {
     color: '#dc2626',
-    fontSize: 11,
-    fontWeight: 'bold',
+    fontSize: 12,
+    fontWeight: '600',
+    lineHeight: 17
   },
-  formCard: {
-    backgroundColor: '#ffffff',
-    padding: 16,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  tabContainer: {
+  modeSwitchRow: {
     flexDirection: 'row',
     backgroundColor: '#f1f5f9',
-    borderRadius: 10,
-    padding: 3,
-    marginBottom: 12,
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 14
   },
-  tab: {
+  modeTab: {
     flex: 1,
-    paddingVertical: 8,
-    alignItems: 'center',
-    borderRadius: 8,
+    paddingVertical: 9,
+    borderRadius: 10,
+    alignItems: 'center'
   },
-  activeTab: {
-    backgroundColor: '#003366',
+  modeTabActive: {
+    backgroundColor: '#003366'
   },
-  tabText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#64748b',
+  modeTabText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#64748b'
   },
-  activeTabText: {
-    color: '#ffffff',
+  modeTabTextActive: {
+    color: '#ffffff'
   },
-  googleBtn: {
+  googleOutlineBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#ffffff',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#cbd5e1',
-    paddingVertical: 10,
-    borderRadius: 10,
-    gap: 8,
+    borderRadius: 12,
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+    gap: 10
   },
-  googleG: {
-    fontSize: 14,
+  googleGIcon: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#4285F4',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  googleGText: {
+    color: '#ffffff',
     fontWeight: '900',
-    color: '#2563eb',
+    fontSize: 12
   },
-  googleBtnText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: '#1e293b',
+  googleOutlineBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1e293b'
   },
   dividerRow: {
-    marginVertical: 10,
+    flexDirection: 'row',
     alignItems: 'center',
+    marginVertical: 14
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#e2e8f0'
   },
   dividerText: {
-    fontSize: 9,
-    fontWeight: 'bold',
-    color: '#94a3b8',
+    marginHorizontal: 10,
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#94a3b8'
   },
-  roleRow: {
-    flexDirection: 'row',
-    gap: 6,
-    marginBottom: 12,
-  },
-  rolePill: {
-    flex: 1,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#cbd5e1',
-    backgroundColor: '#f8fafc',
-    alignItems: 'center',
-  },
-  activeRolePill: {
-    backgroundColor: '#e0f2fe',
-    borderColor: '#0284c7',
-  },
-  rolePillText: {
+  fieldLabel: {
     fontSize: 11,
-    fontWeight: 'bold',
-    color: '#475569',
-  },
-  activeRolePillText: {
-    color: '#003366',
-  },
-  inputGroup: {
-    marginBottom: 10,
-  },
-  label: {
-    fontSize: 11,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: '#334155',
-    marginBottom: 4,
+    marginBottom: 5,
+    textTransform: 'uppercase'
   },
   input: {
     backgroundColor: '#f8fafc',
     borderWidth: 1,
     borderColor: '#cbd5e1',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
+    borderRadius: 12,
+    paddingHorizontal: 13,
+    paddingVertical: 11,
     fontSize: 13,
     color: '#0f172a',
+    marginBottom: 12
+  },
+  passwordWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    borderRadius: 12,
+    marginBottom: 12
+  },
+  passwordInput: {
+    flex: 1,
+    paddingHorizontal: 13,
+    paddingVertical: 11,
+    fontSize: 13,
+    color: '#0f172a'
+  },
+  eyeBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 10
+  },
+  eyeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#003366'
+  },
+  roleSelectorRow: {
+    flexDirection: 'row',
+    gap: 10
+  },
+  roleOption: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 11,
+    borderWidth: 1.5,
+    borderColor: '#cbd5e1',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc'
+  },
+  roleOptionActive: {
+    borderColor: '#003366',
+    backgroundColor: '#eff6ff'
+  },
+  roleOptionText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#64748b'
+  },
+  roleOptionTextActive: {
+    color: '#003366'
+  },
+  twoColRow: {
+    flexDirection: 'row',
+    gap: 10
   },
   primaryBtn: {
     backgroundColor: '#003366',
-    paddingVertical: 12,
-    borderRadius: 10,
+    paddingVertical: 13,
+    borderRadius: 12,
     alignItems: 'center',
-    marginTop: 6,
+    justifyContent: 'center',
+    marginTop: 4
   },
   primaryBtnText: {
     color: '#ffffff',
-    fontWeight: 'bold',
     fontSize: 13,
+    fontWeight: '800'
   },
   secondaryBtn: {
     backgroundColor: '#f1f5f9',
     paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#cbd5e1',
-  },
-  secondaryBtnText: {
-    color: '#334155',
-    fontWeight: 'bold',
-    fontSize: 13,
-  },
-  rowBtns: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 10,
-  },
-  sectionLabel: {
-    fontSize: 11,
-    fontWeight: 'bold',
-    color: '#475569',
-    marginBottom: 8,
-  },
-  googleAcctRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    marginBottom: 6,
-    backgroundColor: '#f8fafc',
-    gap: 10,
-  },
-  googleAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#003366',
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 10
   },
-  googleAvatarText: {
-    color: '#f59e0b',
-    fontWeight: 'bold',
-    fontSize: 13,
-  },
-  googleAcctName: {
+  secondaryBtnText: {
+    color: '#475569',
     fontSize: 12,
-    fontWeight: 'bold',
-    color: '#0f172a',
+    fontWeight: '700'
   },
-  googleAcctEmail: {
-    fontSize: 10,
-    color: '#64748b',
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 6
   },
-  googleTagBadge: {
-    backgroundColor: '#e0f2fe',
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  googleTagText: {
-    fontSize: 9,
-    fontWeight: 'bold',
-    color: '#0369a1',
-  },
-  presetSection: {
+  securityFooter: {
     marginTop: 14,
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: '#f1f5f9',
+    alignItems: 'center'
   },
-  presetTitle: {
+  securityFooterText: {
     fontSize: 10,
-    fontWeight: 'bold',
     color: '#64748b',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  presetGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-  },
-  presetBtn: {
-    width: '48%',
-    backgroundColor: '#f8fafc',
-    borderWidth: 1,
-    borderColor: '#cbd5e1',
-    paddingVertical: 7,
-    paddingHorizontal: 6,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  presetBtnText: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    color: '#003366',
-  },
-  configToggle: {
-    marginTop: 12,
-    alignItems: 'center',
-  },
-  configToggleText: {
-    fontSize: 11,
-    color: '#0284c7',
     fontWeight: '600',
+    textAlign: 'center'
   },
-  configBox: {
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
+  googleBadgeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9'
   },
-  configHint: {
-    fontSize: 10,
-    color: '#64748b',
-    marginBottom: 6,
+  googleHeaderLabel: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#0f172a'
+  },
+  chooserPrompt: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#475569',
+    marginBottom: 10
+  },
+  deviceAccountRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 11,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    backgroundColor: '#f8fafc',
+    marginBottom: 8,
+    gap: 10
+  },
+  deviceAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#003366',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  deviceAvatarText: {
+    color: '#f59e0b',
+    fontWeight: '800',
+    fontSize: 14
+  },
+  deviceAccountName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0f172a'
+  },
+  deviceAccountEmail: {
+    fontSize: 11,
+    color: '#64748b'
+  },
+  removeAcctBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4
+  },
+  removeAcctText: {
+    fontSize: 12,
+    color: '#94a3b8',
+    fontWeight: '700'
+  },
+  anotherAccountBtn: {
+    paddingVertical: 11,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#94a3b8',
+    alignItems: 'center',
+    marginTop: 4
+  },
+  anotherAccountText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#003366'
+  },
+  selectedEmailPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f1f5f9',
+    padding: 10,
+    borderRadius: 12,
+    marginBottom: 12,
+    gap: 8
+  },
+  deviceAvatarSmall: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#003366',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  deviceAvatarSmallText: {
+    color: '#f59e0b',
+    fontSize: 11,
+    fontWeight: '800'
+  },
+  selectedEmailText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#1e293b'
+  },
+  changeEmailLink: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#2563eb'
   }
 });

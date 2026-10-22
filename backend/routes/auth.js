@@ -6,11 +6,49 @@ const { readLocalData, writeLocalData } = require("../db");
 const { requireAuth } = require("../middleware/auth");
 
 const JWT_SECRET = process.env.JWT_SECRET || "smartevent-strathmore-jwt-secret-key-2026";
-const JWT_EXPIRES_IN = "7d";
+const JWT_EXPIRES_IN = "8h";
+
+// Brute-force protection: track failed login attempts per email
+const loginAttempts = new Map();
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MS = 60 * 1000; // 1 minute lockout after 5 failed attempts
+
+function checkRateLimit(emailKey) {
+  const record = loginAttempts.get(emailKey);
+  if (!record) return { allowed: true };
+  if (record.count >= MAX_FAILED_ATTEMPTS) {
+    const elapsed = Date.now() - record.lastAttempt;
+    if (elapsed < LOCKOUT_DURATION_MS) {
+      const remainingSec = Math.ceil((LOCKOUT_DURATION_MS - elapsed) / 1000);
+      return {
+        allowed: false,
+        error: `Too many failed login attempts. Account temporarily locked for ${remainingSec}s.`
+      };
+    }
+    loginAttempts.delete(emailKey);
+  }
+  return { allowed: true };
+}
+
+function recordFailedAttempt(emailKey) {
+  const record = loginAttempts.get(emailKey) || { count: 0, lastAttempt: 0 };
+  record.count += 1;
+  record.lastAttempt = Date.now();
+  loginAttempts.set(emailKey, record);
+}
+
+function clearFailedAttempts(emailKey) {
+  loginAttempts.delete(emailKey);
+}
 
 function signAuthToken(user) {
   return jwt.sign(
-    { id: user.id, email: user.email, role: user.role, name: user.name },
+    {
+      id: user.id,
+      email: user.email,
+      role: String(user.role || "student").toLowerCase(),
+      name: user.name
+    },
     JWT_SECRET,
     { expiresIn: JWT_EXPIRES_IN }
   );
@@ -19,7 +57,10 @@ function signAuthToken(user) {
 function sanitizeUser(user) {
   if (!user) return null;
   const { password, passwordHash, ...safeUser } = user;
-  return safeUser;
+  return {
+    ...safeUser,
+    role: String(safeUser.role || "student").toLowerCase()
+  };
 }
 
 function getUsers() {
@@ -41,9 +82,9 @@ function verifyPassword(user, candidatePassword) {
   return false;
 }
 
-// POST /api/auth/signup - Register new user account
+// POST /api/auth/signup - Register new Student or Organizer account (Admin self-signup blocked)
 router.post("/signup", (req, res) => {
-  const { name, email, password, role, studentId, phone, department } = req.body;
+  const { name, email, password, role, studentId, phone, department, organizationName } = req.body;
 
   if (!name || !email || !password) {
     return res.status(400).json({
@@ -67,6 +108,14 @@ router.post("/signup", (req, res) => {
     });
   }
 
+  const requestedRole = String(role || "student").trim().toLowerCase();
+  if (requestedRole === "admin") {
+    return res.status(403).json({
+      success: false,
+      error: "Security Restriction: Administrator accounts cannot be self-registered publicly."
+    });
+  }
+
   const db = readLocalData();
   db.users = db.users || [];
   const existing = db.users.find((u) => u.email.toLowerCase() === normalizedEmail);
@@ -78,9 +127,9 @@ router.post("/signup", (req, res) => {
     });
   }
 
-  const validRole = ["admin", "organizer", "student"].includes(role) ? role : "student";
+  const validRole = requestedRole === "organizer" ? "ORGANIZER" : "STUDENT";
   const passwordHash = bcrypt.hashSync(password, 10);
-  const userId = `usr-${validRole}-${Date.now()}`;
+  const userId = `usr-${validRole.toLowerCase()}-${Date.now()}`;
 
   const newUser = {
     id: userId,
@@ -88,7 +137,9 @@ router.post("/signup", (req, res) => {
     email: normalizedEmail,
     passwordHash,
     role: validRole,
-    studentId: validRole === "student" ? (studentId || `15${Math.floor(1000 + Math.random() * 9000)}`) : undefined,
+    studentId: validRole === "STUDENT" ? (studentId || `15${Math.floor(1000 + Math.random() * 9000)}`) : undefined,
+    organizerCode: validRole === "ORGANIZER" ? `ORG-${Math.floor(100 + Math.random() * 900)}` : undefined,
+    organizationName: validRole === "ORGANIZER" ? (organizationName || department || `${String(name).trim()} Events`) : undefined,
     phone: phone || "+254712345678",
     department: department || "School of Computing & Engineering Sciences",
     status: "Active",
@@ -98,8 +149,7 @@ router.post("/signup", (req, res) => {
 
   db.users.push(newUser);
 
-  // Sync corresponding role profile table
-  if (validRole === "student") {
+  if (validRole === "STUDENT") {
     db.student_profiles = db.student_profiles || [];
     db.student_profiles.push({
       id: `stud-prof-${Date.now()}`,
@@ -112,14 +162,14 @@ router.post("/signup", (req, res) => {
       yearOfStudy: 3,
       phone: newUser.phone,
       hostelResident: false,
-      pastAttendanceRate: 0.80
+      pastAttendanceRate: 0.82
     });
-  } else if (validRole === "organizer") {
+  } else if (validRole === "ORGANIZER") {
     db.organizer_profiles = db.organizer_profiles || [];
     db.organizer_profiles.push({
       id: `org-prof-${Date.now()}`,
       userId,
-      organizerCode: `ORG-${Math.floor(100 + Math.random() * 900)}`,
+      organizerCode: newUser.organizerCode,
       name: newUser.name,
       email: newUser.email,
       department: newUser.department,
@@ -127,20 +177,6 @@ router.post("/signup", (req, res) => {
       phone: newUser.phone,
       verified: true,
       eventsHostedCount: 0
-    });
-  } else if (validRole === "admin") {
-    db.admin_profiles = db.admin_profiles || [];
-    db.admin_profiles.push({
-      id: `adm-prof-${Date.now()}`,
-      userId,
-      adminCode: `ADM-${Math.floor(100 + Math.random() * 900)}`,
-      name: newUser.name,
-      email: newUser.email,
-      roleTitle: "System Administrator",
-      clearanceLevel: "ADMIN",
-      office: "ICT Directorate",
-      phone: newUser.phone,
-      permissions: ["MANAGE_USERS", "MANAGE_EVENTS", "MANAGE_CATEGORIES", "SMS_BROADCAST"]
     });
   }
 
@@ -157,7 +193,7 @@ router.post("/signup", (req, res) => {
   });
 });
 
-// POST /api/auth/login - Strictly validate email, password, and role
+// POST /api/auth/login - Strictly validate email, password, rate limits, and optional role check
 router.post("/login", (req, res) => {
   const { email, password, role } = req.body;
 
@@ -169,20 +205,32 @@ router.post("/login", (req, res) => {
   }
 
   const normalizedEmail = String(email).trim().toLowerCase();
+
+  // Check brute-force rate limit
+  const rateCheck = checkRateLimit(normalizedEmail);
+  if (!rateCheck.allowed) {
+    return res.status(429).json({
+      success: false,
+      error: rateCheck.error
+    });
+  }
+
   const users = getUsers();
   const userByEmail = users.find((u) => u.email.toLowerCase() === normalizedEmail);
 
   if (!userByEmail) {
+    recordFailedAttempt(normalizedEmail);
     return res.status(401).json({
       success: false,
-      error: "Invalid credentials: No account found with that email address."
+      error: "Invalid email or password credentials."
     });
   }
 
   if (!verifyPassword(userByEmail, password)) {
+    recordFailedAttempt(normalizedEmail);
     return res.status(401).json({
       success: false,
-      error: "Invalid credentials: Incorrect password."
+      error: "Invalid email or password credentials."
     });
   }
 
@@ -193,24 +241,18 @@ router.post("/login", (req, res) => {
     });
   }
 
-  // If role filter specified, strictly verify role match
-  if (role && userByEmail.role !== role) {
+  const userRoleLower = String(userByEmail.role || "student").toLowerCase();
+  const requestedRoleLower = role ? String(role).trim().toLowerCase() : null;
+
+  // If a specific role tab was chosen and does not match the user's actual role, reject
+  if (requestedRoleLower && requestedRoleLower !== "auto" && userRoleLower !== requestedRoleLower) {
     return res.status(403).json({
       success: false,
-      error: `Role mismatch: '${userByEmail.email}' is registered as '${userByEmail.role.toUpperCase()}', not '${role.toUpperCase()}'. Please select the '${userByEmail.role.toUpperCase()}' role.`
+      error: `Access Denied: This account is registered as '${userRoleLower.toUpperCase()}', not '${requestedRoleLower.toUpperCase()}'.`
     });
   }
 
-  // Upgrade plaintext password to bcrypt hash transparently if needed
-  if (!userByEmail.passwordHash) {
-    const db = readLocalData();
-    const target = (db.users || []).find((u) => u.id === userByEmail.id);
-    if (target) {
-      target.passwordHash = bcrypt.hashSync(password, 10);
-      delete target.password;
-      writeLocalData(db);
-    }
-  }
+  clearFailedAttempts(normalizedEmail);
 
   const userPayload = sanitizeUser(userByEmail);
   const token = signAuthToken(userByEmail);
@@ -223,12 +265,13 @@ router.post("/login", (req, res) => {
   });
 });
 
-// POST /api/auth/google - Google OAuth / Google Workspace Sign-In
+// POST /api/auth/google - Google OAuth / Google Workspace Account Chooser Sign-In
 router.post("/google", (req, res) => {
   try {
-    let { email, name, googleId, picture, role, credential } = req.body;
+    let { email, name, googleId, picture, role, credential, password } = req.body;
 
-    // If a Google Identity Services JWT credential was provided, decode its payload
+    // Decode Google Identity Services JWT credential if provided by Google OAuth popup
+    let verifiedByGoogleToken = false;
     if (credential && typeof credential === "string" && credential.split(".").length === 3) {
       const base64Payload = credential.split(".")[1];
       const decodedJson = Buffer.from(base64Payload, "base64").toString("utf8");
@@ -237,6 +280,7 @@ router.post("/google", (req, res) => {
       name = payload.name || name;
       googleId = payload.sub || googleId;
       picture = payload.picture || picture;
+      verifiedByGoogleToken = Boolean(payload.email && payload.sub);
     }
 
     if (!email) {
@@ -247,44 +291,79 @@ router.post("/google", (req, res) => {
     }
 
     const normalizedEmail = String(email).trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      return res.status(400).json({
+        success: false,
+        error: "Please enter a valid Google Workspace (@strathmore.edu) or Gmail address."
+      });
+    }
+
     const db = readLocalData();
     db.users = db.users || [];
 
     let user = db.users.find((u) => u.email.toLowerCase() === normalizedEmail);
 
     if (user) {
-      // If user explicitly asked for a role that doesn't match their existing account role, warn or use their true role
-      if (role && user.role !== role) {
+      const actualRole = String(user.role || "student").toLowerCase();
+
+      // Security check: if signing into an existing account without a cryptographic Google ID token,
+      // require password verification so no one can impersonate another user or Admin by email alone.
+      if (!verifiedByGoogleToken) {
+        if (!password || !verifyPassword(user, password)) {
+          return res.status(401).json({
+            success: false,
+            error: "Please enter the valid Google / Strathmore Workspace password for this account."
+          });
+        }
+      }
+
+      if (role && role !== "auto" && actualRole !== String(role).toLowerCase()) {
         return res.status(403).json({
           success: false,
-          error: `Your Google account (${user.email}) is registered with the '${user.role.toUpperCase()}' role, not '${role.toUpperCase()}'.`
+          error: `Your Google account (${user.email}) is registered as '${actualRole.toUpperCase()}', not '${String(role).toUpperCase()}'.`
         });
       }
+
       user.googleId = googleId || user.googleId || `google_${user.id}`;
       user.picture = picture || user.picture;
       user.lastLoginAt = new Date().toISOString();
       writeLocalData(db);
     } else {
-      // Provision new account via Google OAuth
-      const validRole = ["admin", "organizer", "student"].includes(role) ? role : "student";
-      // Security: Only pre-authorized emails can self-provision as Admin via Google
-      if (validRole === "admin") {
+      // Provision new Student or Organizer account via Google OAuth
+      const requestedRole = String(role || "student").toLowerCase();
+      if (requestedRole === "admin") {
         return res.status(403).json({
           success: false,
-          error: "Administrator accounts cannot be self-created via Google Sign-In. Please sign in with an authorized Admin Google account (admin@strathmore.edu or allan.vikiru@strathmore.edu)."
+          error: "Administrator accounts cannot be self-created via Google Sign-In."
         });
       }
 
+      if (!verifiedByGoogleToken && (!password || String(password).length < 6)) {
+        return res.status(400).json({
+          success: false,
+          error: "Please provide your Google account password (min 6 characters) to verify your account."
+        });
+      }
+
+      const validRole = requestedRole === "organizer" ? "ORGANIZER" : "STUDENT";
       const userId = `usr-google-${Date.now()}`;
+      const formattedName =
+        name ||
+        normalizedEmail
+          .split("@")[0]
+          .replace(/[._-]/g, " ")
+          .replace(/\b\w/g, (c) => c.toUpperCase());
+
       user = {
         id: userId,
-        name: name || normalizedEmail.split("@")[0].replace(/\./g, " "),
+        name: formattedName,
         email: normalizedEmail,
-        passwordHash: bcrypt.hashSync(`google_oauth_${Date.now()}`, 10),
+        passwordHash: bcrypt.hashSync(password || `google_oauth_${Date.now()}`, 10),
         role: validRole,
         googleId: googleId || `google_${Date.now()}`,
         picture: picture || null,
-        studentId: validRole === "student" ? `15${Math.floor(1000 + Math.random() * 9000)}` : undefined,
+        studentId: validRole === "STUDENT" ? `15${Math.floor(1000 + Math.random() * 9000)}` : undefined,
+        organizerCode: validRole === "ORGANIZER" ? `ORG-${Math.floor(100 + Math.random() * 900)}` : undefined,
         phone: "+254712345678",
         department: "School of Computing & Engineering Sciences",
         status: "Active",
@@ -294,7 +373,7 @@ router.post("/google", (req, res) => {
 
       db.users.push(user);
 
-      if (validRole === "student") {
+      if (validRole === "STUDENT") {
         db.student_profiles = db.student_profiles || [];
         db.student_profiles.push({
           id: `stud-prof-${Date.now()}`,
@@ -309,12 +388,12 @@ router.post("/google", (req, res) => {
           hostelResident: false,
           pastAttendanceRate: 0.82
         });
-      } else if (validRole === "organizer") {
+      } else {
         db.organizer_profiles = db.organizer_profiles || [];
         db.organizer_profiles.push({
           id: `org-prof-${Date.now()}`,
           userId,
-          organizerCode: `ORG-${Math.floor(100 + Math.random() * 900)}`,
+          organizerCode: user.organizerCode,
           name: user.name,
           email: user.email,
           department: user.department,
@@ -353,8 +432,8 @@ router.get("/me", requireAuth, (req, res) => {
   });
 });
 
-// GET /api/auth/users - List registered users (sanitized)
-router.get("/users", (req, res) => {
+// GET /api/auth/users - Protected endpoint (requires authentication)
+router.get("/users", requireAuth, (req, res) => {
   const users = getUsers().map(sanitizeUser);
   res.json({ success: true, count: users.length, data: users });
 });

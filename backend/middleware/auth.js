@@ -4,7 +4,7 @@ const { readLocalData } = require('../db');
 const JWT_SECRET = process.env.JWT_SECRET || 'smartevent-strathmore-jwt-secret-key-2026';
 
 /**
- * Authentication Middleware: Extracts & verifies JWT or legacy user token
+ * Authentication Middleware: Extracts & verifies cryptographically signed JWT token
  */
 function verifyToken(req, res, next) {
   const authHeader = req.headers.authorization || req.headers['x-auth-token'];
@@ -18,7 +18,6 @@ function verifyToken(req, res, next) {
     token = req.query.token;
   }
 
-  // Allow unauthenticated access if no token provided (req.user will be null)
   if (!token) {
     req.user = null;
     return next();
@@ -26,30 +25,19 @@ function verifyToken(req, res, next) {
 
   const db = readLocalData();
 
-  // 1. Try JWT verification first
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     const user = (db.users || []).find(u => u.id === decoded.id);
-    if (user) {
+    if (user && String(user.status || 'Active').toLowerCase() !== 'suspended') {
       const { password, passwordHash, ...userPayload } = user;
-      req.user = userPayload;
+      req.user = {
+        ...userPayload,
+        role: String(userPayload.role || 'student').toLowerCase()
+      };
       return next();
     }
   } catch (err) {
-    // Fall through to legacy token format check
-  }
-
-  // 2. Fallback support for legacy token pattern: token_{userId}_{timestamp}
-  const parts = token.split('_');
-  if (parts.length >= 2 && parts[0] === 'token') {
-    const userId = parts[1];
-    const user = (db.users || []).find(u => u.id === userId);
-    
-    if (user) {
-      const { password, passwordHash, ...userPayload } = user;
-      req.user = userPayload;
-      return next();
-    }
+    // Invalid or expired JWT
   }
 
   req.user = null;
@@ -63,7 +51,7 @@ function requireAuth(req, res, next) {
   if (!req.user) {
     return res.status(401).json({
       success: false,
-      error: 'Authentication required. Please log in to perform this action.'
+      error: 'Authentication required. Please log in with a valid session.'
     });
   }
   next();
@@ -74,6 +62,7 @@ function requireAuth(req, res, next) {
  * @param {string[]} allowedRoles - Array of roles permitted (e.g. ['admin', 'organizer'])
  */
 function requireRole(allowedRoles = []) {
+  const normalizedAllowed = allowedRoles.map(r => String(r).toLowerCase());
   return (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({
@@ -82,10 +71,11 @@ function requireRole(allowedRoles = []) {
       });
     }
 
-    if (!allowedRoles.includes(req.user.role)) {
+    const userRole = String(req.user.role || '').toLowerCase();
+    if (!normalizedAllowed.includes(userRole)) {
       return res.status(403).json({
         success: false,
-        error: `Access denied. Role '${req.user.role}' is not authorized to access this resource.`
+        error: `Access denied. Role '${userRole.toUpperCase()}' is not authorized to access this resource.`
       });
     }
 
@@ -98,4 +88,3 @@ module.exports = {
   requireAuth,
   requireRole
 };
-
