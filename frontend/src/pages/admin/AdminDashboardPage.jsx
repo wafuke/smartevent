@@ -1,1150 +1,731 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Users,
-  Calendar,
-  Tag,
-  ShieldCheck,
-  Search,
-  Plus,
-  Edit3,
-  Trash2,
-  RefreshCw,
-  MessageSquare,
-  Send,
-  Database,
-  ExternalLink
+  LayoutDashboard, Users, Calendar, ClipboardList, Tag, MapPin, MessageSquare, Award, Database, Plus, Edit3, Trash2,
+  RefreshCw, ShieldCheck, Ban, CheckCircle2, ExternalLink, Brain, Activity, GraduationCap, Building2, Crown
 } from 'lucide-react';
-import { adminApi, eventsApi, categoriesApi, registrationsApi, smsApi } from '../../services/api';
-import EventCreationModal from '../../components/EventCreationModal';
-import EventEditModal from '../../components/EventEditModal';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, Legend } from 'recharts';
+import { adminApi, eventsApi, categoriesApi, registrationsApi, venuesApi, smsApi } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
+import EventFormModal from '../../components/EventFormModal';
+import SmsComposer from '../../components/SmsComposer';
+import {
+  Badge, StatCard, DataTable, Modal, Field, inputCls, PrimaryButton, Spinner, EmptyState, useToast, useConfirm,
+  fmtDate, fmtDateTime, timeAgo
+} from '../../components/ui';
+
+const NAV = [
+  { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+  { id: 'users', label: 'Users', icon: Users },
+  { id: 'events', label: 'Events', icon: Calendar },
+  { id: 'registrations', label: 'Registrations', icon: ClipboardList },
+  { id: 'categories', label: 'Categories', icon: Tag },
+  { id: 'venues', label: 'Venues', icon: MapPin },
+  { id: 'sms', label: 'SMS Gateway', icon: MessageSquare },
+  { id: 'profiles', label: 'Role Profiles', icon: Award }
+];
+
+const CONSOLE_URL = import.meta.env.VITE_CONSOLE_URL || `${window.location.protocol}//${window.location.hostname}:5000/`;
+const PIE_COLORS = ['#dc2626', '#f59e0b', '#0284c7'];
+const BLANK_USER = { name: '', email: '', password: '', role: 'student', studentId: '', phone: '', department: 'School of Computing & Engineering Sciences', status: 'Active' };
 
 export default function AdminDashboardPage() {
-  const [activeTab, setActiveTab] = useState('users'); // 'overview', 'users', 'profiles', 'events', 'registrations', 'categories', 'sms'
-  const [metrics, setMetrics] = useState({});
-  const [profileTables, setProfileTables] = useState({
-    admin_profiles: [],
-    organizer_profiles: [],
-    student_profiles: [],
-    venues: []
-  });
-  const [users, setUsers] = useState([]);
-  const [events, setEvents] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [registrations, setRegistrations] = useState([]);
-  const [smsLogs, setSmsLogs] = useState([]);
+  const toast = useToast();
+  const confirm = useConfirm();
+  const { user } = useAuth();
+
+  const [tab, setTab] = useState('overview');
+  const [data, setData] = useState(null);
+  const [venues, setVenues] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  // Search & Filters
-  const [searchQuery, setSearchQuery] = useState('');
-  const [roleFilter, setRoleFilter] = useState('All');
-
-  // User Create/Edit Modal
-  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState(null);
-  const [userForm, setUserForm] = useState({
-    name: '',
-    email: '',
-    password: 'password123',
-    role: 'student',
-    studentId: '',
-    phone: '+254712345678',
-    department: 'School of Computing & Engineering Sciences',
-    status: 'Active'
-  });
-
-  // Event Create/Edit Modal
-  const [isCreateEventOpen, setIsCreateEventOpen] = useState(false);
-  const [editingEvent, setEditingEvent] = useState(null);
-
-  // Category Create/Edit Modal
-  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
-  const [editingCategory, setEditingCategory] = useState(null);
-  const [catForm, setCatForm] = useState({ name: '', description: '', icon: 'Tag' });
-
-  // Africa's Talking Priority SMS Form
-  const [smsForm, setSmsForm] = useState({
-    eventId: 'evt-101',
-    priority: 'HIGH',
-    recipients: '',
-    broadcastToEventRoster: true,
-    message: 'Venue reminder: Please arrive 15 minutes early and carry your Strathmore Student ID.'
-  });
-  const [sendingSms, setSendingSms] = useState(false);
-
-  useEffect(() => {
-    loadAdminData();
-  }, []);
-
-  const loadAdminData = async () => {
-    setLoading(true);
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
-      const [overviewRes, usersRes, eventsRes, catsRes, regsRes, smsRes] = await Promise.all([
-        adminApi.getOverview().catch(() => ({ data: { metrics: {}, tables: {} } })),
-        adminApi.getUsers().catch(() => ({ data: [] })),
-        eventsApi.getAll().catch(() => ({ data: [] })),
-        categoriesApi.getAll().catch(() => ({ data: [] })),
-        registrationsApi.getAll().catch(() => ({ data: [] })),
-        smsApi.getLogs().catch(() => ({ data: [] }))
-      ]);
-
-      setMetrics(overviewRes.data?.metrics || {});
-      setProfileTables(overviewRes.data?.tables || {
-        admin_profiles: [],
-        organizer_profiles: [],
-        student_profiles: [],
-        venues: []
-      });
-      setUsers(usersRes.data || []);
-      setEvents(eventsRes.data || []);
-      setCategories(catsRes.data || []);
-      setRegistrations(regsRes.data || []);
-      setSmsLogs(smsRes.data || []);
+      const [ov, v] = await Promise.all([adminApi.getOverview(), venuesApi.getAll()]);
+      setData(ov.data);
+      setVenues(v.data || []);
+      setError('');
     } catch (err) {
-      console.error('Failed to load admin data:', err);
+      setError(err.message);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  // ================= USER CRUD =================
-  const openCreateUserModal = () => {
-    setEditingUser(null);
-    setUserForm({
-      name: '',
-      email: '',
-      password: 'password123',
-      role: 'student',
-      studentId: '',
-      phone: '+254712345678',
-      department: 'BSc Informatics & Computer Science',
-      status: 'Active'
-    });
-    setIsUserModalOpen(true);
-  };
+  useEffect(() => {
+    load();
+  }, [load]);
 
-  const openEditUserModal = (u) => {
-    setEditingUser(u);
-    setUserForm({
-      name: u.name || '',
-      email: u.email || '',
-      password: '',
-      role: u.role || 'student',
-      studentId: u.studentId || '',
-      phone: u.phone || '+254712345678',
-      department: u.department || 'Strathmore University',
-      status: u.status || 'Active'
-    });
-    setIsUserModalOpen(true);
-  };
-
-  const handleSaveUser = async (e) => {
-    e.preventDefault();
+  const run = async (fn, okMessage) => {
     try {
-      if (editingUser) {
-        await adminApi.updateUser(editingUser.id, userForm);
-      } else {
-        await adminApi.createUser(userForm);
-      }
-      setIsUserModalOpen(false);
-      await loadAdminData();
+      await fn();
+      if (okMessage) toast.success(okMessage);
+      await load(true);
+      return true;
     } catch (err) {
-      alert(err.message || 'Failed to save user');
+      toast.error(err.message);
+      return false;
     }
   };
 
-  const handleDeleteUser = async (userId, userName) => {
-    if (!window.confirm(`Are you sure you want to permanently delete user "${userName}"?`)) return;
-    try {
-      await adminApi.deleteUser(userId);
-      await loadAdminData();
-    } catch (err) {
-      alert(err.message || 'Failed to delete user');
-    }
-  };
+  if (loading) return <Spinner label="Loading administration console..." />;
+  if (error || !data) {
+    return (
+      <EmptyState
+        title="Could not load the admin console"
+        message={error || 'Unknown error'}
+        action={<PrimaryButton onClick={() => load()}>Try again</PrimaryButton>}
+      />
+    );
+  }
 
-  // ================= EVENT CRUD =================
-  const handleCreateEvent = async (newEvt) => {
-    try {
-      await eventsApi.create(newEvt);
-      setIsCreateEventOpen(false);
-      await loadAdminData();
-    } catch (err) {
-      alert(err.message || 'Failed to create event');
-    }
-  };
-
-  const handleUpdateEvent = async (updatedEvt) => {
-    try {
-      await eventsApi.update(updatedEvt.id, updatedEvt);
-      setEditingEvent(null);
-      await loadAdminData();
-    } catch (err) {
-      alert(err.message || 'Failed to update event');
-    }
-  };
-
-  const handleDeleteEvent = async (eventId, title) => {
-    if (!window.confirm(`Are you sure you want to delete event "${title}"?`)) return;
-    try {
-      await eventsApi.delete(eventId);
-      await loadAdminData();
-    } catch (err) {
-      alert(err.message || 'Failed to delete event');
-    }
-  };
-
-  // ================= REGISTRATION CRUD =================
-  const handleCancelRegistration = async (regId, studentName) => {
-    if (!window.confirm(`Cancel RSVP registration for "${studentName}"?`)) return;
-    try {
-      await registrationsApi.cancel(regId);
-      await loadAdminData();
-    } catch (err) {
-      alert(err.message || 'Failed to cancel registration');
-    }
-  };
-
-  // ================= CATEGORY CRUD =================
-  const openCreateCategoryModal = () => {
-    setEditingCategory(null);
-    setCatForm({ name: '', description: '', icon: 'Tag' });
-    setIsCategoryModalOpen(true);
-  };
-
-  const openEditCategoryModal = (cat) => {
-    setEditingCategory(cat);
-    setCatForm({ name: cat.name, description: cat.description || '', icon: cat.icon || 'Tag' });
-    setIsCategoryModalOpen(true);
-  };
-
-  const handleSaveCategory = async (e) => {
-    e.preventDefault();
-    try {
-      if (editingCategory) {
-        await categoriesApi.update(editingCategory.id, catForm);
-      } else {
-        await categoriesApi.create(catForm);
-      }
-      setIsCategoryModalOpen(false);
-      await loadAdminData();
-    } catch (err) {
-      alert(err.message || 'Failed to save category');
-    }
-  };
-
-  const handleDeleteCategory = async (catId, catName) => {
-    if (!window.confirm(`Are you sure you want to delete category "${catName}"?`)) return;
-    try {
-      await categoriesApi.delete(catId);
-      await loadAdminData();
-    } catch (err) {
-      alert(err.message || 'Failed to delete category');
-    }
-  };
-
-  // ================= AFRICA'S TALKING SMS DISPATCH =================
-  const handleDispatchSms = async (e) => {
-    e.preventDefault();
-    setSendingSms(true);
-    try {
-      const targetEvent = events.find((ev) => ev.id === smsForm.eventId);
-      const res = await smsApi.send({
-        eventId: smsForm.eventId,
-        eventTitle: targetEvent ? targetEvent.title : 'Campus Alert',
-        priority: smsForm.priority,
-        broadcastToEventRoster: smsForm.broadcastToEventRoster,
-        recipients: smsForm.recipients
-          ? smsForm.recipients.split(',').map((s) => s.trim()).filter(Boolean)
-          : [],
-        message: smsForm.message
-      });
-      alert(res.message || 'Priority SMS dispatched via Africa\'s Talking Gateway!');
-      await loadAdminData();
-    } catch (err) {
-      alert(err.message || 'SMS dispatch failed');
-    } finally {
-      setSendingSms(false);
-    }
-  };
-
-  // Filtered Lists
-  const q = searchQuery.toLowerCase();
-  const filteredUsers = users.filter((u) => {
-    const matchesRole = roleFilter === 'All' || u.role === roleFilter;
-    const matchesSearch =
-      (u.name || '').toLowerCase().includes(q) ||
-      (u.email || '').toLowerCase().includes(q) ||
-      (u.studentId && u.studentId.toLowerCase().includes(q)) ||
-      (u.department && u.department.toLowerCase().includes(q));
-    return matchesRole && matchesSearch;
-  });
-
-  const filteredEvents = events.filter(
-    (e) =>
-      (e.title || '').toLowerCase().includes(q) ||
-      (e.category || '').toLowerCase().includes(q) ||
-      (e.venue || '').toLowerCase().includes(q) ||
-      (e.organizer || '').toLowerCase().includes(q)
-  );
-
-  const filteredRegistrations = registrations.filter(
-    (r) =>
-      (r.studentName || '').toLowerCase().includes(q) ||
-      (r.studentId || '').toLowerCase().includes(q) ||
-      (r.email || '').toLowerCase().includes(q) ||
-      (r.eventTitle || r.eventId || '').toLowerCase().includes(q)
-  );
+  const ctx = { data, venues, run, toast, confirm, reload: () => load(true), user };
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto pb-16">
-      {/* Admin Control Center Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-[#002244] to-slate-900 text-white p-6 sm:p-8 rounded-3xl shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="space-y-2">
-          <div className="flex items-center space-x-2 text-blue-400 text-xs font-bold uppercase tracking-wider">
-            <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            <span>Administrative Control Center & Relational Database Tables</span>
+    <div className="max-w-7xl mx-auto pb-16">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-slate-900 via-[#002244] to-slate-900 text-white p-5 sm:p-7 rounded-3xl shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <div className="flex items-center gap-2 text-emerald-400 text-[11px] font-extrabold uppercase tracking-wider">
+            <ShieldCheck className="w-4 h-4" /> Administration console
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black">System Administration & Table Explorer</h1>
-          <p className="text-xs text-slate-300">
-            Full CRUD management for Users (2 Admins, 4 Organizers, 6 Students), Events, Registrations, Categories, and Africa's Talking Priority SMS.
+          <h1 className="text-2xl sm:text-3xl font-black mt-1">Welcome, {user.name.split(' ')[0]}</h1>
+          <p className="text-xs text-slate-300 mt-1">
+            {data.summary.totals.users} users - {data.summary.totals.events} events - {data.summary.totals.registrations} registrations - {data.summary.sms.totalSent} SMS sent
           </p>
         </div>
-
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          <a
-            href="http://localhost:5000"
-            target="_blank"
-            rel="noreferrer"
-            className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-extrabold flex items-center space-x-1.5 shadow-sm"
-          >
-            <Database className="w-4 h-4" />
-            <span>Backend DB Console</span>
-            <ExternalLink className="w-3.5 h-3.5" />
+        <div className="flex items-center gap-2">
+          <a href={CONSOLE_URL} target="_blank" rel="noreferrer" className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-extrabold flex items-center gap-1.5">
+            <Database className="w-4 h-4" /> Database tables <ExternalLink className="w-3 h-3" />
           </a>
-          <button
-            onClick={loadAdminData}
-            className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold flex items-center space-x-2 border border-white/20"
-          >
-            <RefreshCw className="w-4 h-4" />
-            <span>Refresh</span>
+          <button onClick={() => load(true)} className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-xs font-bold flex items-center gap-2">
+            <RefreshCw className="w-4 h-4" /> Refresh
           </button>
         </div>
       </div>
 
-      {/* Metrics Row */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">Total Users</span>
-          <span className="text-2xl font-extrabold text-slate-900 mt-1 block">{users.length}</span>
-          <span className="text-[11px] text-blue-700 font-semibold mt-0.5 block">
-            {users.filter((u) => u.role === 'admin').length} Admins • {users.filter((u) => u.role === 'organizer').length} Org • {users.filter((u) => u.role === 'student').length} Stud
-          </span>
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Sidebar / mobile tabs */}
+        <nav className="lg:w-56 shrink-0">
+          <div className="flex lg:flex-col gap-1.5 overflow-x-auto pb-1 lg:pb-0 lg:sticky lg:top-24">
+            {NAV.map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                onClick={() => setTab(id)}
+                className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-extrabold whitespace-nowrap transition-colors ${
+                  tab === id ? 'bg-[#003366] text-white shadow-sm' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                <Icon className="w-4 h-4" /> {label}
+              </button>
+            ))}
+          </div>
+        </nav>
+
+        <section className="flex-1 min-w-0">
+          {tab === 'overview' && <Overview {...ctx} />}
+          {tab === 'users' && <UsersTab {...ctx} />}
+          {tab === 'events' && <EventsTab {...ctx} />}
+          {tab === 'registrations' && <RegistrationsTab {...ctx} />}
+          {tab === 'categories' && <CategoriesTab {...ctx} />}
+          {tab === 'venues' && <VenuesTab {...ctx} />}
+          {tab === 'sms' && <SmsTab {...ctx} />}
+          {tab === 'profiles' && <ProfilesTab {...ctx} />}
+        </section>
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================ OVERVIEW */
+function Overview({ data }) {
+  const { totals, categoryBreakdown, topEvents, sms, model, capacityUtilizationPct } = data.summary;
+  const smsPie = [
+    { name: 'High', value: sms.highPriority },
+    { name: 'Medium', value: sms.mediumPriority },
+    { name: 'Low', value: sms.lowPriority }
+  ].filter((d) => d.value > 0);
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <StatCard label="Total users" value={totals.users} icon={Users} hint={`${totals.suspended} suspended`} />
+        <StatCard label="Students" value={totals.students} icon={GraduationCap} tone="green" />
+        <StatCard label="Organizers" value={totals.organizers} icon={Building2} tone="amber" />
+        <StatCard label="Admins" value={totals.admins} icon={Crown} tone="purple" />
+        <StatCard label="Events" value={totals.events} icon={Calendar} hint={`${totals.upcomingEvents} upcoming`} />
+        <StatCard label="Registrations" value={totals.registrations} icon={ClipboardList} tone="green" hint={`${capacityUtilizationPct}% of seat capacity booked`} />
+        <StatCard label="Categories" value={totals.categories} icon={Tag} tone="amber" hint={`${totals.venues} venues`} />
+        <StatCard label="SMS delivered" value={`${sms.deliveryRate}%`} icon={MessageSquare} tone="purple" hint={`${sms.totalSent} sent - ${sms.failed} failed`} />
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        <div className="xl:col-span-2 bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+          <h3 className="text-sm font-black text-slate-900 mb-1">Registrations by category</h3>
+          <p className="text-xs text-slate-500 mb-3">Seats booked versus total capacity</p>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={categoryBreakdown} margin={{ left: -15 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} />
+                <Tooltip />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+                <Bar dataKey="registrations" name="Registered" fill="#003366" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="capacity" name="Capacity" fill="#cbd5e1" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">Campus Events</span>
-          <span className="text-2xl font-extrabold text-[#003366] mt-1 block">{events.length}</span>
-          <span className="text-[11px] text-slate-500 font-medium mt-0.5 block">{metrics?.capacityUtilization || '76%'} Avg Fill</span>
-        </div>
-
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">Registrations</span>
-          <span className="text-2xl font-extrabold text-emerald-700 mt-1 block">{registrations.length}</span>
-          <span className="text-[11px] text-emerald-600 font-semibold mt-0.5 block">Confirmed RSVPs</span>
-        </div>
-
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">Categories</span>
-          <span className="text-2xl font-extrabold text-amber-700 mt-1 block">{categories.length}</span>
-          <span className="text-[11px] text-slate-500 font-medium mt-0.5 block">{profileTables.venues?.length || 6} Venues</span>
-        </div>
-
-        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">Priority SMS</span>
-          <span className="text-2xl font-extrabold text-purple-700 mt-1 block">{smsLogs.length}</span>
-          <span className="text-[11px] text-purple-600 font-semibold mt-0.5 block">Africa's Talking API</span>
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+          <h3 className="text-sm font-black text-slate-900 mb-1">SMS by priority</h3>
+          <p className="text-xs text-slate-500 mb-3">Africa's Talking dispatches</p>
+          {smsPie.length ? (
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={smsPie} dataKey="value" nameKey="name" innerRadius={50} outerRadius={80} paddingAngle={3}>
+                    {smsPie.map((_, i) => (
+                      <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <EmptyState title="No SMS sent yet" />
+          )}
         </div>
       </div>
 
-      {/* Admin Navigation Tabs */}
-      <div className="flex items-center space-x-2 border-b border-slate-200 pb-2 overflow-x-auto">
-        {[
-          { id: 'users', label: `Users Table (${users.length})` },
-          { id: 'profiles', label: `Role Profiles & Venues Tables` },
-          { id: 'events', label: `Events Table (${events.length})` },
-          { id: 'registrations', label: `Registrations Table (${registrations.length})` },
-          { id: 'categories', label: `Categories Table (${categories.length})` },
-          { id: 'sms', label: `Africa's Talking SMS Table (${smsLogs.length})` }
-        ].map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setActiveTab(t.id)}
-            className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-              activeTab === t.id ? 'bg-[#003366] text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            {t.label}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+          <h3 className="text-sm font-black text-slate-900 mb-3">Most popular events</h3>
+          <div className="space-y-3">
+            {topEvents.map((e) => {
+              const pct = Math.min(100, Math.round((e.registrations / e.capacity) * 100));
+              return (
+                <div key={e.id}>
+                  <div className="flex justify-between text-xs font-bold text-slate-700 mb-1">
+                    <span className="truncate pr-3">{e.title}</span>
+                    <span>{e.registrations}/{e.capacity}</span>
+                  </div>
+                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full ${pct > 90 ? 'bg-red-500' : 'bg-[#003366]'}`} style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+          <h3 className="text-sm font-black text-slate-900 mb-3 flex items-center gap-2"><Brain className="w-4 h-4 text-indigo-600" /> Prediction model</h3>
+          {model ? (
+            <dl className="grid grid-cols-2 gap-3 text-xs">
+              <div><dt className="text-slate-500 font-bold">Algorithm</dt><dd className="font-black text-slate-900">{model.algorithm}</dd></div>
+              <div><dt className="text-slate-500 font-bold">ROC-AUC</dt><dd className="font-black text-slate-900">{model.rocAuc}</dd></div>
+              <div><dt className="text-slate-500 font-bold">Student-level accuracy</dt><dd className="font-black text-slate-900">{Math.round(model.accuracy * 1000) / 10}%</dd></div>
+              <div><dt className="text-slate-500 font-bold">Event headcount MAE</dt><dd className="font-black text-slate-900">{model.eventMae} students ({model.eventMapePct}% MAPE)</dd></div>
+              <div><dt className="text-slate-500 font-bold">Trained</dt><dd className="font-black text-slate-900">{fmtDate(model.trainedAt)}</dd></div>
+              <div><dt className="text-slate-500 font-bold">Held-out test events</dt><dd className="font-black text-slate-900">{model.testEvents}</dd></div>
+            </dl>
+          ) : (
+            <EmptyState title="Model metadata not found" message="Run the ML training pipeline to generate it." />
+          )}
+        </div>
+      </div>
+
+      <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+        <h3 className="text-sm font-black text-slate-900 mb-3 flex items-center gap-2"><Activity className="w-4 h-4 text-emerald-600" /> Recent activity</h3>
+        {data.recentActivity.length === 0 ? (
+          <EmptyState title="No activity yet" />
+        ) : (
+          <ul className="divide-y divide-slate-100">
+            {data.recentActivity.map((a) => (
+              <li key={a.id} className="py-2.5 flex items-start gap-3 text-xs">
+                <Badge>{a.type.replace(/_/g, ' ')}</Badge>
+                <span className="flex-1 text-slate-700 font-medium">{a.detail}</span>
+                <span className="text-slate-400 font-semibold whitespace-nowrap">{timeAgo(a.createdAt)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* =================================================================== USERS */
+function UsersTab({ data, run, confirm, user: me }) {
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [editing, setEditing] = useState(null); // null | 'new' | user
+  const [form, setForm] = useState(BLANK_USER);
+  const [saving, setSaving] = useState(false);
+
+  const rows = useMemo(
+    () =>
+      data.users.filter(
+        (u) => (roleFilter === 'all' || u.role === roleFilter) && (statusFilter === 'all' || (u.status || 'Active') === statusFilter)
+      ),
+    [data.users, roleFilter, statusFilter]
+  );
+
+  const open = (u) => {
+    setEditing(u || 'new');
+    setForm(u ? { ...BLANK_USER, ...u, password: '' } : BLANK_USER);
+  };
+
+  const save = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    const isNew = editing === 'new';
+    const body = { ...form };
+    if (!isNew && !body.password) delete body.password;
+    const ok = await run(
+      () => (isNew ? adminApi.createUser(body) : adminApi.updateUser(editing.id, body)),
+      isNew ? 'User created.' : 'User updated.'
+    );
+    setSaving(false);
+    if (ok) setEditing(null);
+  };
+
+  const toggleStatus = async (u) => {
+    const suspend = (u.status || 'Active') === 'Active';
+    if (suspend && !(await confirm({ title: `Suspend ${u.name}?`, message: 'They will be signed out and unable to log in until reactivated.', confirmLabel: 'Suspend' }))) return;
+    run(() => adminApi.updateUser(u.id, { status: suspend ? 'Suspended' : 'Active' }), suspend ? 'Account suspended.' : 'Account reactivated.');
+  };
+
+  const remove = async (u) => {
+    if (!(await confirm({ title: `Delete ${u.name}?`, message: 'This permanently removes the account together with their registrations, saved events and notifications.', confirmLabel: 'Delete user' }))) return;
+    run(() => adminApi.deleteUser(u.id), 'User deleted.');
+  };
+
+  const columns = [
+    {
+      key: 'name', label: 'User',
+      render: (u) => (
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-full bg-[#003366] text-amber-300 flex items-center justify-center font-black text-xs shrink-0">{u.name.charAt(0)}</div>
+          <div className="min-w-0"><div className="font-extrabold text-slate-900 truncate">{u.name}</div><div className="text-[11px] text-slate-500 truncate">{u.email}</div></div>
+        </div>
+      )
+    },
+    { key: 'role', label: 'Role', render: (u) => <Badge kind={u.role}>{u.role}</Badge> },
+    { key: 'code', label: 'ID / code', sortValue: (u) => u.studentId || u.organizerCode || u.staffId || '', render: (u) => u.studentId || u.organizerCode || u.staffId || '-' },
+    { key: 'phone', label: 'Phone' },
+    { key: 'status', label: 'Status', render: (u) => <Badge>{u.status || 'Active'}</Badge> },
+    { key: 'createdAt', label: 'Created', render: (u) => fmtDate(u.createdAt) },
+    {
+      key: 'actions', label: 'Actions',
+      render: (u) => (
+        <div className="flex items-center gap-1">
+          <button title="Edit" onClick={() => open(u)} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-[#003366]"><Edit3 className="w-4 h-4" /></button>
+          {u.id !== me.id && (
+            <>
+              <button title={(u.status || 'Active') === 'Active' ? 'Suspend' : 'Reactivate'} onClick={() => toggleStatus(u)} className="p-1.5 rounded-lg text-slate-500 hover:bg-amber-50 hover:text-amber-600">
+                {(u.status || 'Active') === 'Active' ? <Ban className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+              </button>
+              <button title="Delete" onClick={() => remove(u)} className="p-1.5 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+            </>
+          )}
+        </div>
+      )
+    }
+  ];
+
+  return (
+    <div className="space-y-4">
+      <Header title="User management" subtitle={`${rows.length} of ${data.users.length} accounts`} action={<PrimaryButton onClick={() => open(null)}><Plus className="w-4 h-4" /> Add user</PrimaryButton>} />
+      <DataTable
+        columns={columns}
+        rows={rows}
+        searchPlaceholder="Search name, email, ID..."
+        searchText={(u) => `${u.name} ${u.email} ${u.studentId || ''} ${u.organizerCode || ''} ${u.staffId || ''} ${u.department || ''}`}
+        toolbar={
+          <>
+            <select className={`${inputCls} !w-auto`} value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
+              <option value="all">All roles</option><option value="student">Students</option><option value="organizer">Organizers</option><option value="admin">Admins</option>
+            </select>
+            <select className={`${inputCls} !w-auto`} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <option value="all">Any status</option><option value="Active">Active</option><option value="Suspended">Suspended</option>
+            </select>
+          </>
+        }
+      />
+
+      {editing && (
+        <Modal title={editing === 'new' ? 'Add user' : `Edit ${editing.name}`} subtitle="Passwords are stored as bcrypt hashes" icon={Users} onClose={() => setEditing(null)}>
+          <form onSubmit={save} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field label="Full name"><input required className={inputCls} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Field>
+              <Field label="Email"><input required type="email" className={inputCls} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></Field>
+              <Field label="Role">
+                <select className={inputCls} value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
+                  <option value="student">Student</option><option value="organizer">Event organizer</option><option value="admin">Administrator</option>
+                </select>
+              </Field>
+              <Field label="Status">
+                <select className={inputCls} value={form.status || 'Active'} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+                  <option>Active</option><option>Suspended</option>
+                </select>
+              </Field>
+              {form.role === 'student' && (
+                <Field label="Admission number"><input required={editing === 'new'} pattern="\d{5,8}" title="5-8 digits" className={inputCls} value={form.studentId || ''} onChange={(e) => setForm({ ...form, studentId: e.target.value })} /></Field>
+              )}
+              <Field label="Mobile (SMS)" hint="e.g. 0712345678"><input required={editing === 'new'} className={inputCls} value={form.phone || ''} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></Field>
+              <Field label="Department" className={form.role === 'student' ? '' : 'sm:col-span-2'}><input className={inputCls} value={form.department || ''} onChange={(e) => setForm({ ...form, department: e.target.value })} /></Field>
+              <Field label={editing === 'new' ? 'Password' : 'New password (optional)'} hint="Min 8 characters with a letter and a number." className="sm:col-span-2">
+                <input required={editing === 'new'} type="password" autoComplete="new-password" className={inputCls} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+              </Field>
+            </div>
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <button type="button" onClick={() => setEditing(null)} className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100">Cancel</button>
+              <PrimaryButton type="submit" loading={saving}>{editing === 'new' ? 'Create user' : 'Save changes'}</PrimaryButton>
+            </div>
+          </form>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+/* ================================================================== EVENTS */
+function EventsTab({ data, run, confirm }) {
+  const [formFor, setFormFor] = useState(null); // null | 'new' | event
+  const [catFilter, setCatFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const organizers = useMemo(() => data.users.filter((u) => u.role === 'organizer'), [data.users]);
+
+  const rows = data.events.filter((e) => (catFilter === 'all' || e.category === catFilter) && (statusFilter === 'all' || e.status === statusFilter));
+  const orgName = (e) => data.users.find((u) => u.id === e.organizerId)?.name || e.organizerName || '-';
+
+  const remove = async (e) => {
+    if (!(await confirm({ title: `Delete "${e.title}"?`, message: `All ${e.registrationCount || 0} registrations will be removed and registered students notified.`, confirmLabel: 'Delete event' }))) return;
+    run(() => eventsApi.delete(e.id), 'Event deleted.');
+  };
+
+  const columns = [
+    { key: 'title', label: 'Event', render: (e) => (<div><div className="font-extrabold text-slate-900">{e.title}</div><div className="text-[11px] text-slate-500">{e.venue}</div></div>) },
+    { key: 'organizer', label: 'Organizer', sortValue: orgName, render: orgName },
+    { key: 'category', label: 'Category' },
+    { key: 'date', label: 'Date', render: (e) => fmtDate(e.date) },
+    { key: 'registrationCount', label: 'Seats', sortValue: (e) => e.registrationCount || 0, render: (e) => `${e.registrationCount || 0} / ${e.venueCapacity}` },
+    { key: 'status', label: 'Status', render: (e) => <Badge>{e.status || 'Upcoming'}</Badge> },
+    {
+      key: 'actions', label: 'Actions',
+      render: (e) => (
+        <div className="flex gap-1">
+          <button title="Edit" onClick={() => setFormFor(e)} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-[#003366]"><Edit3 className="w-4 h-4" /></button>
+          <button title="Delete" onClick={() => remove(e)} className="p-1.5 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+        </div>
+      )
+    }
+  ];
+
+  return (
+    <div className="space-y-4">
+      <Header title="Event management" subtitle={`${rows.length} of ${data.events.length} events`} action={<PrimaryButton onClick={() => setFormFor('new')}><Plus className="w-4 h-4" /> New event</PrimaryButton>} />
+      <DataTable
+        columns={columns}
+        rows={rows}
+        searchPlaceholder="Search events, venues, organizers..."
+        searchText={(e) => `${e.title} ${e.venue} ${e.category} ${orgName(e)}`}
+        toolbar={
+          <>
+            <select className={`${inputCls} !w-auto`} value={catFilter} onChange={(e) => setCatFilter(e.target.value)}>
+              <option value="all">All categories</option>
+              {data.categories.map((c) => <option key={c.id}>{c.name}</option>)}
+            </select>
+            <select className={`${inputCls} !w-auto`} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <option value="all">Any status</option>
+              {['Upcoming', 'Ongoing', 'Completed', 'Cancelled'].map((s) => <option key={s}>{s}</option>)}
+            </select>
+          </>
+        }
+      />
+      <EventFormModal
+        isOpen={Boolean(formFor)}
+        event={formFor && formFor !== 'new' ? formFor : null}
+        isAdmin
+        organizers={organizers}
+        onClose={() => setFormFor(null)}
+        onSubmit={async (payload, existing) => {
+          const ok = await run(() => (existing ? eventsApi.update(existing.id, payload) : eventsApi.create(payload)), existing ? 'Event updated.' : 'Event created.');
+          if (!ok) throw new Error('Save failed - see the message above.');
+        }}
+      />
+    </div>
+  );
+}
+
+/* ============================================================ REGISTRATIONS */
+function RegistrationsTab({ data, run, confirm }) {
+  const [eventFilter, setEventFilter] = useState('all');
+  const rows = data.registrations.filter((r) => eventFilter === 'all' || r.eventId === eventFilter);
+
+  const cancel = async (r) => {
+    if (!(await confirm({ title: 'Cancel registration?', message: `${r.studentName} will be removed from "${r.eventTitle || r.eventId}" and notified.`, confirmLabel: 'Cancel registration' }))) return;
+    run(() => registrationsApi.cancel(r.id), 'Registration cancelled.');
+  };
+
+  const columns = [
+    { key: 'studentName', label: 'Student', render: (r) => (<div><div className="font-extrabold text-slate-900">{r.studentName}</div><div className="text-[11px] text-slate-500">{r.studentId}</div></div>) },
+    { key: 'eventTitle', label: 'Event', render: (r) => r.eventTitle || r.eventId },
+    { key: 'phone', label: 'Phone' },
+    { key: 'registeredAt', label: 'Registered', render: (r) => fmtDateTime(r.registeredAt) },
+    { key: 'status', label: 'Status', render: (r) => <Badge>{r.status || 'Confirmed'}</Badge> },
+    { key: 'actions', label: 'Actions', render: (r) => (<button title="Cancel registration" onClick={() => cancel(r)} className="p-1.5 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>) }
+  ];
+
+  return (
+    <div className="space-y-4">
+      <Header title="Registrations" subtitle={`${rows.length} of ${data.registrations.length} records`} />
+      <DataTable
+        columns={columns}
+        rows={rows}
+        searchPlaceholder="Search student, ID, event..."
+        searchText={(r) => `${r.studentName} ${r.studentId} ${r.eventTitle} ${r.phone}`}
+        toolbar={
+          <select className={`${inputCls} !w-auto max-w-[260px]`} value={eventFilter} onChange={(e) => setEventFilter(e.target.value)}>
+            <option value="all">All events</option>
+            {data.events.map((e) => <option key={e.id} value={e.id}>{e.title}</option>)}
+          </select>
+        }
+      />
+    </div>
+  );
+}
+
+/* =============================================================== CATEGORIES */
+function CategoriesTab({ data, run, confirm }) {
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState({ name: '', description: '' });
+  const [saving, setSaving] = useState(false);
+
+  const open = (c) => {
+    setEditing(c || 'new');
+    setForm(c ? { name: c.name, description: c.description || '' } : { name: '', description: '' });
+  };
+  const save = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    const ok = await run(() => (editing === 'new' ? categoriesApi.create(form) : categoriesApi.update(editing.id, form)), editing === 'new' ? 'Category created.' : 'Category updated.');
+    setSaving(false);
+    if (ok) setEditing(null);
+  };
+  const remove = async (c) => {
+    if (!(await confirm({ title: `Delete "${c.name}"?`, message: 'Categories that still have events cannot be deleted.', confirmLabel: 'Delete' }))) return;
+    run(() => categoriesApi.delete(c.id), 'Category deleted.');
+  };
+
+  const columns = [
+    { key: 'name', label: 'Category', render: (c) => <span className="font-extrabold text-slate-900">{c.name}</span> },
+    { key: 'description', label: 'Description' },
+    { key: 'count', label: 'Events', sortValue: (c) => c.count || 0 },
+    {
+      key: 'actions', label: 'Actions',
+      render: (c) => (
+        <div className="flex gap-1">
+          <button onClick={() => open(c)} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-[#003366]"><Edit3 className="w-4 h-4" /></button>
+          <button onClick={() => remove(c)} className="p-1.5 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+        </div>
+      )
+    }
+  ];
+
+  return (
+    <div className="space-y-4">
+      <Header title="Event categories" subtitle="Organizers choose from these when listing events" action={<PrimaryButton onClick={() => open(null)}><Plus className="w-4 h-4" /> Add category</PrimaryButton>} />
+      <DataTable columns={columns} rows={data.categories} searchText={(c) => `${c.name} ${c.description}`} searchPlaceholder="Search categories..." />
+      {editing && (
+        <Modal title={editing === 'new' ? 'Add category' : 'Edit category'} icon={Tag} size="sm" onClose={() => setEditing(null)}>
+          <form onSubmit={save} className="space-y-4">
+            <Field label="Name"><input required minLength={2} maxLength={40} className={inputCls} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Field>
+            <Field label="Description"><textarea rows="2" maxLength={200} className={inputCls} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></Field>
+            <div className="flex justify-end gap-2"><button type="button" onClick={() => setEditing(null)} className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100">Cancel</button><PrimaryButton type="submit" loading={saving}>Save</PrimaryButton></div>
+          </form>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+/* ================================================================== VENUES */
+function VenuesTab({ venues, data, run, confirm }) {
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState({ name: '', building: '', capacity: 100, hasProjector: true, hasPA: true });
+  const [saving, setSaving] = useState(false);
+
+  const open = (v) => {
+    setEditing(v || 'new');
+    setForm(v ? { ...v } : { name: '', building: '', capacity: 100, hasProjector: true, hasPA: true });
+  };
+  const save = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    const body = { name: form.name, building: form.building, capacity: Number(form.capacity), hasProjector: form.hasProjector, hasPA: form.hasPA };
+    const ok = await run(() => (editing === 'new' ? venuesApi.create(body) : venuesApi.update(editing.id, body)), 'Venue saved.');
+    setSaving(false);
+    if (ok) setEditing(null);
+  };
+  const remove = async (v) => {
+    if (!(await confirm({ title: `Delete ${v.name}?`, message: 'Venues that host events cannot be deleted.', confirmLabel: 'Delete' }))) return;
+    run(() => venuesApi.delete(v.id), 'Venue deleted.');
+  };
+
+  const columns = [
+    { key: 'name', label: 'Venue', render: (v) => <span className="font-extrabold text-slate-900">{v.name}</span> },
+    { key: 'building', label: 'Building' },
+    { key: 'capacity', label: 'Capacity' },
+    { key: 'hasProjector', label: 'Projector', render: (v) => (v.hasProjector ? 'Yes' : 'No') },
+    { key: 'hasPA', label: 'PA system', render: (v) => (v.hasPA ? 'Yes' : 'No') },
+    { key: 'events', label: 'Events', sortValue: (v) => data.events.filter((e) => e.venue === v.name).length, render: (v) => data.events.filter((e) => e.venue === v.name).length },
+    {
+      key: 'actions', label: 'Actions',
+      render: (v) => (
+        <div className="flex gap-1">
+          <button onClick={() => open(v)} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-[#003366]"><Edit3 className="w-4 h-4" /></button>
+          <button onClick={() => remove(v)} className="p-1.5 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+        </div>
+      )
+    }
+  ];
+
+  return (
+    <div className="space-y-4">
+      <Header title="Campus venues" subtitle="Used for capacity planning in the event form" action={<PrimaryButton onClick={() => open(null)}><Plus className="w-4 h-4" /> Add venue</PrimaryButton>} />
+      <DataTable columns={columns} rows={venues} searchText={(v) => `${v.name} ${v.building}`} searchPlaceholder="Search venues..." />
+      {editing && (
+        <Modal title={editing === 'new' ? 'Add venue' : 'Edit venue'} icon={MapPin} size="sm" onClose={() => setEditing(null)}>
+          <form onSubmit={save} className="space-y-4">
+            <Field label="Name"><input required className={inputCls} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Field>
+            <Field label="Building"><input className={inputCls} value={form.building || ''} onChange={(e) => setForm({ ...form, building: e.target.value })} /></Field>
+            <Field label="Capacity"><input required type="number" min="1" className={inputCls} value={form.capacity} onChange={(e) => setForm({ ...form, capacity: e.target.value })} /></Field>
+            <div className="flex gap-5 text-xs font-bold text-slate-700">
+              <label className="flex items-center gap-2"><input type="checkbox" checked={Boolean(form.hasProjector)} onChange={(e) => setForm({ ...form, hasProjector: e.target.checked })} /> Projector</label>
+              <label className="flex items-center gap-2"><input type="checkbox" checked={Boolean(form.hasPA)} onChange={(e) => setForm({ ...form, hasPA: e.target.checked })} /> PA system</label>
+            </div>
+            <div className="flex justify-end gap-2"><button type="button" onClick={() => setEditing(null)} className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100">Cancel</button><PrimaryButton type="submit" loading={saving}>Save</PrimaryButton></div>
+          </form>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+/* ===================================================================== SMS */
+function SmsTab({ data, reload }) {
+  const [logs, setLogs] = useState(data.tables.smsLogs || []);
+  const [priority, setPriority] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+
+  const refreshLogs = useCallback(() => smsApi.getLogs().then((r) => setLogs(r.data || [])).catch(() => {}), []);
+  useEffect(() => { refreshLogs(); }, [refreshLogs]);
+
+  const rows = logs.filter(
+    (l) => (priority === 'ALL' || String(l.priority).toUpperCase() === priority) && (statusFilter === 'ALL' || String(l.status).toUpperCase().startsWith(statusFilter))
+  );
+
+  const columns = [
+    { key: 'priority', label: 'Priority', render: (l) => <Badge>{l.priority}</Badge> },
+    { key: 'eventTitle', label: 'Event', render: (l) => <span className="font-bold text-slate-800">{l.eventTitle}</span> },
+    { key: 'recipient', label: 'Recipient', render: (l) => l.recipientName ? (<div><div className="font-bold text-slate-800">{l.recipientName}</div><div className="text-[11px] text-slate-500">{l.recipient}</div></div>) : (l.recipient || `${l.recipientCount || 0} recipients`) },
+    { key: 'message', label: 'Message', sortable: false, className: 'max-w-xs', render: (l) => <span className="line-clamp-2 text-slate-600">{l.message}</span> },
+    { key: 'status', label: 'Status', render: (l) => (<div><Badge kind={String(l.status).split(' ')[0]}>{String(l.status).split(' ')[0]}</Badge>{l.failureReason && <div className="text-[10px] text-red-600 mt-1 max-w-[180px]">{l.failureReason}</div>}</div>) },
+    { key: 'sentAt', label: 'Sent', render: (l) => fmtDateTime(l.sentAt) }
+  ];
+
+  return (
+    <div className="space-y-6">
+      <Header title="Africa's Talking SMS gateway" subtitle="Broadcast priority alerts and review delivery history" />
+      <SmsComposer events={data.events} role="admin" onSent={() => { refreshLogs(); reload(); }} />
+      <div className="space-y-3">
+        <h3 className="text-sm font-black text-slate-900">Delivery log ({rows.length})</h3>
+        <DataTable
+          columns={columns}
+          rows={rows}
+          rowKey="id"
+          searchText={(l) => `${l.eventTitle} ${l.recipient} ${l.recipientName} ${l.message}`}
+          searchPlaceholder="Search messages, numbers..."
+          toolbar={
+            <>
+              <select className={`${inputCls} !w-auto`} value={priority} onChange={(e) => setPriority(e.target.value)}>
+                <option value="ALL">All priorities</option><option>HIGH</option><option>MEDIUM</option><option>LOW</option>
+              </select>
+              <select className={`${inputCls} !w-auto`} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                <option value="ALL">Any status</option><option>DELIVERED</option><option>SENT</option><option>SIMULATED</option><option>FAILED</option>
+              </select>
+            </>
+          }
+        />
+      </div>
+    </div>
+  );
+}
+
+/* ================================================================= PROFILES */
+function ProfilesTab({ data }) {
+  const [sub, setSub] = useState('organizer_profiles');
+  const t = data.tables;
+  const defs = {
+    organizer_profiles: {
+      label: 'Organizers',
+      rows: t.organizer_profiles,
+      columns: [
+        { key: 'organizerCode', label: 'Code' }, { key: 'name', label: 'Organizer', render: (r) => <span className="font-extrabold text-slate-900">{r.name}</span> },
+        { key: 'department', label: 'Department' }, { key: 'officeLocation', label: 'Office' },
+        { key: 'verified', label: 'Verified', render: (r) => <Badge kind={r.verified ? 'active' : 'medium'}>{r.verified ? 'Verified' : 'Pending'}</Badge> },
+        { key: 'events', label: 'Events listed', sortValue: (r) => data.events.filter((e) => e.organizerId === r.userId).length, render: (r) => data.events.filter((e) => e.organizerId === r.userId).length }
+      ]
+    },
+    student_profiles: {
+      label: 'Students',
+      rows: t.student_profiles,
+      columns: [
+        { key: 'studentId', label: 'Adm. no' }, { key: 'name', label: 'Student', render: (r) => <span className="font-extrabold text-slate-900">{r.name}</span> },
+        { key: 'program', label: 'Programme' }, { key: 'faculty', label: 'Faculty' }, { key: 'yearOfStudy', label: 'Year' },
+        { key: 'pastAttendanceRate', label: 'Past attendance', render: (r) => `${Math.round((r.pastAttendanceRate || 0) * 100)}%` }
+      ]
+    },
+    admin_profiles: {
+      label: 'Admins',
+      rows: t.admin_profiles,
+      columns: [
+        { key: 'staffId', label: 'Staff ID' }, { key: 'name', label: 'Administrator', render: (r) => <span className="font-extrabold text-slate-900">{r.name}</span> },
+        { key: 'title', label: 'Title' }, { key: 'department', label: 'Department' }, { key: 'clearanceLevel', label: 'Clearance' }
+      ]
+    }
+  };
+  const cur = defs[sub];
+  return (
+    <div className="space-y-4">
+      <Header title="Role profiles" subtitle="Extended records linked to each user account" />
+      <div className="flex gap-2">
+        {Object.entries(defs).map(([k, d]) => (
+          <button key={k} onClick={() => setSub(k)} className={`px-3.5 py-2 rounded-xl text-xs font-extrabold ${sub === k ? 'bg-[#003366] text-white' : 'bg-white border border-slate-200 text-slate-600'}`}>
+            {d.label} ({d.rows.length})
           </button>
         ))}
       </div>
+      <DataTable columns={cur.columns} rows={cur.rows} searchText={(r) => Object.values(r).join(' ')} searchPlaceholder={`Search ${cur.label.toLowerCase()}...`} />
+    </div>
+  );
+}
 
-      {/* TAB 1: USERS TABLE */}
-      {activeTab === 'users' && (
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-5 shadow-xs">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h3 className="text-base font-extrabold text-slate-900">Table: <code>users</code> (All System Accounts)</h3>
-              <p className="text-xs text-slate-500">Create, view, edit, or remove Student, Event Organizer, and Administrator accounts.</p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2.5">
-              <div className="relative">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Search name, email, ID..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium outline-none"
-                />
-              </div>
-
-              <select
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
-                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none"
-              >
-                <option value="All">All Roles ({users.length})</option>
-                <option value="admin">Admins ({users.filter((u) => u.role === 'admin').length})</option>
-                <option value="organizer">Organizers ({users.filter((u) => u.role === 'organizer').length})</option>
-                <option value="student">Students ({users.filter((u) => u.role === 'student').length})</option>
-              </select>
-
-              <button
-                onClick={openCreateUserModal}
-                className="px-4 py-2 rounded-xl bg-[#003366] hover:bg-[#002244] text-white text-xs font-bold flex items-center space-x-1.5"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add User</span>
-              </button>
-            </div>
-          </div>
-
-          <div className="overflow-x-auto border border-slate-200 rounded-2xl">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-extrabold uppercase text-[10px]">
-                  <th className="p-3.5">Name</th>
-                  <th className="p-3.5">Email</th>
-                  <th className="p-3.5">Role</th>
-                  <th className="p-3.5">ID / Code</th>
-                  <th className="p-3.5">Department / Program</th>
-                  <th className="p-3.5">Phone (SMS)</th>
-                  <th className="p-3.5">Status</th>
-                  <th className="p-3.5">Created</th>
-                  <th className="p-3.5 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredUsers.map((u) => (
-                  <tr key={u.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="p-3.5 font-extrabold text-slate-900">{u.name}</td>
-                    <td className="p-3.5 text-slate-600">{u.email}</td>
-                    <td className="p-3.5">
-                      <span
-                        className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] uppercase border ${
-                          u.role === 'admin'
-                            ? 'bg-purple-50 text-purple-700 border-purple-200'
-                            : u.role === 'organizer'
-                            ? 'bg-amber-50 text-amber-700 border-amber-200'
-                            : 'bg-blue-50 text-blue-700 border-blue-200'
-                        }`}
-                      >
-                        {u.role}
-                      </span>
-                    </td>
-                    <td className="p-3.5 font-mono font-bold text-slate-700">
-                      {u.studentId || u.adminCode || u.organizerCode || '—'}
-                    </td>
-                    <td className="p-3.5 text-slate-600">{u.department || 'Strathmore University'}</td>
-                    <td className="p-3.5 text-slate-600 font-mono">{u.phone || '+254712345678'}</td>
-                    <td className="p-3.5">
-                      <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-bold text-[10px] border border-emerald-200">
-                        {u.status || 'Active'}
-                      </span>
-                    </td>
-                    <td className="p-3.5 text-slate-500">{(u.createdAt || '').split('T')[0]}</td>
-                    <td className="p-3.5 text-right space-x-1 whitespace-nowrap">
-                      <button
-                        onClick={() => openEditUserModal(u)}
-                        className="p-1.5 text-slate-500 hover:text-[#003366] hover:bg-slate-100 rounded-lg transition-colors"
-                        title="Edit User"
-                      >
-                        <Edit3 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteUser(u.id, u.name)}
-                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Delete User"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* TAB 2: RELATIONAL ROLE PROFILES & VENUES TABLES */}
-      {activeTab === 'profiles' && (
-        <div className="space-y-6">
-          {/* 2 Admin Profiles Table */}
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-4 shadow-xs">
-            <h3 className="text-base font-extrabold text-slate-900">
-              Table: <code>admin_profiles</code> (2 System Administrators)
-            </h3>
-            <div className="overflow-x-auto border border-slate-200 rounded-2xl">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-extrabold uppercase text-[10px]">
-                    <th className="p-3">Admin Code</th>
-                    <th className="p-3">Administrator Name</th>
-                    <th className="p-3">Email</th>
-                    <th className="p-3">Role Title</th>
-                    <th className="p-3">Clearance</th>
-                    <th className="p-3">Office Location</th>
-                    <th className="p-3">Phone</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {(profileTables.admin_profiles || []).map((a) => (
-                    <tr key={a.id} className="hover:bg-slate-50">
-                      <td className="p-3 font-mono font-bold text-purple-700">{a.adminCode}</td>
-                      <td className="p-3 font-extrabold text-slate-900">{a.name}</td>
-                      <td className="p-3 text-slate-600">{a.email}</td>
-                      <td className="p-3 font-semibold text-slate-700">{a.roleTitle}</td>
-                      <td className="p-3">
-                        <span className="px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 font-bold text-[10px]">
-                          {a.clearanceLevel}
-                        </span>
-                      </td>
-                      <td className="p-3 text-slate-600">{a.office}</td>
-                      <td className="p-3 font-mono text-slate-600">{a.phone}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Organizer Profiles Table */}
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-4 shadow-xs">
-            <h3 className="text-base font-extrabold text-slate-900">
-              Table: <code>organizer_profiles</code> (Verified Campus Event Organizers)
-            </h3>
-            <div className="overflow-x-auto border border-slate-200 rounded-2xl">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-extrabold uppercase text-[10px]">
-                    <th className="p-3">Org Code</th>
-                    <th className="p-3">Organizer Name</th>
-                    <th className="p-3">Email</th>
-                    <th className="p-3">Faculty / Department</th>
-                    <th className="p-3">Office</th>
-                    <th className="p-3">Phone</th>
-                    <th className="p-3">Events Hosted</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {(profileTables.organizer_profiles || []).map((o) => (
-                    <tr key={o.id} className="hover:bg-slate-50">
-                      <td className="p-3 font-mono font-bold text-amber-700">{o.organizerCode}</td>
-                      <td className="p-3 font-extrabold text-slate-900">{o.name}</td>
-                      <td className="p-3 text-slate-600">{o.email}</td>
-                      <td className="p-3 text-slate-700">{o.department}</td>
-                      <td className="p-3 text-slate-600">{o.officeLocation}</td>
-                      <td className="p-3 font-mono text-slate-600">{o.phone}</td>
-                      <td className="p-3 font-extrabold text-[#003366]">{o.eventsHostedCount}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Student Profiles Table */}
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-4 shadow-xs">
-            <h3 className="text-base font-extrabold text-slate-900">
-              Table: <code>student_profiles</code> (Strathmore Student Profiles)
-            </h3>
-            <div className="overflow-x-auto border border-slate-200 rounded-2xl">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-extrabold uppercase text-[10px]">
-                    <th className="p-3">Admission No</th>
-                    <th className="p-3">Student Name</th>
-                    <th className="p-3">Email</th>
-                    <th className="p-3">Degree Program</th>
-                    <th className="p-3">Faculty</th>
-                    <th className="p-3">Year</th>
-                    <th className="p-3">Phone (SMS)</th>
-                    <th className="p-3">Past Turnout Rate</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {(profileTables.student_profiles || []).map((s) => (
-                    <tr key={s.id} className="hover:bg-slate-50">
-                      <td className="p-3 font-mono font-bold text-blue-700">{s.studentId}</td>
-                      <td className="p-3 font-extrabold text-slate-900">{s.name}</td>
-                      <td className="p-3 text-slate-600">{s.email}</td>
-                      <td className="p-3 text-slate-700">{s.program}</td>
-                      <td className="p-3 font-bold text-slate-700">{s.faculty}</td>
-                      <td className="p-3">Year {s.yearOfStudy}</td>
-                      <td className="p-3 font-mono text-slate-600">{s.phone}</td>
-                      <td className="p-3 font-extrabold text-emerald-700">
-                        {Math.round((s.pastAttendanceRate || 0.8) * 100)}%
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* TAB 3: EVENTS TABLE */}
-      {activeTab === 'events' && (
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-5 shadow-xs">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h3 className="text-base font-extrabold text-slate-900">Table: <code>events</code> (Campus Events Moderation)</h3>
-              <p className="text-xs text-slate-500">Create, edit, or delete campus events across all faculties.</p>
-            </div>
-            <div className="flex items-center gap-2.5">
-              <div className="relative">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Search event, venue, organizer..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium outline-none"
-                />
-              </div>
-              <button
-                onClick={() => setIsCreateEventOpen(true)}
-                className="px-4 py-2 rounded-xl bg-[#003366] hover:bg-[#002244] text-white text-xs font-bold flex items-center space-x-1.5"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Create Event</span>
-              </button>
-            </div>
-          </div>
-
-          <div className="overflow-x-auto border border-slate-200 rounded-2xl">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-extrabold uppercase text-[10px]">
-                  <th className="p-3.5">Event</th>
-                  <th className="p-3.5">Organizer</th>
-                  <th className="p-3.5">Category</th>
-                  <th className="p-3.5">Date</th>
-                  <th className="p-3.5">Location</th>
-                  <th className="p-3.5">RSVPs / Cap</th>
-                  <th className="p-3.5">ML Forecast</th>
-                  <th className="p-3.5">Status</th>
-                  <th className="p-3.5 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredEvents.map((evt) => (
-                  <tr key={evt.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="p-3.5 font-extrabold text-slate-900">{evt.title}</td>
-                    <td className="p-3.5 text-slate-600 font-medium">{evt.organizer}</td>
-                    <td className="p-3.5">
-                      <span className="px-2.5 py-0.5 rounded-full font-bold text-[10px] bg-blue-50 text-[#003366] border border-blue-200">
-                        {evt.category}
-                      </span>
-                    </td>
-                    <td className="p-3.5 text-slate-600 whitespace-nowrap">{evt.date} • {evt.time || evt.timeSlot}</td>
-                    <td className="p-3.5 text-slate-600">{evt.venue}</td>
-                    <td className="p-3.5 font-bold text-emerald-700">
-                      {evt.registrationCount} / {evt.venueCapacity}
-                    </td>
-                    <td className="p-3.5 font-extrabold text-blue-700">
-                      {evt.predictedAttendance || Math.round((evt.registrationCount || 0) * 0.82)}
-                    </td>
-                    <td className="p-3.5">
-                      <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-bold text-[10px] border border-emerald-200">
-                        {evt.status || 'Upcoming'}
-                      </span>
-                    </td>
-                    <td className="p-3.5 text-right space-x-1 whitespace-nowrap">
-                      <button
-                        onClick={() => setEditingEvent(evt)}
-                        className="p-1.5 text-slate-500 hover:text-[#003366] hover:bg-slate-100 rounded-lg transition-colors"
-                        title="Edit Event"
-                      >
-                        <Edit3 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteEvent(evt.id, evt.title)}
-                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Delete Event"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* TAB 4: REGISTRATIONS TABLE */}
-      {activeTab === 'registrations' && (
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-5 shadow-xs">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h3 className="text-base font-extrabold text-slate-900">Table: <code>registrations</code> (Student RSVPs)</h3>
-              <p className="text-xs text-slate-500">Inspect and manage student event registrations.</p>
-            </div>
-            <div className="relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Search student, admission no, event..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium outline-none"
-              />
-            </div>
-          </div>
-
-          <div className="overflow-x-auto border border-slate-200 rounded-2xl">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-extrabold uppercase text-[10px]">
-                  <th className="p-3.5">Student</th>
-                  <th className="p-3.5">Admission No</th>
-                  <th className="p-3.5">Event</th>
-                  <th className="p-3.5">Email</th>
-                  <th className="p-3.5">Phone (SMS)</th>
-                  <th className="p-3.5">Date Registered</th>
-                  <th className="p-3.5">Status</th>
-                  <th className="p-3.5 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredRegistrations.map((r) => {
-                  const matchedEvt = events.find((e) => e.id === r.eventId);
-                  return (
-                    <tr key={r.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="p-3.5 font-extrabold text-slate-900">{r.studentName}</td>
-                      <td className="p-3.5 font-mono font-bold text-blue-700">{r.studentId}</td>
-                      <td className="p-3.5 font-semibold text-slate-800">
-                        {r.eventTitle || matchedEvt?.title || r.eventId}
-                      </td>
-                      <td className="p-3.5 text-slate-600">{r.email}</td>
-                      <td className="p-3.5 font-mono text-slate-600">{r.phone}</td>
-                      <td className="p-3.5 text-slate-500">{(r.registeredAt || '').split('T')[0]}</td>
-                      <td className="p-3.5">
-                        <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-bold text-[10px] border border-emerald-200">
-                          {r.status || 'Confirmed'}
-                        </span>
-                      </td>
-                      <td className="p-3.5 text-right">
-                        <button
-                          onClick={() => handleCancelRegistration(r.id, r.studentName)}
-                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Cancel / Delete RSVP"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* TAB 5: CATEGORIES TABLE */}
-      {activeTab === 'categories' && (
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-5 shadow-xs">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-base font-extrabold text-slate-900">Table: <code>event_categories</code></h3>
-              <p className="text-xs text-slate-500">Create, edit, or delete official university event categories.</p>
-            </div>
-            <button
-              onClick={openCreateCategoryModal}
-              className="px-4 py-2 rounded-xl bg-[#003366] hover:bg-[#002244] text-white text-xs font-bold flex items-center space-x-1.5 shadow-xs"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add Category</span>
-            </button>
-          </div>
-
-          <div className="overflow-x-auto border border-slate-200 rounded-2xl">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-extrabold uppercase text-[10px]">
-                  <th className="p-3.5">Category ID</th>
-                  <th className="p-3.5">Category Name</th>
-                  <th className="p-3.5">Description</th>
-                  <th className="p-3.5">Icon</th>
-                  <th className="p-3.5">Event Count</th>
-                  <th className="p-3.5 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {categories.map((cat) => (
-                  <tr key={cat.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="p-3.5 font-mono text-slate-600">{cat.id}</td>
-                    <td className="p-3.5 font-extrabold text-slate-900">{cat.name}</td>
-                    <td className="p-3.5 text-slate-600">{cat.description || '—'}</td>
-                    <td className="p-3.5 font-mono text-slate-600">{cat.icon || 'Tag'}</td>
-                    <td className="p-3.5 font-bold text-[#003366]">{cat.count || 0}</td>
-                    <td className="p-3.5 text-right space-x-1">
-                      <button
-                        onClick={() => openEditCategoryModal(cat)}
-                        className="p-1.5 text-slate-500 hover:text-[#003366] hover:bg-slate-100 rounded-lg transition-colors"
-                        title="Edit Category"
-                      >
-                        <Edit3 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteCategory(cat.id, cat.name)}
-                        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Delete Category"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* TAB 6: AFRICA'S TALKING SMS GATEWAY & LOGS TABLE */}
-      {activeTab === 'sms' && (
-        <div className="space-y-6">
-          {/* Dispatch Priority SMS Form */}
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-4 shadow-xs">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div>
-                <h3 className="text-base font-extrabold text-slate-900">
-                  📱 Africa's Talking Priority SMS Dispatch Console
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Broadcast urgent venue changes or reminders to event registrants or custom Kenyan (+254) numbers.
-                </p>
-              </div>
-              <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold">
-                Africa's Talking Gateway Active
-              </span>
-            </div>
-
-            <form onSubmit={handleDispatchSms} className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-              <div>
-                <label className="block font-bold uppercase text-slate-700 mb-1">Target Campus Event</label>
-                <select
-                  value={smsForm.eventId}
-                  onChange={(e) => setSmsForm({ ...smsForm, eventId: e.target.value })}
-                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold outline-none"
-                >
-                  {events.map((ev) => (
-                    <option key={ev.id} value={ev.id}>
-                      {ev.title}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block font-bold uppercase text-slate-700 mb-1">Priority Level</label>
-                <select
-                  value={smsForm.priority}
-                  onChange={(e) => setSmsForm({ ...smsForm, priority: e.target.value })}
-                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold outline-none"
-                >
-                  <option value="HIGH">🔴 HIGH PRIORITY (Immediate Venue/Time Alert)</option>
-                  <option value="MEDIUM">🟡 MEDIUM PRIORITY (Standard Reminder)</option>
-                  <option value="LOW">🔵 LOW PRIORITY (General Announcement)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block font-bold uppercase text-slate-700 mb-1">
-                  Custom Phone Numbers (Optional, comma-separated)
-                </label>
-                <input
-                  type="text"
-                  placeholder="Leave blank for event RSVP roster, or +254712345678"
-                  value={smsForm.recipients}
-                  onChange={(e) => setSmsForm({ ...smsForm, recipients: e.target.value })}
-                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold outline-none"
-                />
-              </div>
-
-              <div className="md:col-span-2">
-                <label className="block font-bold uppercase text-slate-700 mb-1">SMS Message Body</label>
-                <input
-                  type="text"
-                  required
-                  value={smsForm.message}
-                  onChange={(e) => setSmsForm({ ...smsForm, message: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold outline-none"
-                />
-              </div>
-
-              <div className="flex items-end">
-                <button
-                  type="submit"
-                  disabled={sendingSms}
-                  className="w-full py-2.5 px-4 rounded-xl bg-[#003366] hover:bg-[#002244] text-white font-bold flex items-center justify-center space-x-2 shadow-sm"
-                >
-                  <Send className="w-4 h-4" />
-                  <span>{sendingSms ? 'Dispatching...' : "Dispatch via Africa's Talking"}</span>
-                </button>
-              </div>
-            </form>
-          </div>
-
-          {/* SMS Logs Table */}
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-4 shadow-xs">
-            <h3 className="text-base font-extrabold text-slate-900">
-              Table: <code>sms_logs</code> ({smsLogs.length} Dispatches)
-            </h3>
-            <div className="overflow-x-auto border border-slate-200 rounded-2xl">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 font-extrabold uppercase text-[10px]">
-                    <th className="p-3">Priority</th>
-                    <th className="p-3">Event</th>
-                    <th className="p-3">Recipient</th>
-                    <th className="p-3">Phone</th>
-                    <th className="p-3">Message</th>
-                    <th className="p-3">Gateway Status</th>
-                    <th className="p-3">Cost</th>
-                    <th className="p-3">Sent At</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {smsLogs.map((log) => (
-                    <tr key={log.id} className="hover:bg-slate-50">
-                      <td className="p-3">
-                        <span
-                          className={`px-2 py-0.5 rounded-full font-bold text-[10px] border ${
-                            log.priority === 'HIGH'
-                              ? 'bg-red-50 text-red-700 border-red-200'
-                              : log.priority === 'MEDIUM'
-                              ? 'bg-amber-50 text-amber-700 border-amber-200'
-                              : 'bg-blue-50 text-blue-700 border-blue-200'
-                          }`}
-                        >
-                          {log.priority}
-                        </span>
-                      </td>
-                      <td className="p-3 font-extrabold text-slate-900">{log.eventTitle}</td>
-                      <td className="p-3 text-slate-700 font-semibold">{log.recipientName || 'Student'}</td>
-                      <td className="p-3 font-mono text-slate-600">{log.recipient}</td>
-                      <td className="p-3 text-slate-600 max-w-md">{log.message}</td>
-                      <td className="p-3 text-emerald-700 font-bold">{log.gatewayResponse}</td>
-                      <td className="p-3 font-mono font-bold">{log.cost}</td>
-                      <td className="p-3 text-slate-500 whitespace-nowrap">
-                        {(log.sentAt || '').replace('T', ' ').slice(0, 16)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Create / Edit User Modal */}
-      {isUserModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl">
-            <h3 className="text-base font-extrabold text-slate-900 border-b border-slate-200 pb-3">
-              {editingUser ? `Edit User: ${editingUser.name}` : 'Create New System User'}
-            </h3>
-            <form onSubmit={handleSaveUser} className="space-y-3 text-xs">
-              <div>
-                <label className="block font-bold uppercase text-slate-700 mb-1">Full Name</label>
-                <input
-                  type="text"
-                  required
-                  value={userForm.name}
-                  onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-semibold outline-none"
-                />
-              </div>
-              <div>
-                <label className="block font-bold uppercase text-slate-700 mb-1">University Email</label>
-                <input
-                  type="email"
-                  required
-                  value={userForm.email}
-                  onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-semibold outline-none"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block font-bold uppercase text-slate-700 mb-1">Role</label>
-                  <select
-                    value={userForm.role}
-                    onChange={(e) => setUserForm({ ...userForm, role: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold outline-none"
-                  >
-                    <option value="student">Student</option>
-                    <option value="organizer">Organizer</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block font-bold uppercase text-slate-700 mb-1">Status</label>
-                  <select
-                    value={userForm.status}
-                    onChange={(e) => setUserForm({ ...userForm, status: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-bold outline-none"
-                  >
-                    <option value="Active">Active</option>
-                    <option value="Suspended">Suspended</option>
-                  </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block font-bold uppercase text-slate-700 mb-1">Student ID / Code</label>
-                  <input
-                    type="text"
-                    value={userForm.studentId}
-                    onChange={(e) => setUserForm({ ...userForm, studentId: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-semibold outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold uppercase text-slate-700 mb-1">Phone (E.164)</label>
-                  <input
-                    type="text"
-                    value={userForm.phone}
-                    onChange={(e) => setUserForm({ ...userForm, phone: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-semibold outline-none"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block font-bold uppercase text-slate-700 mb-1">Department / Program</label>
-                <input
-                  type="text"
-                  value={userForm.department}
-                  onChange={(e) => setUserForm({ ...userForm, department: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-semibold outline-none"
-                />
-              </div>
-              {!editingUser && (
-                <div>
-                  <label className="block font-bold uppercase text-slate-700 mb-1">Initial Password</label>
-                  <input
-                    type="text"
-                    required
-                    value={userForm.password}
-                    onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl font-semibold outline-none"
-                  />
-                </div>
-              )}
-
-              <div className="flex justify-end space-x-2 pt-3">
-                <button
-                  type="button"
-                  onClick={() => setIsUserModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-slate-600 font-bold"
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="px-5 py-2 rounded-xl bg-[#003366] text-white font-bold">
-                  {editingUser ? 'Save Changes' : 'Create User'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Create / Edit Category Modal */}
-      {isCategoryModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl">
-            <h3 className="text-base font-extrabold text-slate-900 border-b border-slate-200 pb-3">
-              {editingCategory ? `Edit Category: ${editingCategory.name}` : 'Create New Category'}
-            </h3>
-            <form onSubmit={handleSaveCategory} className="space-y-4 text-xs">
-              <div>
-                <label className="block font-bold text-slate-700 uppercase mb-1">Category Name</label>
-                <input
-                  type="text"
-                  required
-                  value={catForm.name}
-                  onChange={(e) => setCatForm({ ...catForm, name: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold outline-none"
-                />
-              </div>
-              <div>
-                <label className="block font-bold text-slate-700 uppercase mb-1">Description</label>
-                <textarea
-                  rows="2"
-                  value={catForm.description}
-                  onChange={(e) => setCatForm({ ...catForm, description: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl font-semibold outline-none"
-                />
-              </div>
-              <div className="flex justify-end space-x-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsCategoryModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-slate-600 font-bold"
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="px-5 py-2 rounded-xl bg-[#003366] text-white font-bold">
-                  {editingCategory ? 'Update Category' : 'Create Category'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Event Creation & Edit Modals */}
-      <EventCreationModal
-        isOpen={isCreateEventOpen}
-        onClose={() => setIsCreateEventOpen(false)}
-        onCreateEvent={handleCreateEvent}
-      />
-
-      <EventEditModal
-        isOpen={Boolean(editingEvent)}
-        onClose={() => setEditingEvent(null)}
-        event={editingEvent}
-        onSaveEvent={handleUpdateEvent}
-      />
+function Header({ title, subtitle, action }) {
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div>
+        <h2 className="text-xl font-black text-slate-900">{title}</h2>
+        {subtitle && <p className="text-xs text-slate-500 font-medium">{subtitle}</p>}
+      </div>
+      {action}
     </div>
   );
 }

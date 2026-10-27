@@ -34,3 +34,6 @@ datasets/
 .DS_Store
 .vscode/*
 !.vscode/settings.json
+
+backend/.jwt_secret
+backend/*.tmp

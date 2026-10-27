@@ -13,15 +13,16 @@ try {
       credential: admin.credential.cert(serviceAccount)
     });
     firestoreDb = admin.firestore();
-    console.log("🔥 Connected to Firebase Firestore Database.");
+    console.log("ðŸ”¥ Connected to Firebase Firestore Database.");
   } else {
-    console.log("ℹ️ No serviceAccountKey.json found. Using Local Persistent JSON Store (data.json).");
+    console.log("â„¹ï¸ No serviceAccountKey.json found. Using Local Persistent JSON Store (data.json).");
   }
 } catch (error) {
-  console.warn("⚠️ Firebase initialization skipped, falling back to local JSON store:", error.message);
+  console.warn("âš ï¸ Firebase initialization skipped, falling back to local JSON store:", error.message);
 }
 
-const DATA_FILE = path.join(__dirname, 'data.json');
+// Allow tests / deployments to point at a different data file
+const DATA_FILE = process.env.SMARTEVENT_DATA_FILE || path.join(__dirname, 'data.json');
 
 function buildDefaultData() {
   const defaultPasswordHash = bcrypt.hashSync('Strathmore@2026', 10);
@@ -328,7 +329,7 @@ function buildDefaultData() {
     },
     {
       id: "usr-stud-9",
-      name: "samuel.mwangi@strathmore.edu" ? "Samuel Mwangi" : "Samuel Mwangi",
+      name: "Samuel Mwangi",
       email: "samuel.mwangi@strathmore.edu",
       passwordHash: legacyPasswordHash,
       role: "STUDENT",
@@ -1154,7 +1155,7 @@ function buildDefaultData() {
       priority: "HIGH",
       recipientCount: 412,
       recipientsSample: ["+254712345678", "+254722112233", "+254719889900"],
-      message: "🚨 [URGENT - Strathmore SmartEvent]: AI & ML Annual Colloquium starts at 14:00 in Main Auditorium. Present your Student ID at Entry Gate B.",
+      message: "ðŸš¨ [URGENT - Strathmore SmartEvent]: AI & ML Annual Colloquium starts at 14:00 in Main Auditorium. Present your Student ID at Entry Gate B.",
       status: "DELIVERED (Africa's Talking Gateway)",
       gatewayMessageId: "ATXid_892341098234019",
       cost: "KES 329.60",
@@ -1168,7 +1169,7 @@ function buildDefaultData() {
       priority: "HIGH",
       recipientCount: 114,
       recipientsSample: ["+254712345678", "+254728776655"],
-      message: "🚨 [URGENT - @iLabAfrica]: Room 302 lab workstations are pre-configured. Bring your laptop charger and Strathmore SmartEvent QR pass.",
+      message: "ðŸš¨ [URGENT - @iLabAfrica]: Room 302 lab workstations are pre-configured. Bring your laptop charger and Strathmore SmartEvent QR pass.",
       status: "DELIVERED (Africa's Talking Gateway)",
       gatewayMessageId: "ATXid_892341098234088",
       cost: "KES 91.20",
@@ -1182,7 +1183,7 @@ function buildDefaultData() {
       priority: "MEDIUM",
       recipientCount: 485,
       recipientsSample: ["+254733445566", "+254715998811"],
-      message: "📌 [REMINDER - Career Services]: Employer booths open at 10:00 AM at Graduation Square. Upload your CV to the SmartEvent portal.",
+      message: "ðŸ“Œ [REMINDER - Career Services]: Employer booths open at 10:00 AM at Graduation Square. Upload your CV to the SmartEvent portal.",
       status: "DELIVERED (Africa's Talking Gateway)",
       gatewayMessageId: "ATXid_892341098234152",
       cost: "KES 388.00",
@@ -1196,7 +1197,7 @@ function buildDefaultData() {
       priority: "HIGH",
       recipientCount: 118,
       recipientsSample: ["+254712345678", "+254728776655"],
-      message: "🚨 [URGENT - Hackathon]: Sandbox API keys for Africa's Talking SMS & USSD have been provisioned to all registered team leads.",
+      message: "ðŸš¨ [URGENT - Hackathon]: Sandbox API keys for Africa's Talking SMS & USSD have been provisioned to all registered team leads.",
       status: "DELIVERED (Africa's Talking Gateway)",
       gatewayMessageId: "ATXid_892341098234209",
       cost: "KES 94.40",
@@ -1210,7 +1211,7 @@ function buildDefaultData() {
       priority: "LOW",
       recipientCount: 540,
       recipientsSample: ["+254799112244", "+254722112233"],
-      message: "ℹ️ [INFO - Cultural Week]: Early-bird wristbands for the Friday Cultural Gala are available at the Student Center desk.",
+      message: "â„¹ï¸ [INFO - Cultural Week]: Early-bird wristbands for the Friday Cultural Gala are available at the Student Center desk.",
       status: "DELIVERED (Africa's Talking Gateway)",
       gatewayMessageId: "ATXid_892341098234299",
       cost: "KES 432.00",
@@ -1229,39 +1230,84 @@ function buildDefaultData() {
     events,
     registrations,
     smsLogs,
-    savedEvents: {
-      "usr-stud-1": ["evt-103", "evt-105"],
-      "usr-stud-2": ["evt-104"]
-    }
+    favorites: [
+      { id: "fav-1", userId: "usr-stud-1", eventId: "evt-103", savedAt: "2026-10-12T10:20:00.000Z" },
+      { id: "fav-2", userId: "usr-stud-1", eventId: "evt-105", savedAt: "2026-10-12T10:22:00.000Z" },
+      { id: "fav-3", userId: "usr-stud-2", eventId: "evt-104", savedAt: "2026-10-13T12:40:00.000Z" }
+    ],
+    notifications: [
+      {
+        id: "notif-1",
+        userId: "usr-stud-1",
+        title: "Registration Confirmed",
+        message: "Your spot for the Strathmore AI & Machine Learning Annual Colloquium is confirmed.",
+        type: "REGISTRATION",
+        priority: "MEDIUM",
+        read: false,
+        createdAt: "2026-10-12T10:15:00.000Z"
+      },
+      {
+        id: "notif-2",
+        userId: "usr-stud-1",
+        title: "Priority SMS: Colloquium Reminder",
+        message: "AI & ML Colloquium starts at 14:00 in the Main Auditorium. Present your Student ID at Gate B.",
+        type: "SMS_PRIORITY",
+        priority: "HIGH",
+        read: false,
+        createdAt: "2026-10-18T08:30:00.000Z"
+      }
+    ],
+    activity: [
+      { id: "act-1", type: "EVENT_CREATED", detail: "Strathmore AI & Machine Learning Annual Colloquium was listed by Dr. Joseph Orero", createdAt: "2026-10-01T09:00:00.000Z" },
+      { id: "act-2", type: "STUDENT_RSVP", detail: "Elvis Wanyama Wafuke (154210) registered for the AI & ML Colloquium", createdAt: "2026-10-12T10:15:00.000Z" },
+      { id: "act-3", type: "SMS_DISPATCHED", detail: "HIGH priority SMS sent to 412 Colloquium registrants", createdAt: "2026-10-18T08:30:00.000Z" }
+    ]
   };
 }
 
+/**
+ * Only add tables that are completely missing. We deliberately do NOT re-seed on
+ * row-count differences, otherwise records an admin deleted would reappear.
+ */
 function ensureCompleteSeedData(data) {
   const defaults = buildDefaultData();
   let modified = false;
 
   for (const key of Object.keys(defaults)) {
-    if (!data[key] || (Array.isArray(defaults[key]) && (!Array.isArray(data[key]) || data[key].length < defaults[key].length))) {
-      if (Array.isArray(defaults[key])) {
-        const existingById = new Map((data[key] || []).map(item => [item.id, item]));
-        for (const seedItem of defaults[key]) {
-          existingById.set(seedItem.id, { ...(existingById.get(seedItem.id) || {}), ...seedItem });
-        }
-        data[key] = Array.from(existingById.values());
-      } else {
-        data[key] = { ...defaults[key], ...(data[key] || {}) };
-      }
+    if (data[key] === undefined || data[key] === null) {
+      data[key] = defaults[key];
       modified = true;
     }
   }
 
+  // Legacy key from older versions
+  if (data.savedEvents) {
+    delete data.savedEvents;
+    modified = true;
+  }
+
+  // Roles are always stored lowercase ('admin' | 'organizer' | 'student')
+  (data.users || []).forEach((u) => {
+    const normalized = String(u.role || 'student').toLowerCase();
+    if (u.role !== normalized) {
+      u.role = normalized;
+      modified = true;
+    }
+  });
+
   return { data, modified };
+}
+
+function atomicWrite(data) {
+  const tmp = `${DATA_FILE}.${process.pid}.tmp`;
+  fs.writeFileSync(tmp, JSON.stringify(data, null, 2));
+  fs.renameSync(tmp, DATA_FILE);
 }
 
 function readLocalData() {
   if (!fs.existsSync(DATA_FILE)) {
-    const initial = buildDefaultData();
-    fs.writeFileSync(DATA_FILE, JSON.stringify(initial, null, 2));
+    const initial = ensureCompleteSeedData(buildDefaultData()).data;
+    atomicWrite(initial);
     return initial;
   }
   try {
@@ -1269,22 +1315,50 @@ function readLocalData() {
     const parsed = JSON.parse(raw);
     const { data, modified } = ensureCompleteSeedData(parsed);
     if (modified) {
-      fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+      atomicWrite(data);
     }
     return data;
   } catch (e) {
-    const initial = buildDefaultData();
-    fs.writeFileSync(DATA_FILE, JSON.stringify(initial, null, 2));
+    console.error('[db] Data file unreadable, rebuilding seed data:', e.message);
+    const initial = ensureCompleteSeedData(buildDefaultData()).data;
+    atomicWrite(initial);
     return initial;
   }
 }
 
 function writeLocalData(data) {
   try {
-    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+    atomicWrite(data);
   } catch (e) {
-    console.error("Error writing data file:", e.message);
+    console.error('Error writing data file:', e.message);
   }
+}
+
+/** Append an entry to the admin activity feed (keeps the latest 200). */
+function logActivity(db, type, detail) {
+  db.activity = db.activity || [];
+  db.activity.unshift({
+    id: `act-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    type,
+    detail,
+    createdAt: new Date().toISOString()
+  });
+  db.activity = db.activity.slice(0, 200);
+}
+
+/** Create an in-app notification for a user ('all' broadcasts to everyone). */
+function addNotification(db, { userId, title, message, type = 'INFO', priority = 'MEDIUM' }) {
+  db.notifications = db.notifications || [];
+  db.notifications.unshift({
+    id: `notif-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    userId,
+    title,
+    message,
+    type,
+    priority,
+    read: false,
+    createdAt: new Date().toISOString()
+  });
 }
 
 module.exports = {
@@ -1292,5 +1366,8 @@ module.exports = {
   getFirestore: () => firestoreDb,
   readLocalData,
   writeLocalData,
-  buildDefaultData
+  buildDefaultData,
+  logActivity,
+  addNotification,
+  DATA_FILE
 };

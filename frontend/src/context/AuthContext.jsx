@@ -58,6 +58,21 @@ export function AuthProvider({ children }) {
     window.scrollTo(0, 0);
   };
 
+  // Any API call that comes back 401 while logged in means the session expired
+  useEffect(() => {
+    const onUnauthorized = () => {
+      setUser(null);
+      setToken(null);
+      localStorage.removeItem('smartevent_user');
+      localStorage.removeItem('smartevent_token');
+      window.history.pushState({}, '', '/');
+      setCurrentPath('/');
+      window.dispatchEvent(new CustomEvent('smartevent:toast', { detail: { type: 'info', message: 'Your session expired. Please sign in again.' } }));
+    };
+    window.addEventListener('smartevent:unauthorized', onUnauthorized);
+    return () => window.removeEventListener('smartevent:unauthorized', onUnauthorized);
+  }, []);
+
   const login = (authenticatedUser, authToken) => {
     setUser(authenticatedUser);
     setToken(authToken);

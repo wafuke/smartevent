@@ -1,5 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, Lock, Mail, User, AlertCircle, ArrowRight, Eye, EyeOff, Phone, Building2, GraduationCap, Trash2 } from 'lucide-react';
+import {
+  ShieldCheck,
+  User,
+  AlertCircle,
+  ArrowRight,
+  Eye,
+  EyeOff,
+  Building2,
+  GraduationCap,
+  Trash2
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { authApi } from '../services/api';
 
@@ -68,14 +78,14 @@ export default function AuthModal({ isOpen, initialTab = 'login', onClose }) {
   const [errorMsg, setErrorMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Google OAuth Account Chooser State (stores ONLY accounts signed in on this user's device)
+  // Google OAuth Account Chooser State (stores ONLY accounts signed in on this user's browser)
   const [showGoogleFlow, setShowGoogleFlow] = useState(false);
   const [deviceGoogleAccounts, setDeviceGoogleAccounts] = useState([]);
   const [googleStep, setGoogleStep] = useState('chooser'); // 'chooser' | 'email' | 'password'
   const [googleEmail, setGoogleEmail] = useState('');
   const [googleName, setGoogleName] = useState('');
   const [googlePassword, setGooglePassword] = useState('');
-  const [googleRole, setGoogleRole] = useState('auto');
+  const [googleRole] = useState('auto');
 
   useEffect(() => {
     setIsLogin(initialTab === 'login');
@@ -169,12 +179,21 @@ export default function AuthModal({ isOpen, initialTab = 'login', onClose }) {
         setErrorMsg('Full name, email address, and password are required.');
         return;
       }
-      if (formData.password.length < 6) {
-        setErrorMsg('Password must be at least 6 characters long.');
+      if (formData.password.length < 8 || !/[A-Za-z]/.test(formData.password) || !/\d/.test(formData.password)) {
+        setErrorMsg('Password must be at least 8 characters and contain both letters and numbers.');
         return;
       }
       if (formData.password !== formData.confirmPassword) {
         setErrorMsg('Passwords do not match.');
+        return;
+      }
+      if (signupRole === 'student' && !/^\d{5,8}$/.test(formData.studentId.trim())) {
+        setErrorMsg('Student admission number must be 5 to 8 digits (e.g. 154210).');
+        return;
+      }
+      const cleanedPhone = formData.phone.replace(/[\s\-()]/g, '');
+      if (!/^(\+?254|0)[17]\d{8}$/.test(cleanedPhone)) {
+        setErrorMsg('Enter a valid Kenyan mobile number (e.g. +254712345678 or 0712345678).');
         return;
       }
     }
@@ -269,7 +288,9 @@ export default function AuthModal({ isOpen, initialTab = 'login', onClose }) {
                           {(acct.name || acct.email).charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <div className="text-xs font-extrabold text-slate-900">{acct.name || acct.email.split('@')[0]}</div>
+                          <div className="text-xs font-extrabold text-slate-900">
+                            {acct.name || acct.email.split('@')[0]}
+                          </div>
                           <div className="text-[11px] text-slate-500">{acct.email}</div>
                         </div>
                       </div>
@@ -301,7 +322,10 @@ export default function AuthModal({ isOpen, initialTab = 'login', onClose }) {
 
                 <button
                   type="button"
-                  onClick={() => { setShowGoogleFlow(false); setErrorMsg(''); }}
+                  onClick={() => {
+                    setShowGoogleFlow(false);
+                    setErrorMsg('');
+                  }}
                   className="w-full py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50"
                 >
                   ← Back to Sign In
@@ -362,7 +386,10 @@ export default function AuthModal({ isOpen, initialTab = 'login', onClose }) {
                   </div>
                   <button
                     type="button"
-                    onClick={() => { setGoogleStep('email'); setErrorMsg(''); }}
+                    onClick={() => {
+                      setGoogleStep('email');
+                      setErrorMsg('');
+                    }}
                     className="text-[11px] font-bold text-blue-600 hover:underline"
                   >
                     Change
@@ -421,7 +448,10 @@ export default function AuthModal({ isOpen, initialTab = 'login', onClose }) {
             <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-100 rounded-2xl">
               <button
                 type="button"
-                onClick={() => { setIsLogin(true); setErrorMsg(''); }}
+                onClick={() => {
+                  setIsLogin(true);
+                  setErrorMsg('');
+                }}
                 className={`py-2 rounded-xl text-xs font-extrabold transition-all ${
                   isLogin ? 'bg-[#003366] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
                 }`}
@@ -430,7 +460,10 @@ export default function AuthModal({ isOpen, initialTab = 'login', onClose }) {
               </button>
               <button
                 type="button"
-                onClick={() => { setIsLogin(false); setErrorMsg(''); }}
+                onClick={() => {
+                  setIsLogin(false);
+                  setErrorMsg('');
+                }}
                 className={`py-2 rounded-xl text-xs font-extrabold transition-all ${
                   !isLogin ? 'bg-[#003366] text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'
                 }`}
@@ -446,10 +479,22 @@ export default function AuthModal({ isOpen, initialTab = 'login', onClose }) {
               className="w-full py-2.5 px-4 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 text-xs font-bold transition-all shadow-2xs flex items-center justify-center space-x-2.5"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z" />
-                <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.11-6.72-4.96H1.29v3.14C3.26 21.3 7.31 24 12 24z" />
-                <path fill="#FBBC05" d="M5.28 14.24c-.24-.72-.38-1.49-.38-2.24s.14-1.52.38-2.24V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.99-3.14z" />
-                <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.99 3.14c.95-2.85 3.6-4.96 6.72-4.96z" />
+                <path
+                  fill="#4285F4"
+                  d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.11-6.72-4.96H1.29v3.14C3.26 21.3 7.31 24 12 24z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.28 14.24c-.24-.72-.38-1.49-.38-2.24s.14-1.52.38-2.24V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.99-3.14z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.99 3.14c.95-2.85 3.6-4.96 6.72-4.96z"
+                />
               </svg>
               <span>Continue with Google (@strathmore.edu)</span>
             </button>
@@ -505,7 +550,11 @@ export default function AuthModal({ isOpen, initialTab = 'login', onClose }) {
                     <input
                       type="text"
                       required
-                      placeholder={signupRole === 'organizer' ? 'e.g. Strathmore Robotics Club' : 'e.g. Elvis Wanyama Wafuke'}
+                      placeholder={
+                        signupRole === 'organizer'
+                          ? 'e.g. Strathmore Robotics Club'
+                          : 'e.g. Elvis Wanyama Wafuke'
+                      }
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-[#003366]"
@@ -533,7 +582,7 @@ export default function AuthModal({ isOpen, initialTab = 'login', onClose }) {
                   {signupRole === 'student' ? (
                     <div>
                       <label className="block text-[11px] font-bold uppercase text-slate-700 mb-1">
-                        Admission Number
+                        Admission Number (5-8 digits)
                       </label>
                       <input
                         type="text"
@@ -562,7 +611,7 @@ export default function AuthModal({ isOpen, initialTab = 'login', onClose }) {
 
                   <div>
                     <label className="block text-[11px] font-bold uppercase text-slate-700 mb-1">
-                      Phone (SMS Alerts)
+                      Phone (Kenyan Mobile)
                     </label>
                     <input
                       type="text"
@@ -578,13 +627,13 @@ export default function AuthModal({ isOpen, initialTab = 'login', onClose }) {
 
               <div>
                 <label className="block text-[11px] font-bold uppercase text-slate-700 mb-1">
-                  Password
+                  Password {!isLogin && <span className="text-[10px] font-normal text-slate-400">(min 8 chars, letters + numbers)</span>}
                 </label>
                 <div className="relative">
                   <input
                     type={showPassword ? 'text' : 'password'}
                     required
-                    placeholder="Enter your password"
+                    placeholder={isLogin ? 'Enter your password' : 'At least 8 chars with letters & numbers'}
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     className="w-full px-3.5 py-2.5 pr-10 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-[#003366]"

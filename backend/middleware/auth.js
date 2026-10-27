@@ -1,52 +1,50 @@
 const jwt = require('jsonwebtoken');
 const { readLocalData } = require('../db');
+const { JWT_SECRET } = require('./secret');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'smartevent-strathmore-jwt-secret-key-2026';
-
-/**
- * Authentication Middleware: Extracts & verifies cryptographically signed JWT token
- */
-function verifyToken(req, res, next) {
-  const authHeader = req.headers.authorization || req.headers['x-auth-token'];
-  let token = null;
-
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    token = authHeader.split(' ')[1];
-  } else if (authHeader) {
-    token = authHeader;
-  } else if (req.query && req.query.token) {
-    token = req.query.token;
+function readCookie(req, name) {
+  const header = req.headers.cookie;
+  if (!header) return null;
+  for (const part of header.split(';')) {
+    const [k, ...v] = part.trim().split('=');
+    if (k === name) return decodeURIComponent(v.join('='));
   }
-
-  if (!token) {
-    req.user = null;
-    return next();
-  }
-
-  const db = readLocalData();
-
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const user = (db.users || []).find(u => u.id === decoded.id);
-    if (user && String(user.status || 'Active').toLowerCase() !== 'suspended') {
-      const { password, passwordHash, ...userPayload } = user;
-      req.user = {
-        ...userPayload,
-        role: String(userPayload.role || 'student').toLowerCase()
-      };
-      return next();
-    }
-  } catch (err) {
-    // Invalid or expired JWT
-  }
-
-  req.user = null;
-  return next();
+  return null;
 }
 
 /**
- * Strict Authentication Guard Middleware: Requires a valid logged-in user
+ * Authentication middleware: verifies a signed JWT (Authorization: Bearer <token>)
+ * and attaches the live user record to req.user. Anonymous requests continue with
+ * req.user = null; protected routes use requireAuth / requireRole.
+ * The `se_token` cookie is accepted ONLY for the server-rendered admin console.
  */
+function verifyToken(req, res, next) {
+  const authHeader = req.headers.authorization;
+  let token = null;
+
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.slice(7).trim();
+  } else if (req.method === 'GET' && req.path === '/') {
+    token = readCookie(req, 'se_token');
+  }
+
+  req.user = null;
+  if (!token) return next();
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
+    const db = readLocalData();
+    const user = (db.users || []).find((u) => u.id === decoded.id);
+    if (user && String(user.status || 'Active').toLowerCase() !== 'suspended') {
+      const { password, passwordHash, ...userPayload } = user;
+      req.user = { ...userPayload, role: String(userPayload.role || 'student').toLowerCase() };
+    }
+  } catch (err) {
+    // invalid / expired token -> treated as anonymous
+  }
+  return next();
+}
+
 function requireAuth(req, res, next) {
   if (!req.user) {
     return res.status(401).json({
@@ -57,34 +55,21 @@ function requireAuth(req, res, next) {
   next();
 }
 
-/**
- * Role-Based Access Control (RBAC) Guard Middleware
- * @param {string[]} allowedRoles - Array of roles permitted (e.g. ['admin', 'organizer'])
- */
+/** Role-based access control. Roles are compared case-insensitively. */
 function requireRole(allowedRoles = []) {
-  const normalizedAllowed = allowedRoles.map(r => String(r).toLowerCase());
+  const allowed = allowedRoles.map((r) => String(r).toLowerCase());
   return (req, res, next) => {
     if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        error: 'Authentication required. Please log in first.'
-      });
+      return res.status(401).json({ success: false, error: 'Authentication required. Please log in first.' });
     }
-
-    const userRole = String(req.user.role || '').toLowerCase();
-    if (!normalizedAllowed.includes(userRole)) {
+    if (!allowed.includes(String(req.user.role).toLowerCase())) {
       return res.status(403).json({
         success: false,
-        error: `Access denied. Role '${userRole.toUpperCase()}' is not authorized to access this resource.`
+        error: `Access denied. Role '${String(req.user.role).toUpperCase()}' is not authorized for this resource.`
       });
     }
-
     next();
   };
 }
 
-module.exports = {
-  verifyToken,
-  requireAuth,
-  requireRole
-};
+module.exports = { verifyToken, requireAuth, requireRole };

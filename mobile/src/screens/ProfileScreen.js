@@ -1,9 +1,55 @@
-import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
-import { getBackendUrl } from '../services/api';
+import React, { useState } from 'react';
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  ScrollView,
+  TextInput,
+  Alert
+} from 'react-native';
+import { getBackendUrl, updateUserProfileMobile } from '../services/api';
 
-export default function ProfileScreen({ user, registeredCount = 0, savedCount = 0, onSignOut }) {
+export default function ProfileScreen({
+  user,
+  registeredCount = 0,
+  savedCount = 0,
+  onUserUpdated,
+  onSignOut
+}) {
   const role = (user?.role || 'STUDENT').toUpperCase();
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(user?.name || '');
+  const [phone, setPhone] = useState(user?.phone || '+254712345678');
+  const [department, setDepartment] = useState(
+    user?.department || 'School of Computing & Engineering Sciences (SCES)'
+  );
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    const res = await updateUserProfileMobile(
+      user?.id,
+      { name: name.trim(), phone: phone.trim(), department: department.trim() },
+      user?.token
+    );
+    setSaving(false);
+    if (res && res.success) {
+      if (onUserUpdated) {
+        onUserUpdated({
+          ...user,
+          name: name.trim(),
+          phone: phone.trim(),
+          department: department.trim(),
+          ...(res.data || {})
+        });
+      }
+      setEditing(false);
+      Alert.alert('Profile Saved', 'Your profile & SMS alert number have been updated.');
+    } else {
+      Alert.alert('Update Error', res?.error || 'Could not update profile.');
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -18,8 +64,8 @@ export default function ProfileScreen({ user, registeredCount = 0, savedCount = 
             {role === 'ADMIN'
               ? `Staff ID: ${user?.staffId || 'ADM-001'} • ${user?.clearanceLevel || 'Super Admin'}`
               : role === 'ORGANIZER'
-                ? `${user?.organizationName || 'Campus Organizer'} • ${user?.department || 'SCES'}`
-                : `Admission No: ${user?.studentId || '154210'}`}
+              ? `${user?.organizationName || 'Campus Organizer'} • ${user?.department || 'SCES'}`
+              : `Admission No: ${user?.studentId || '154210'}`}
           </Text>
           <View
             style={[
@@ -44,11 +90,15 @@ export default function ProfileScreen({ user, registeredCount = 0, savedCount = 
         <View style={styles.statsRow}>
           <View style={styles.statBox}>
             <Text style={styles.statValue}>{role === 'STUDENT' ? registeredCount : 'Active'}</Text>
-            <Text style={styles.statLabel}>{role === 'STUDENT' ? 'Active RSVPs' : 'Portal Status'}</Text>
+            <Text style={styles.statLabel}>
+              {role === 'STUDENT' ? 'Active RSVPs' : 'Portal Status'}
+            </Text>
           </View>
           <View style={styles.statBox}>
             <Text style={styles.statValue}>{role === 'STUDENT' ? savedCount : 'JWT ✓'}</Text>
-            <Text style={styles.statLabel}>{role === 'STUDENT' ? 'Saved Events' : 'RBAC Auth'}</Text>
+            <Text style={styles.statLabel}>
+              {role === 'STUDENT' ? 'Saved Events' : 'RBAC Auth'}
+            </Text>
           </View>
           <View style={styles.statBox}>
             <Text style={styles.statValue}>AT SMS ✓</Text>
@@ -56,30 +106,70 @@ export default function ProfileScreen({ user, registeredCount = 0, savedCount = 
           </View>
         </View>
 
-        {/* Details Card */}
+        {/* Details / Edit Card */}
         <View style={styles.card}>
-          <View style={styles.row}>
-            <Text style={styles.label}>Account Role</Text>
-            <Text style={styles.value}>{role}</Text>
+          <View style={styles.cardHeaderRow}>
+            <Text style={styles.cardHeaderTitle}>Account & SMS Preferences</Text>
+            <TouchableOpacity onPress={() => setEditing(!editing)}>
+              <Text style={styles.editLink}>{editing ? 'Cancel' : 'Edit Profile'}</Text>
+            </TouchableOpacity>
           </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>Department / Faculty</Text>
-            <Text style={styles.value}>
-              {user?.department || 'School of Computing & Engineering Sciences (SCES)'}
-            </Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>Strathmore Email</Text>
-            <Text style={styles.value}>{user?.email || 'student@strathmore.edu'}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>Africa's Talking SMS Phone</Text>
-            <Text style={styles.value}>{user?.phone || '+254712345678'}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>Connected API Endpoint</Text>
-            <Text style={styles.value}>{getBackendUrl()}</Text>
-          </View>
+
+          {editing ? (
+            <View style={{ gap: 10 }}>
+              <View>
+                <Text style={styles.label}>Full Name</Text>
+                <TextInput style={styles.input} value={name} onChangeText={setName} />
+              </View>
+              <View>
+                <Text style={styles.label}>Kenyan Mobile Phone (+2547...)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={phone}
+                  onChangeText={setPhone}
+                  keyboardType="phone-pad"
+                />
+              </View>
+              <View>
+                <Text style={styles.label}>Department / Degree Program</Text>
+                <TextInput style={styles.input} value={department} onChangeText={setDepartment} />
+              </View>
+              <TouchableOpacity
+                style={styles.saveButton}
+                onPress={handleSave}
+                disabled={saving}
+              >
+                <Text style={styles.saveButtonText}>
+                  {saving ? 'Saving...' : 'Save Profile Changes'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <>
+              <View style={styles.row}>
+                <Text style={styles.label}>Account Role</Text>
+                <Text style={styles.value}>{role}</Text>
+              </View>
+              <View style={styles.row}>
+                <Text style={styles.label}>Department / Faculty</Text>
+                <Text style={styles.value}>
+                  {user?.department || 'School of Computing & Engineering Sciences (SCES)'}
+                </Text>
+              </View>
+              <View style={styles.row}>
+                <Text style={styles.label}>Strathmore Email</Text>
+                <Text style={styles.value}>{user?.email || 'student@strathmore.edu'}</Text>
+              </View>
+              <View style={styles.row}>
+                <Text style={styles.label}>Africa&apos;s Talking SMS Phone</Text>
+                <Text style={styles.value}>{user?.phone || '+254712345678'}</Text>
+              </View>
+              <View style={styles.row}>
+                <Text style={styles.label}>Connected API Endpoint</Text>
+                <Text style={styles.value}>{getBackendUrl()}</Text>
+              </View>
+            </>
+          )}
         </View>
 
         {/* Sign Out Button */}
@@ -183,6 +273,24 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 16
   },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9'
+  },
+  cardHeaderTitle: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#0f172a'
+  },
+  editLink: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#0284c7'
+  },
   row: {
     flexDirection: 'column',
     gap: 2
@@ -197,6 +305,29 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
     color: '#0f172a'
+  },
+  input: {
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: 12,
+    color: '#0f172a',
+    marginTop: 3
+  },
+  saveButton: {
+    backgroundColor: '#003366',
+    paddingVertical: 11,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 4
+  },
+  saveButtonText: {
+    color: '#ffffff',
+    fontWeight: 'bold',
+    fontSize: 12
   },
   signOutButton: {
     backgroundColor: '#fef2f2',

@@ -136,12 +136,21 @@ export default function AuthScreen({
         setErrorMsg('Full name, email address, and password are required.');
         return;
       }
-      if (password.length < 6) {
-        setErrorMsg('Password must be at least 6 characters long.');
+      if (password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
+        setErrorMsg('Password must be at least 8 characters and include both letters and numbers.');
         return;
       }
       if (password !== confirmPassword) {
         setErrorMsg('Passwords do not match.');
+        return;
+      }
+      if (signupRole === 'student' && !/^\d{5,8}$/.test(studentId.trim())) {
+        setErrorMsg('Student admission number must be 5 to 8 digits (e.g. 154210).');
+        return;
+      }
+      const cleanedPhone = phone.replace(/[\s\-()]/g, '');
+      if (!/^(\+?254|0)[17]\d{8}$/.test(cleanedPhone)) {
+        setErrorMsg('Enter a valid Kenyan mobile number (e.g. +254712345678 or 0712345678).');
         return;
       }
     }

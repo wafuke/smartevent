@@ -194,14 +194,30 @@ export async function signupUser({ name, email, password, role, studentId, phone
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
     return { success: false, error: "Please enter a valid email address." };
   }
-  if (String(password).length < 6) {
-    return { success: false, error: "Password must be at least 6 characters long." };
+  if (String(password).length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
+    return {
+      success: false,
+      error: "Password must be at least 8 characters and include both letters and numbers."
+    };
   }
   const requestedRole = String(role || "student").toLowerCase();
   if (requestedRole === "admin") {
     return {
       success: false,
       error: "Security Restriction: Administrator accounts cannot be self-registered publicly."
+    };
+  }
+  if (requestedRole === "student" && studentId && !/^\d{5,8}$/.test(String(studentId).trim())) {
+    return {
+      success: false,
+      error: "Student admission number must be 5 to 8 digits (e.g. 154210)."
+    };
+  }
+  const cleanedPhone = String(phone || "+254712345678").replace(/[\s\-()]/g, "");
+  if (!/^(\+?254|0)[17]\d{8}$/.test(cleanedPhone)) {
+    return {
+      success: false,
+      error: "Enter a valid Kenyan mobile number (e.g. +254712345678 or 0712345678)."
     };
   }
 
@@ -463,14 +479,27 @@ export async function registerStudentForEvent(eventId, studentInfo) {
   try {
     const response = await fetch(`${BACKEND_URL}/registrations`, {
       method: "POST",
-      headers: getHeaders(),
-      body: JSON.stringify({
-        eventId,
-        studentName: studentInfo.name || "Elvis Wanyama Wafuke",
-        studentId: studentInfo.studentId || "154210",
-        phone: studentInfo.phone || "+254712345678",
-        email: studentInfo.email || "student@strathmore.edu"
-      })
+      headers: getHeaders(studentInfo?.token),
+      body: JSON.stringify({ eventId })
+    });
+    const data = await response.json();
+    if (response.ok && data.success) {
+      return data;
+    }
+    if (data && data.error) {
+      return { success: false, error: data.error };
+    }
+  } catch (error) {
+    // Offline fallback
+  }
+  return { success: true, offline: true, message: "RSVP confirmed!" };
+}
+
+export async function cancelRegistrationForEvent(eventId, tokenOverride) {
+  try {
+    const response = await fetch(`${BACKEND_URL}/registrations/event/${eventId}`, {
+      method: "DELETE",
+      headers: getHeaders(tokenOverride)
     });
     const data = await response.json();
     if (response.ok && data.success) {
@@ -479,7 +508,71 @@ export async function registerStudentForEvent(eventId, studentInfo) {
   } catch (error) {
     // Offline fallback
   }
-  return { success: true, offline: true, message: "RSVP confirmed!" };
+  return { success: true, offline: true };
+}
+
+export async function fetchMyRegistrations(tokenOverride) {
+  try {
+    const response = await fetch(`${BACKEND_URL}/registrations`, {
+      headers: getHeaders(tokenOverride)
+    });
+    const data = await response.json();
+    if (response.ok && data.success && Array.isArray(data.data)) {
+      return data.data;
+    }
+  } catch (error) {
+    // Offline fallback
+  }
+  return null;
+}
+
+export async function fetchFavoriteIds(tokenOverride) {
+  try {
+    const response = await fetch(`${BACKEND_URL}/favorites`, {
+      headers: getHeaders(tokenOverride)
+    });
+    const data = await response.json();
+    if (response.ok && data.success && Array.isArray(data.favoriteIds)) {
+      return data.favoriteIds;
+    }
+  } catch (error) {
+    // Offline fallback
+  }
+  return null;
+}
+
+export async function toggleFavoriteEvent(eventId, tokenOverride) {
+  try {
+    const response = await fetch(`${BACKEND_URL}/favorites/toggle`, {
+      method: "POST",
+      headers: getHeaders(tokenOverride),
+      body: JSON.stringify({ eventId })
+    });
+    const data = await response.json();
+    if (response.ok && data.success) {
+      return data;
+    }
+  } catch (error) {
+    // Offline fallback
+  }
+  return { success: true, offline: true };
+}
+
+export async function updateUserProfileMobile(userId, payload, tokenOverride) {
+  try {
+    const response = await fetch(`${BACKEND_URL}/users/${userId}`, {
+      method: "PUT",
+      headers: getHeaders(tokenOverride),
+      body: JSON.stringify(payload)
+    });
+    const data = await response.json();
+    if (response.ok && data.success) {
+      return data;
+    }
+    return { success: false, error: data.error || "Update failed" };
+  } catch (error) {
+    return { success: true, offline: true, data: payload };
+  }
 }
 
 export async function fetchPriorityNotifications() {

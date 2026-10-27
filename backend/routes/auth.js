@@ -1,441 +1,445 @@
-const express = require("express");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
+const express = require('express');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const router = express.Router();
-const { readLocalData, writeLocalData } = require("../db");
-const { requireAuth } = require("../middleware/auth");
+const { readLocalData, writeLocalData, logActivity } = require('../db');
+const { requireAuth, requireRole } = require('../middleware/auth');
+const { JWT_SECRET, JWT_EXPIRES_IN } = require('../middleware/secret');
+const { normalizeKenyanPhone } = require('../utils/phone');
 
-const JWT_SECRET = process.env.JWT_SECRET || "smartevent-strathmore-jwt-secret-key-2026";
-const JWT_EXPIRES_IN = "8h";
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
+const GOOGLE_ALLOWED_DOMAINS = (process.env.GOOGLE_ALLOWED_DOMAINS || '')
+  .split(',')
+  .map((d) => d.trim().toLowerCase())
+  .filter(Boolean);
 
-// Brute-force protection: track failed login attempts per email
+// ---------------------------------------------------------------- brute force
 const loginAttempts = new Map();
 const MAX_FAILED_ATTEMPTS = 5;
-const LOCKOUT_DURATION_MS = 60 * 1000; // 1 minute lockout after 5 failed attempts
+const LOCKOUT_MS = 60 * 1000;
 
-function checkRateLimit(emailKey) {
-  const record = loginAttempts.get(emailKey);
-  if (!record) return { allowed: true };
-  if (record.count >= MAX_FAILED_ATTEMPTS) {
-    const elapsed = Date.now() - record.lastAttempt;
-    if (elapsed < LOCKOUT_DURATION_MS) {
-      const remainingSec = Math.ceil((LOCKOUT_DURATION_MS - elapsed) / 1000);
-      return {
-        allowed: false,
-        error: `Too many failed login attempts. Account temporarily locked for ${remainingSec}s.`
-      };
-    }
-    loginAttempts.delete(emailKey);
+function checkLock(key) {
+  const rec = loginAttempts.get(key);
+  if (!rec || rec.count < MAX_FAILED_ATTEMPTS) return null;
+  const elapsed = Date.now() - rec.last;
+  if (elapsed >= LOCKOUT_MS) {
+    loginAttempts.delete(key);
+    return null;
   }
-  return { allowed: true };
+  return Math.ceil((LOCKOUT_MS - elapsed) / 1000);
 }
+const failAttempt = (key) => {
+  const rec = loginAttempts.get(key) || { count: 0, last: 0 };
+  loginAttempts.set(key, { count: rec.count + 1, last: Date.now() });
+};
+const clearAttempts = (key) => loginAttempts.delete(key);
 
-function recordFailedAttempt(emailKey) {
-  const record = loginAttempts.get(emailKey) || { count: 0, lastAttempt: 0 };
-  record.count += 1;
-  record.lastAttempt = Date.now();
-  loginAttempts.set(emailKey, record);
-}
-
-function clearFailedAttempts(emailKey) {
-  loginAttempts.delete(emailKey);
-}
-
+// -------------------------------------------------------------------- helpers
 function signAuthToken(user) {
   return jwt.sign(
-    {
-      id: user.id,
-      email: user.email,
-      role: String(user.role || "student").toLowerCase(),
-      name: user.name
-    },
+    { id: user.id, email: user.email, role: String(user.role).toLowerCase(), name: user.name },
     JWT_SECRET,
-    { expiresIn: JWT_EXPIRES_IN }
+    { expiresIn: JWT_EXPIRES_IN, algorithm: 'HS256' }
   );
 }
 
 function sanitizeUser(user) {
   if (!user) return null;
-  const { password, passwordHash, ...safeUser } = user;
-  return {
-    ...safeUser,
-    role: String(safeUser.role || "student").toLowerCase()
+  const { password, passwordHash, ...safe } = user;
+  return { ...safe, role: String(safe.role || 'student').toLowerCase() };
+}
+
+function verifyPassword(user, candidate) {
+  if (!candidate || typeof candidate !== 'string' || !user.passwordHash) return false;
+  return bcrypt.compareSync(candidate, user.passwordHash);
+}
+
+// Pre-computed hash used to equalize timing when the account does not exist
+const DUMMY_HASH = bcrypt.hashSync('not-a-real-password', 10);
+
+function passwordPolicyError(password) {
+  if (typeof password !== 'string' || password.length < 8) {
+    return 'Password must be at least 8 characters long.';
+  }
+  if (!/[A-Za-z]/.test(password) || !/\d/.test(password)) {
+    return 'Password must contain at least one letter and one number.';
+  }
+  return null;
+}
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function createRoleProfile(db, user) {
+  if (user.role === 'student') {
+    db.student_profiles = db.student_profiles || [];
+    db.student_profiles.push({
+      id: `stud-prof-${Date.now()}`,
+      userId: user.id,
+      studentId: user.studentId,
+      name: user.name,
+      email: user.email,
+      program: user.department,
+      faculty: 'SCES',
+      yearOfStudy: 1,
+      phone: user.phone,
+      hostelResident: false,
+      pastAttendanceRate: 0.8
+    });
+  } else if (user.role === 'organizer') {
+    db.organizer_profiles = db.organizer_profiles || [];
+    db.organizer_profiles.push({
+      id: `org-prof-${Date.now()}`,
+      userId: user.id,
+      organizerCode: user.organizerCode,
+      name: user.name,
+      email: user.email,
+      department: user.department,
+      officeLocation: 'Strathmore University Campus',
+      phone: user.phone,
+      verified: false,
+      eventsHostedCount: 0
+    });
+  }
+}
+
+function nextCode(db, prefix, field) {
+  const nums = (db.users || [])
+    .map((u) => String(u[field] || ''))
+    .filter((c) => c.startsWith(prefix))
+    .map((c) => parseInt(c.slice(prefix.length + 1), 10) || 0);
+  const next = (nums.length ? Math.max(...nums) : 0) + 1;
+  return `${prefix}-${String(next).padStart(3, '0')}`;
+}
+
+function buildNewUser(db, { name, email, password, role, studentId, phone, department, organizationName, authProvider, extra = {} }) {
+  const user = {
+    id: `usr-${role}-${Date.now()}`,
+    name: String(name).trim(),
+    email: String(email).trim().toLowerCase(),
+    passwordHash: bcrypt.hashSync(password, 10),
+    role,
+    phone,
+    department: department || 'School of Computing & Engineering Sciences',
+    status: 'Active',
+    authProvider,
+    createdAt: new Date().toISOString(),
+    ...extra
   };
+  if (role === 'student') user.studentId = studentId;
+  if (role === 'organizer') {
+    user.organizerCode = nextCode(db, 'ORG', 'organizerCode');
+    user.organizationName = organizationName || `${user.name} Events`;
+  }
+  return user;
 }
 
-function getUsers() {
-  const db = readLocalData();
-  return db.users || [];
-}
+// ------------------------------------------------------------------- SIGN UP
+// POST /api/auth/signup - public registration for STUDENT and ORGANIZER only
+router.post('/signup', (req, res) => {
+  const { name, email, password, role, studentId, phone, department, organizationName } = req.body || {};
 
-function verifyPassword(user, candidatePassword) {
-  if (!candidatePassword || typeof candidatePassword !== "string") return false;
-  if (user.passwordHash) {
-    return bcrypt.compareSync(candidatePassword, user.passwordHash);
+  if (!name || !String(name).trim() || !email || !password) {
+    return res.status(400).json({ success: false, error: 'Full name, email address and password are required.' });
   }
-  if (user.password && user.password.startsWith("$2")) {
-    return bcrypt.compareSync(candidatePassword, user.password);
-  }
-  if (user.password) {
-    return user.password === candidatePassword;
-  }
-  return false;
-}
-
-// POST /api/auth/signup - Register new Student or Organizer account (Admin self-signup blocked)
-router.post("/signup", (req, res) => {
-  const { name, email, password, role, studentId, phone, department, organizationName } = req.body;
-
-  if (!name || !email || !password) {
-    return res.status(400).json({
-      success: false,
-      error: "Full name, email address, and password are required."
-    });
-  }
-
   const normalizedEmail = String(email).trim().toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
-    return res.status(400).json({
-      success: false,
-      error: "Please provide a valid email address (e.g. name@strathmore.edu)."
-    });
+  if (!EMAIL_RE.test(normalizedEmail)) {
+    return res.status(400).json({ success: false, error: 'Please provide a valid email address.' });
   }
+  const pwErr = passwordPolicyError(password);
+  if (pwErr) return res.status(400).json({ success: false, error: pwErr });
 
-  if (String(password).length < 6) {
-    return res.status(400).json({
-      success: false,
-      error: "Password must be at least 6 characters long."
-    });
-  }
-
-  const requestedRole = String(role || "student").trim().toLowerCase();
-  if (requestedRole === "admin") {
+  const requestedRole = String(role || 'student').trim().toLowerCase();
+  if (requestedRole === 'admin') {
     return res.status(403).json({
       success: false,
-      error: "Security Restriction: Administrator accounts cannot be self-registered publicly."
+      error: 'Administrator accounts cannot be self-registered. Ask an existing administrator to create one.'
+    });
+  }
+  if (!['student', 'organizer'].includes(requestedRole)) {
+    return res.status(400).json({ success: false, error: "Role must be 'student' or 'organizer'." });
+  }
+
+  const normalizedPhone = normalizeKenyanPhone(phone);
+  if (!normalizedPhone) {
+    return res.status(400).json({
+      success: false,
+      error: 'Enter a valid Kenyan mobile number (e.g. 0712345678 or +254712345678) so you can receive SMS alerts.'
     });
   }
 
   const db = readLocalData();
   db.users = db.users || [];
-  const existing = db.users.find((u) => u.email.toLowerCase() === normalizedEmail);
-
-  if (existing) {
-    return res.status(400).json({
-      success: false,
-      error: "An account with this email address already exists. Please sign in instead."
-    });
+  if (db.users.some((u) => u.email.toLowerCase() === normalizedEmail)) {
+    return res.status(409).json({ success: false, error: 'An account with this email already exists. Please sign in instead.' });
   }
 
-  const validRole = requestedRole === "organizer" ? "ORGANIZER" : "STUDENT";
-  const passwordHash = bcrypt.hashSync(password, 10);
-  const userId = `usr-${validRole.toLowerCase()}-${Date.now()}`;
+  let cleanStudentId;
+  if (requestedRole === 'student') {
+    cleanStudentId = String(studentId || '').trim();
+    if (!/^\d{5,8}$/.test(cleanStudentId)) {
+      return res.status(400).json({ success: false, error: 'Enter a valid admission number (5-8 digits).' });
+    }
+    if (db.users.some((u) => u.studentId === cleanStudentId)) {
+      return res.status(409).json({ success: false, error: 'That admission number is already registered.' });
+    }
+  }
 
-  const newUser = {
-    id: userId,
-    name: String(name).trim(),
+  const newUser = buildNewUser(db, {
+    name,
     email: normalizedEmail,
-    passwordHash,
-    role: validRole,
-    studentId: validRole === "STUDENT" ? (studentId || `15${Math.floor(1000 + Math.random() * 9000)}`) : undefined,
-    organizerCode: validRole === "ORGANIZER" ? `ORG-${Math.floor(100 + Math.random() * 900)}` : undefined,
-    organizationName: validRole === "ORGANIZER" ? (organizationName || department || `${String(name).trim()} Events`) : undefined,
-    phone: phone || "+254712345678",
-    department: department || "School of Computing & Engineering Sciences",
-    status: "Active",
-    authProvider: "local",
-    createdAt: new Date().toISOString()
-  };
+    password,
+    role: requestedRole,
+    studentId: cleanStudentId,
+    phone: normalizedPhone,
+    department: department && String(department).trim(),
+    organizationName: organizationName && String(organizationName).trim(),
+    authProvider: 'local'
+  });
 
   db.users.push(newUser);
-
-  if (validRole === "STUDENT") {
-    db.student_profiles = db.student_profiles || [];
-    db.student_profiles.push({
-      id: `stud-prof-${Date.now()}`,
-      userId,
-      studentId: newUser.studentId,
-      name: newUser.name,
-      email: newUser.email,
-      program: newUser.department,
-      faculty: "SCES",
-      yearOfStudy: 3,
-      phone: newUser.phone,
-      hostelResident: false,
-      pastAttendanceRate: 0.82
-    });
-  } else if (validRole === "ORGANIZER") {
-    db.organizer_profiles = db.organizer_profiles || [];
-    db.organizer_profiles.push({
-      id: `org-prof-${Date.now()}`,
-      userId,
-      organizerCode: newUser.organizerCode,
-      name: newUser.name,
-      email: newUser.email,
-      department: newUser.department,
-      officeLocation: "SCES Complex",
-      phone: newUser.phone,
-      verified: true,
-      eventsHostedCount: 0
-    });
-  }
-
+  createRoleProfile(db, newUser);
+  logActivity(db, 'USER_REGISTERED', `${newUser.name} registered as ${newUser.role.toUpperCase()}`);
   writeLocalData(db);
-
-  const userPayload = sanitizeUser(newUser);
-  const token = signAuthToken(newUser);
 
   res.status(201).json({
     success: true,
-    message: "Account registered successfully!",
-    token,
-    user: userPayload
+    message: 'Account registered successfully!',
+    token: signAuthToken(newUser),
+    user: sanitizeUser(newUser)
   });
 });
 
-// POST /api/auth/login - Strictly validate email, password, rate limits, and optional role check
-router.post("/login", (req, res) => {
-  const { email, password, role } = req.body;
-
+// -------------------------------------------------------------------- LOG IN
+// POST /api/auth/login - role is derived from the account; an optional `role`
+// hint is verified (never trusted) to support role-specific login tabs.
+router.post('/login', (req, res) => {
+  const { email, password, role } = req.body || {};
   if (!email || !password) {
-    return res.status(400).json({
-      success: false,
-      error: "Email address and password are required."
-    });
+    return res.status(400).json({ success: false, error: 'Email address and password are required.' });
   }
 
-  const normalizedEmail = String(email).trim().toLowerCase();
-
-  // Check brute-force rate limit
-  const rateCheck = checkRateLimit(normalizedEmail);
-  if (!rateCheck.allowed) {
+  const key = String(email).trim().toLowerCase();
+  const lockedFor = checkLock(key);
+  if (lockedFor) {
     return res.status(429).json({
       success: false,
-      error: rateCheck.error
+      error: `Too many failed attempts. This account is locked for another ${lockedFor}s.`
     });
   }
 
-  const users = getUsers();
-  const userByEmail = users.find((u) => u.email.toLowerCase() === normalizedEmail);
+  const db = readLocalData();
+  const user = (db.users || []).find((u) => u.email.toLowerCase() === key);
 
-  if (!userByEmail) {
-    recordFailedAttempt(normalizedEmail);
-    return res.status(401).json({
-      success: false,
-      error: "Invalid email or password credentials."
-    });
+  if (!user) {
+    bcrypt.compareSync(String(password), DUMMY_HASH); // equalize timing
+    failAttempt(key);
+    return res.status(401).json({ success: false, error: 'Invalid email or password.' });
+  }
+  if (!verifyPassword(user, password)) {
+    failAttempt(key);
+    return res.status(401).json({ success: false, error: 'Invalid email or password.' });
+  }
+  if (String(user.status || 'Active').toLowerCase() === 'suspended') {
+    return res.status(403).json({ success: false, error: 'This account has been suspended. Contact a system administrator.' });
   }
 
-  if (!verifyPassword(userByEmail, password)) {
-    recordFailedAttempt(normalizedEmail);
-    return res.status(401).json({
-      success: false,
-      error: "Invalid email or password credentials."
-    });
-  }
-
-  if (userByEmail.status && userByEmail.status.toLowerCase() === "suspended") {
+  const actualRole = String(user.role).toLowerCase();
+  const hint = role ? String(role).trim().toLowerCase() : 'auto';
+  if (hint !== 'auto' && hint !== actualRole) {
     return res.status(403).json({
       success: false,
-      error: "This account has been suspended by a System Administrator."
+      error: `This account is registered as ${actualRole.toUpperCase()}, not ${hint.toUpperCase()}.`
     });
   }
 
-  const userRoleLower = String(userByEmail.role || "student").toLowerCase();
-  const requestedRoleLower = role ? String(role).trim().toLowerCase() : null;
-
-  // If a specific role tab was chosen and does not match the user's actual role, reject
-  if (requestedRoleLower && requestedRoleLower !== "auto" && userRoleLower !== requestedRoleLower) {
-    return res.status(403).json({
-      success: false,
-      error: `Access Denied: This account is registered as '${userRoleLower.toUpperCase()}', not '${requestedRoleLower.toUpperCase()}'.`
-    });
-  }
-
-  clearFailedAttempts(normalizedEmail);
-
-  const userPayload = sanitizeUser(userByEmail);
-  const token = signAuthToken(userByEmail);
+  clearAttempts(key);
+  user.lastLoginAt = new Date().toISOString();
+  writeLocalData(db);
 
   res.json({
     success: true,
-    message: `Welcome back, ${userByEmail.name}!`,
-    token,
-    user: userPayload
+    message: `Welcome back, ${user.name}!`,
+    token: signAuthToken(user),
+    user: sanitizeUser(user)
   });
 });
 
-// POST /api/auth/google - Google OAuth / Google Workspace Account Chooser Sign-In
-router.post("/google", (req, res) => {
+// -------------------------------------------------------------------- GOOGLE
+// GET /api/auth/google/config - tells clients which Google flow is active
+router.get('/google/config', (req, res) => {
+  const prod = process.env.NODE_ENV === 'production';
+  res.json({
+    success: true,
+    mode: GOOGLE_CLIENT_ID ? 'google' : prod ? 'disabled' : 'demo',
+    clientId: GOOGLE_CLIENT_ID || null,
+    allowedDomains: GOOGLE_ALLOWED_DOMAINS
+  });
+});
+
+let googleClient = null;
+async function verifyGoogleIdToken(idToken) {
+  if (!googleClient) {
+    const { OAuth2Client } = require('google-auth-library');
+    googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
+  }
+  const ticket = await googleClient.verifyIdToken({ idToken, audience: GOOGLE_CLIENT_ID });
+  return ticket.getPayload();
+}
+
+// POST /api/auth/google
+//  * GOOGLE_CLIENT_ID configured -> a Google-signed ID token (`credential`) is cryptographically verified.
+//  * not configured (development) -> "demo mode": the email AND that account's password are required.
+//  * production without client id -> disabled.
+router.post('/google', async (req, res) => {
   try {
-    let { email, name, googleId, picture, role, credential, password } = req.body;
-
-    // Decode Google Identity Services JWT credential if provided by Google OAuth popup
-    let verifiedByGoogleToken = false;
-    if (credential && typeof credential === "string" && credential.split(".").length === 3) {
-      const base64Payload = credential.split(".")[1];
-      const decodedJson = Buffer.from(base64Payload, "base64").toString("utf8");
-      const payload = JSON.parse(decodedJson);
-      email = payload.email || email;
-      name = payload.name || name;
-      googleId = payload.sub || googleId;
-      picture = payload.picture || picture;
-      verifiedByGoogleToken = Boolean(payload.email && payload.sub);
-    }
-
-    if (!email) {
-      return res.status(400).json({
-        success: false,
-        error: "Google authentication requires a valid Google account email."
-      });
-    }
-
-    const normalizedEmail = String(email).trim().toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
-      return res.status(400).json({
-        success: false,
-        error: "Please enter a valid Google Workspace (@strathmore.edu) or Gmail address."
-      });
-    }
-
+    const { credential, email, password, name, role } = req.body || {};
     const db = readLocalData();
     db.users = db.users || [];
 
-    let user = db.users.find((u) => u.email.toLowerCase() === normalizedEmail);
+    let verifiedEmail;
+    let displayName = name;
+    let googleId;
+    let picture;
 
-    if (user) {
-      const actualRole = String(user.role || "student").toLowerCase();
-
-      // Security check: if signing into an existing account without a cryptographic Google ID token,
-      // require password verification so no one can impersonate another user or Admin by email alone.
-      if (!verifiedByGoogleToken) {
-        if (!password || !verifyPassword(user, password)) {
-          return res.status(401).json({
-            success: false,
-            error: "Please enter the valid Google / Strathmore Workspace password for this account."
-          });
-        }
+    if (GOOGLE_CLIENT_ID) {
+      if (!credential || typeof credential !== 'string') {
+        return res.status(400).json({ success: false, error: 'Missing Google credential.' });
       }
-
-      if (role && role !== "auto" && actualRole !== String(role).toLowerCase()) {
+      let payload;
+      try {
+        payload = await verifyGoogleIdToken(credential);
+      } catch (e) {
+        return res.status(401).json({ success: false, error: 'Google could not verify this sign-in. Please try again.' });
+      }
+      if (!payload || !payload.email || !payload.email_verified) {
+        return res.status(401).json({ success: false, error: 'Your Google email address is not verified.' });
+      }
+      verifiedEmail = payload.email.toLowerCase();
+      displayName = payload.name || displayName;
+      googleId = payload.sub;
+      picture = payload.picture;
+      const domain = verifiedEmail.split('@')[1];
+      if (GOOGLE_ALLOWED_DOMAINS.length && !GOOGLE_ALLOWED_DOMAINS.includes(domain)) {
         return res.status(403).json({
           success: false,
-          error: `Your Google account (${user.email}) is registered as '${actualRole.toUpperCase()}', not '${String(role).toUpperCase()}'.`
+          error: `Please sign in with a ${GOOGLE_ALLOWED_DOMAINS.map((d) => '@' + d).join(' / ')} Google account.`
         });
       }
-
-      user.googleId = googleId || user.googleId || `google_${user.id}`;
-      user.picture = picture || user.picture;
-      user.lastLoginAt = new Date().toISOString();
-      writeLocalData(db);
     } else {
-      // Provision new Student or Organizer account via Google OAuth
-      const requestedRole = String(role || "student").toLowerCase();
-      if (requestedRole === "admin") {
-        return res.status(403).json({
-          success: false,
-          error: "Administrator accounts cannot be self-created via Google Sign-In."
-        });
+      if (process.env.NODE_ENV === 'production') {
+        return res.status(503).json({ success: false, error: 'Google Sign-In is not configured on this server.' });
       }
-
-      if (!verifiedByGoogleToken && (!password || String(password).length < 6)) {
-        return res.status(400).json({
-          success: false,
-          error: "Please provide your Google account password (min 6 characters) to verify your account."
-        });
+      if (!email || !EMAIL_RE.test(String(email).trim())) {
+        return res.status(400).json({ success: false, error: 'Enter a valid email address.' });
       }
-
-      const validRole = requestedRole === "organizer" ? "ORGANIZER" : "STUDENT";
-      const userId = `usr-google-${Date.now()}`;
-      const formattedName =
-        name ||
-        normalizedEmail
-          .split("@")[0]
-          .replace(/[._-]/g, " ")
-          .replace(/\b\w/g, (c) => c.toUpperCase());
-
-      user = {
-        id: userId,
-        name: formattedName,
-        email: normalizedEmail,
-        passwordHash: bcrypt.hashSync(password || `google_oauth_${Date.now()}`, 10),
-        role: validRole,
-        googleId: googleId || `google_${Date.now()}`,
-        picture: picture || null,
-        studentId: validRole === "STUDENT" ? `15${Math.floor(1000 + Math.random() * 9000)}` : undefined,
-        organizerCode: validRole === "ORGANIZER" ? `ORG-${Math.floor(100 + Math.random() * 900)}` : undefined,
-        phone: "+254712345678",
-        department: "School of Computing & Engineering Sciences",
-        status: "Active",
-        authProvider: "google",
-        createdAt: new Date().toISOString()
-      };
-
-      db.users.push(user);
-
-      if (validRole === "STUDENT") {
-        db.student_profiles = db.student_profiles || [];
-        db.student_profiles.push({
-          id: `stud-prof-${Date.now()}`,
-          userId,
-          studentId: user.studentId,
-          name: user.name,
-          email: user.email,
-          program: "BSc Informatics & Computer Science",
-          faculty: "SCES",
-          yearOfStudy: 3,
-          phone: user.phone,
-          hostelResident: false,
-          pastAttendanceRate: 0.82
-        });
+      verifiedEmail = String(email).trim().toLowerCase();
+      const existing = db.users.find((u) => u.email.toLowerCase() === verifiedEmail);
+      const lockedFor = checkLock(verifiedEmail);
+      if (lockedFor) {
+        return res.status(429).json({ success: false, error: `Too many failed attempts. Try again in ${lockedFor}s.` });
+      }
+      if (existing) {
+        if (!verifyPassword(existing, password)) {
+          failAttempt(verifiedEmail);
+          return res.status(401).json({ success: false, error: 'Incorrect password for this account.' });
+        }
+        clearAttempts(verifiedEmail);
       } else {
-        db.organizer_profiles = db.organizer_profiles || [];
-        db.organizer_profiles.push({
-          id: `org-prof-${Date.now()}`,
-          userId,
-          organizerCode: user.organizerCode,
-          name: user.name,
-          email: user.email,
-          department: user.department,
-          officeLocation: "SCES Complex",
-          phone: user.phone,
-          verified: true,
-          eventsHostedCount: 0
-        });
+        const pwErr = passwordPolicyError(password);
+        if (pwErr) return res.status(400).json({ success: false, error: pwErr });
       }
-
-      writeLocalData(db);
     }
 
-    const userPayload = sanitizeUser(user);
-    const token = signAuthToken(user);
+    let user = db.users.find((u) => u.email.toLowerCase() === verifiedEmail);
 
+    if (user) {
+      if (String(user.status || 'Active').toLowerCase() === 'suspended') {
+        return res.status(403).json({ success: false, error: 'This account has been suspended.' });
+      }
+      const actualRole = String(user.role).toLowerCase();
+      const hint = role ? String(role).toLowerCase() : 'auto';
+      if (hint !== 'auto' && hint !== actualRole) {
+        return res.status(403).json({
+          success: false,
+          error: `This Google account is registered as ${actualRole.toUpperCase()}, not ${hint.toUpperCase()}.`
+        });
+      }
+      user.googleId = googleId || user.googleId;
+      user.picture = picture || user.picture;
+      if (!String(user.authProvider || '').includes('google')) {
+        user.authProvider = `${user.authProvider || 'local'},google`;
+      }
+      user.lastLoginAt = new Date().toISOString();
+    } else {
+      const requestedRole = String(role || 'student').toLowerCase();
+      if (requestedRole === 'admin') {
+        return res.status(403).json({ success: false, error: 'Administrator accounts cannot be created through Google Sign-In.' });
+      }
+      const finalRole = requestedRole === 'organizer' ? 'organizer' : 'student';
+      const generatedStudentId = (() => {
+        let id;
+        do {
+          id = String(150000 + Math.floor(Math.random() * 9000));
+        } while (db.users.some((u) => u.studentId === id));
+        return id;
+      })();
+      user = buildNewUser(db, {
+        name: displayName || verifiedEmail.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+        email: verifiedEmail,
+        password: password && !GOOGLE_CLIENT_ID ? password : `G!${require('crypto').randomBytes(12).toString('hex')}1a`,
+        role: finalRole,
+        studentId: generatedStudentId,
+        phone: '',
+        authProvider: 'google',
+        extra: { googleId, picture, phoneVerified: false }
+      });
+      db.users.push(user);
+      createRoleProfile(db, user);
+      logActivity(db, 'USER_REGISTERED', `${user.name} registered via Google as ${user.role.toUpperCase()}`);
+    }
+
+    writeLocalData(db);
     res.json({
       success: true,
-      message: `Signed in with Google as ${user.name}`,
-      token,
-      user: userPayload
+      message: `Signed in as ${user.name}`,
+      token: signAuthToken(user),
+      user: sanitizeUser(user),
+      needsPhone: !normalizeKenyanPhone(user.phone)
     });
   } catch (err) {
-    res.status(400).json({
-      success: false,
-      error: "Failed to verify Google account credential: " + err.message
-    });
+    console.error('[auth/google]', err.message);
+    res.status(500).json({ success: false, error: 'Google sign-in failed. Please try again.' });
   }
 });
 
-// GET /api/auth/me - Validate current JWT token and return active user profile
-router.get("/me", requireAuth, (req, res) => {
-  res.json({
-    success: true,
-    user: sanitizeUser(req.user)
-  });
+// ------------------------------------------------------------ SESSION / ME
+router.get('/me', requireAuth, (req, res) => {
+  res.json({ success: true, user: sanitizeUser(req.user) });
 });
 
-// GET /api/auth/users - Protected endpoint (requires authentication)
-router.get("/users", requireAuth, (req, res) => {
-  const users = getUsers().map(sanitizeUser);
+// PUT /api/auth/password - change own password (current password required)
+router.put('/password', requireAuth, (req, res) => {
+  const { currentPassword, newPassword } = req.body || {};
+  const pwErr = passwordPolicyError(newPassword);
+  if (pwErr) return res.status(400).json({ success: false, error: pwErr });
+
+  const db = readLocalData();
+  const user = db.users.find((u) => u.id === req.user.id);
+  if (!user || !verifyPassword(user, currentPassword)) {
+    return res.status(401).json({ success: false, error: 'Your current password is incorrect.' });
+  }
+  user.passwordHash = bcrypt.hashSync(newPassword, 10);
+  user.updatedAt = new Date().toISOString();
+  writeLocalData(db);
+  res.json({ success: true, message: 'Password updated successfully.' });
+});
+
+// GET /api/auth/users - kept for backwards compatibility, ADMIN ONLY
+router.get('/users', requireRole(['admin']), (req, res) => {
+  const users = (readLocalData().users || []).map(sanitizeUser);
   res.json({ success: true, count: users.length, data: users });
 });
 
 module.exports = router;
+module.exports.sanitizeUser = sanitizeUser;
+module.exports.passwordPolicyError = passwordPolicyError;

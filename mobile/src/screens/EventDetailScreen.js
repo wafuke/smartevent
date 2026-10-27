@@ -8,7 +8,7 @@ import {
   Alert,
   ActivityIndicator
 } from 'react-native';
-import { registerStudentForEvent, fetchEventPrediction } from '../services/api';
+import { registerStudentForEvent, cancelRegistrationForEvent, fetchEventPrediction } from '../services/api';
 
 export default function EventDetailScreen({
   event,
@@ -63,7 +63,8 @@ export default function EventDetailScreen({
     }
   };
 
-  const handleCancel = () => {
+  const handleCancel = async () => {
+    await cancelRegistrationForEvent(event.id, user?.token);
     if (onCancelRegistration) {
       onCancelRegistration(event.id);
       Alert.alert("RSVP Cancelled", `Your registration for "${event.title}" has been removed.`);

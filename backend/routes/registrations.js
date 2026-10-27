@@ -1,110 +1,155 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const { readLocalData, writeLocalData } = require("../db");
-const { requireAuth, requireRole } = require("../middleware/auth");
+const { readLocalData, writeLocalData, logActivity, addNotification } = require('../db');
+const { requireAuth, requireRole } = require('../middleware/auth');
+const { normalizeKenyanPhone } = require('../utils/phone');
 
-// GET /api/registrations - List registrations (Filterable by eventId or studentId)
-router.get("/", (req, res) => {
+function ownsEvent(db, user, eventId) {
+  const ev = (db.events || []).find((e) => e.id === eventId);
+  return Boolean(ev && ev.organizerId === user.id);
+}
+
+// GET /api/registrations - role-scoped listing
+//   student   -> only their own
+//   organizer -> registrations for events they organise
+//   admin     -> everything
+router.get('/', requireAuth, (req, res) => {
   const db = readLocalData();
-  const { eventId, studentId } = req.query;
-  let filtered = db.registrations || [];
+  let list = db.registrations || [];
+  const { eventId, status } = req.query;
 
-  if (eventId) {
-    filtered = filtered.filter((r) => r.eventId === eventId);
+  if (req.user.role === 'student') {
+    list = list.filter((r) => r.userId === req.user.id);
+  } else if (req.user.role === 'organizer') {
+    const mine = new Set((db.events || []).filter((e) => e.organizerId === req.user.id).map((e) => e.id));
+    list = list.filter((r) => mine.has(r.eventId));
   }
-  if (studentId) {
-    filtered = filtered.filter((r) => r.studentId === studentId);
-  }
+  if (eventId) list = list.filter((r) => r.eventId === eventId);
+  if (status) list = list.filter((r) => (r.status || 'Confirmed').toLowerCase() === String(status).toLowerCase());
 
-  res.json({ success: true, count: filtered.length, data: filtered });
+  res.json({ success: true, count: list.length, data: list });
 });
 
-// POST /api/registrations - Register student for an event (Authenticated)
-router.post("/", requireAuth, (req, res) => {
-  const { eventId, studentName, studentId, phone, email } = req.body;
+// GET /api/registrations/mine - the logged-in student's registrations joined with event info
+router.get('/mine', requireAuth, (req, res) => {
+  const db = readLocalData();
+  const regs = (db.registrations || []).filter((r) => r.userId === req.user.id);
+  const data = regs.map((r) => ({
+    ...r,
+    event: (db.events || []).find((e) => e.id === r.eventId) || null
+  }));
+  res.json({ success: true, count: data.length, data });
+});
 
-  if (!eventId) {
-    return res.status(400).json({ success: false, error: "Missing eventId" });
-  }
+// POST /api/registrations - a student registers for an event
+router.post('/', requireRole(['student']), (req, res) => {
+  const { eventId } = req.body || {};
+  if (!eventId) return res.status(400).json({ success: false, error: 'eventId is required.' });
 
   const db = readLocalData();
   db.registrations = db.registrations || [];
-  db.events = db.events || [];
 
-  const currentUser = req.user;
-
-  // Check if already registered for this event
-  const existing = db.registrations.find(
-    (r) => r.eventId === eventId && (r.userId === currentUser.id || r.email === currentUser.email)
-  );
-
-  if (existing) {
-    return res.status(400).json({ success: false, error: "You are already registered for this event." });
+  const event = (db.events || []).find((e) => e.id === eventId);
+  if (!event) return res.status(404).json({ success: false, error: 'Event not found.' });
+  if (event.status === 'Cancelled') return res.status(400).json({ success: false, error: 'This event has been cancelled.' });
+  if (event.status === 'Completed' || event.date < new Date().toISOString().slice(0, 10)) {
+    return res.status(400).json({ success: false, error: 'Registration is closed - this event has already taken place.' });
   }
 
-  const newRegistration = {
-    id: `reg-${Date.now()}`,
+  if (db.registrations.some((r) => r.eventId === eventId && r.userId === req.user.id)) {
+    return res.status(409).json({ success: false, error: 'You are already registered for this event.' });
+  }
+  if ((event.registrationCount || 0) >= event.venueCapacity) {
+    return res.status(409).json({ success: false, error: 'Sorry, this event is fully booked.' });
+  }
+
+  const phone = normalizeKenyanPhone(req.user.phone);
+  if (!phone) {
+    return res.status(400).json({
+      success: false,
+      error: 'Add a valid mobile number to your profile first so we can send you SMS alerts.'
+    });
+  }
+
+  const registration = {
+    id: `reg-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
     eventId,
-    userId: currentUser.id,
-    studentName: studentName || currentUser.name,
-    studentId: studentId || currentUser.studentId || "154210",
-    phone: phone || "+254712345678",
-    email: email || currentUser.email,
+    eventTitle: event.title,
+    userId: req.user.id,
+    studentId: req.user.studentId,
+    studentName: req.user.name,
+    studentEmail: req.user.email,
+    phone,
+    status: 'Confirmed',
     registeredAt: new Date().toISOString()
   };
+  db.registrations.push(registration);
 
-  db.registrations.push(newRegistration);
+  event.registrationCount = (event.registrationCount || 0) + 1;
+  event.predictedAttendance = Math.round(event.registrationCount * (event.pastAttendanceRate || 0.8));
 
-  // Increment event registration count and update ML predicted turnout
-  const event = db.events.find((e) => e.id === eventId);
-  if (event) {
-    event.registrationCount = (event.registrationCount || 0) + 1;
-    event.predictedAttendance = Math.round(event.registrationCount * (event.pastAttendanceRate || 0.8));
-  }
-
+  addNotification(db, {
+    userId: req.user.id,
+    title: 'Registration confirmed',
+    message: `You are registered for "${event.title}" on ${event.date} at ${event.venue}.`,
+    type: 'REGISTRATION',
+    priority: 'MEDIUM'
+  });
+  logActivity(db, 'STUDENT_RSVP', `${req.user.name} (${req.user.studentId}) registered for "${event.title}"`);
   writeLocalData(db);
 
-  res.status(201).json({
-    success: true,
-    message: "RSVP Registration successful!",
-    data: newRegistration
-  });
+  res.status(201).json({ success: true, message: 'Registration successful!', data: registration });
 });
 
-// DELETE /api/registrations/:id - Cancel registration (Authenticated)
-router.delete("/:id", requireAuth, (req, res) => {
-  const db = readLocalData();
-  db.registrations = db.registrations || [];
-  db.events = db.events || [];
-
-  const index = db.registrations.findIndex(r => r.id === req.params.id || r.eventId === req.params.id);
-  if (index === -1) {
-    return res.status(404).json({ success: false, error: "Registration record not found" });
-  }
-
-  const registration = db.registrations[index];
-
-  // Students can only cancel their own registration (unless Admin/Organizer)
-  if (req.user.role === "student" && registration.userId && registration.userId !== req.user.id) {
-    return res.status(403).json({ success: false, error: "Unauthorized to cancel another student's RSVP" });
-  }
-
-  const deleted = db.registrations.splice(index, 1);
-
-  // Decrement event registration count
-  const event = db.events.find((e) => e.id === registration.eventId);
+function cancelRegistration(db, index, actor) {
+  const [removed] = db.registrations.splice(index, 1);
+  const event = (db.events || []).find((e) => e.id === removed.eventId);
   if (event && event.registrationCount > 0) {
     event.registrationCount -= 1;
     event.predictedAttendance = Math.round(event.registrationCount * (event.pastAttendanceRate || 0.8));
   }
+  if (removed.userId && removed.userId !== actor.id) {
+    addNotification(db, {
+      userId: removed.userId,
+      title: 'Registration cancelled',
+      message: `Your registration for "${removed.eventTitle || 'an event'}" was cancelled by ${actor.role === 'admin' ? 'an administrator' : 'the organiser'}.`,
+      type: 'REGISTRATION',
+      priority: 'MEDIUM'
+    });
+  }
+  logActivity(db, 'RSVP_CANCELLED', `${actor.name} cancelled the registration of ${removed.studentName} for "${removed.eventTitle || removed.eventId}"`);
+  return removed;
+}
 
+// DELETE /api/registrations/event/:eventId - the student cancels their own RSVP for an event
+router.delete('/event/:eventId', requireRole(['student']), (req, res) => {
+  const db = readLocalData();
+  db.registrations = db.registrations || [];
+  const index = db.registrations.findIndex((r) => r.eventId === req.params.eventId && r.userId === req.user.id);
+  if (index === -1) return res.status(404).json({ success: false, error: 'You are not registered for this event.' });
+  const removed = cancelRegistration(db, index, req.user);
   writeLocalData(db);
+  res.json({ success: true, message: 'Registration cancelled successfully', data: removed });
+});
 
-  res.json({
-    success: true,
-    message: "RSVP Registration cancelled successfully",
-    data: deleted[0]
-  });
+// DELETE /api/registrations/:id - cancel by registration id
+//   student -> own only, organizer -> registrations of own events, admin -> any
+router.delete('/:id', requireAuth, (req, res) => {
+  const db = readLocalData();
+  db.registrations = db.registrations || [];
+  const index = db.registrations.findIndex((r) => r.id === req.params.id);
+  if (index === -1) return res.status(404).json({ success: false, error: 'Registration not found.' });
+
+  const reg = db.registrations[index];
+  const allowed =
+    req.user.role === 'admin' ||
+    (req.user.role === 'student' && reg.userId === req.user.id) ||
+    (req.user.role === 'organizer' && ownsEvent(db, req.user, reg.eventId));
+  if (!allowed) return res.status(403).json({ success: false, error: 'You are not allowed to cancel this registration.' });
+
+  const removed = cancelRegistration(db, index, req.user);
+  writeLocalData(db);
+  res.json({ success: true, message: 'Registration cancelled successfully', data: removed });
 });
 
 module.exports = router;

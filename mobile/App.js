@@ -23,7 +23,10 @@ import {
   createEventMobile,
   deleteEventMobile,
   sendPrioritySmsMobile,
-  fetchPriorityNotifications
+  fetchPriorityNotifications,
+  fetchMyRegistrations,
+  fetchFavoriteIds,
+  toggleFavoriteEvent
 } from './src/services/api';
 
 export default function App() {
@@ -71,6 +74,16 @@ export default function App() {
     setAllEvents(evts);
     const logs = await fetchPriorityNotifications();
     setSmsLogs(logs);
+    if (user && (user.role || '').toUpperCase() === 'STUDENT') {
+      const myRegs = await fetchMyRegistrations(user.token);
+      if (Array.isArray(myRegs)) {
+        setRegisteredIds(myRegs.map((r) => r.eventId));
+      }
+      const favIds = await fetchFavoriteIds(user.token);
+      if (Array.isArray(favIds)) {
+        setSavedIds(favIds);
+      }
+    }
     if (user && (user.role || '').toUpperCase() === 'ADMIN') {
       const ov = await fetchAdminOverview(user.token);
       setAdminOverview(ov);
@@ -110,7 +123,7 @@ export default function App() {
     setRegisteredIds(registeredIds.filter((id) => id !== eventId));
   };
 
-  const handleToggleSave = (eventId) => {
+  const handleToggleSave = async (eventId) => {
     if (!user) {
       handleOpenAuth('login');
       return;
@@ -120,6 +133,7 @@ export default function App() {
     } else {
       setSavedIds([...savedIds, eventId]);
     }
+    await toggleFavoriteEvent(eventId, user.token);
   };
 
   const handleCreateEvent = async () => {
@@ -348,6 +362,7 @@ export default function App() {
           user={user}
           registeredCount={registeredIds.length}
           savedCount={savedIds.length}
+          onUserUpdated={(u) => setUser(u)}
           onSignOut={handleSignOut}
         />
       );
