@@ -13,12 +13,12 @@ try {
       credential: admin.credential.cert(serviceAccount)
     });
     firestoreDb = admin.firestore();
-    console.log("ðŸ”¥ Connected to Firebase Firestore Database.");
+    console.log("Connected to Firebase Firestore Database.");
   } else {
-    console.log("â„¹ï¸ No serviceAccountKey.json found. Using Local Persistent JSON Store (data.json).");
+    console.log("No serviceAccountKey.json found. Using Local Persistent JSON Store (data.json).");
   }
 } catch (error) {
-  console.warn("âš ï¸ Firebase initialization skipped, falling back to local JSON store:", error.message);
+  console.warn("Firebase initialization skipped, falling back to local JSON store:", error.message);
 }
 
 // Allow tests / deployments to point at a different data file
@@ -36,9 +36,11 @@ function buildDefaultData() {
     {
       id: "usr-admin-1",
       name: "Elvis Wanyama Wafuke",
-      email: "admin@strathmore.edu",
+      email: "elvis.wafuke@strathmore.edu",
+      aliasEmails: ["admin@strathmore.edu"],
       passwordHash: legacyPasswordHash,
-      role: "ADMIN",
+      role: "admin",
+      studentId: "154210",
       status: "Active",
       staffId: "ADM-001",
       phone: "+254712345678",
@@ -366,7 +368,7 @@ function buildDefaultData() {
       userId: "usr-admin-1",
       staffId: "ADM-001",
       name: "Elvis Wanyama Wafuke",
-      email: "admin@strathmore.edu",
+      email: "elvis.wafuke@strathmore.edu",
       title: "Chief System Administrator",
       department: "ICT & Campus Operations Directorate",
       clearanceLevel: "Super Admin (Full CRUD & Gateway Control)",
@@ -1155,7 +1157,7 @@ function buildDefaultData() {
       priority: "HIGH",
       recipientCount: 412,
       recipientsSample: ["+254712345678", "+254722112233", "+254719889900"],
-      message: "ðŸš¨ [URGENT - Strathmore SmartEvent]: AI & ML Annual Colloquium starts at 14:00 in Main Auditorium. Present your Student ID at Entry Gate B.",
+      message: "[URGENT - Strathmore SmartEvent]: AI & ML Annual Colloquium starts at 14:00 in Main Auditorium. Present your Student ID at Entry Gate B.",
       status: "DELIVERED (Africa's Talking Gateway)",
       gatewayMessageId: "ATXid_892341098234019",
       cost: "KES 329.60",
@@ -1169,7 +1171,7 @@ function buildDefaultData() {
       priority: "HIGH",
       recipientCount: 114,
       recipientsSample: ["+254712345678", "+254728776655"],
-      message: "ðŸš¨ [URGENT - @iLabAfrica]: Room 302 lab workstations are pre-configured. Bring your laptop charger and Strathmore SmartEvent QR pass.",
+      message: "[URGENT - @iLabAfrica]: Room 302 lab workstations are pre-configured. Bring your laptop charger and Strathmore SmartEvent QR pass.",
       status: "DELIVERED (Africa's Talking Gateway)",
       gatewayMessageId: "ATXid_892341098234088",
       cost: "KES 91.20",
@@ -1183,7 +1185,7 @@ function buildDefaultData() {
       priority: "MEDIUM",
       recipientCount: 485,
       recipientsSample: ["+254733445566", "+254715998811"],
-      message: "ðŸ“Œ [REMINDER - Career Services]: Employer booths open at 10:00 AM at Graduation Square. Upload your CV to the SmartEvent portal.",
+      message: "[REMINDER - Career Services]: Employer booths open at 10:00 AM at Graduation Square. Upload your CV to the SmartEvent portal.",
       status: "DELIVERED (Africa's Talking Gateway)",
       gatewayMessageId: "ATXid_892341098234152",
       cost: "KES 388.00",
@@ -1197,7 +1199,7 @@ function buildDefaultData() {
       priority: "HIGH",
       recipientCount: 118,
       recipientsSample: ["+254712345678", "+254728776655"],
-      message: "ðŸš¨ [URGENT - Hackathon]: Sandbox API keys for Africa's Talking SMS & USSD have been provisioned to all registered team leads.",
+      message: "[URGENT - Hackathon]: Sandbox API keys for Africa's Talking SMS & USSD have been provisioned to all registered team leads.",
       status: "DELIVERED (Africa's Talking Gateway)",
       gatewayMessageId: "ATXid_892341098234209",
       cost: "KES 94.40",
@@ -1211,7 +1213,7 @@ function buildDefaultData() {
       priority: "LOW",
       recipientCount: 540,
       recipientsSample: ["+254799112244", "+254722112233"],
-      message: "â„¹ï¸ [INFO - Cultural Week]: Early-bird wristbands for the Friday Cultural Gala are available at the Student Center desk.",
+      message: "[INFO - Cultural Week]: Early-bird wristbands for the Friday Cultural Gala are available at the Student Center desk.",
       status: "DELIVERED (Africa's Talking Gateway)",
       gatewayMessageId: "ATXid_892341098234299",
       cost: "KES 432.00",
@@ -1286,8 +1288,33 @@ function ensureCompleteSeedData(data) {
     modified = true;
   }
 
-  // Roles are always stored lowercase ('admin' | 'organizer' | 'student')
+  // Ensure primary admin (usr-admin-1) always has elvis.wafuke@strathmore.edu + admin@strathmore.edu alias
+  data.users = data.users || [];
+  const admin1 = data.users.find((u) => u.id === 'usr-admin-1' || u.email === 'admin@strathmore.edu' || u.email === 'elvis.wafuke@strathmore.edu');
+  if (admin1) {
+    if (admin1.email !== 'elvis.wafuke@strathmore.edu') {
+      admin1.email = 'elvis.wafuke@strathmore.edu';
+      modified = true;
+    }
+    if (!Array.isArray(admin1.aliasEmails) || !admin1.aliasEmails.includes('admin@strathmore.edu')) {
+      admin1.aliasEmails = ['admin@strathmore.edu'];
+      modified = true;
+    }
+    if (String(admin1.role).toLowerCase() !== 'admin') {
+      admin1.role = 'admin';
+      modified = true;
+    }
+  } else {
+    data.users.unshift(defaults.users[0]);
+    modified = true;
+  }
+
+  // Ensure any user with elvis.wafuke@strathmore.edu is admin
   (data.users || []).forEach((u) => {
+    if (String(u.email || '').toLowerCase() === 'elvis.wafuke@strathmore.edu' && u.role !== 'admin') {
+      u.role = 'admin';
+      modified = true;
+    }
     const normalized = String(u.role || 'student').toLowerCase();
     if (u.role !== normalized) {
       u.role = normalized;
@@ -1295,13 +1322,28 @@ function ensureCompleteSeedData(data) {
     }
   });
 
+  if (Array.isArray(data.admin_profiles) && data.admin_profiles[0] && data.admin_profiles[0].email !== 'elvis.wafuke@strathmore.edu') {
+    data.admin_profiles[0].email = 'elvis.wafuke@strathmore.edu';
+    modified = true;
+  }
+
   return { data, modified };
 }
 
 function atomicWrite(data) {
+  const serialized = JSON.stringify(data, null, 2);
   const tmp = `${DATA_FILE}.${process.pid}.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify(data, null, 2));
-  fs.renameSync(tmp, DATA_FILE);
+  try {
+    fs.writeFileSync(tmp, serialized);
+    fs.renameSync(tmp, DATA_FILE);
+  } catch (err) {
+    try {
+      if (fs.existsSync(tmp)) fs.unlinkSync(tmp);
+    } catch (_) {
+      // ignore
+    }
+    fs.writeFileSync(DATA_FILE, serialized);
+  }
 }
 
 function readLocalData() {

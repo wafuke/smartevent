@@ -1,4 +1,4 @@
-# 🏗️ SmartEvent — System Architecture & API Documentation
+# SmartEvent — System Architecture & API Documentation
 
 **Author:** Elvis Wanyama Wafuke (154210)  
 **Institution:** Strathmore University — School of Computing and Engineering Sciences  
@@ -28,16 +28,16 @@ SmartEvent is an enterprise university event management platform combining real-
 
 ## 2. Component Isolation & Roles
 
-### 🌐 Web Frontend (`frontend/`)
+### Web Frontend (`frontend/`)
 - **Public Homepage (`/`)**: Accessible without login. Allows visitors to search, filter by category/venue/date, and inspect upcoming campus events.
 - **Student Dashboard (`/student/dashboard`)**: Dedicated student interface for 1-tap RSVPs, RSVP schedule manager, favorite event bookmarks, and notification alerts.
 - **Organizer Dashboard (`/organizer/dashboard`)**: Dedicated organizer interface for creating, editing, and canceling events, inspecting real-time attendee rosters, ML turnout forecasts, and sending priority SMS.
 - **Admin Control Center (`/admin/dashboard`)**: Dedicated system administration dashboard for user management, event moderation, category CRUD, and system log inspection.
 
-### 📱 Mobile App (`mobile/`)
+### Mobile App (`mobile/`)
 - Completely independent React Native / Expo application designed specifically for student iOS & Android devices.
 
-### 🤖 ML Prediction Service (`ml-service/`)
+### ML Prediction Service (`ml-service/`)
 - Python FastAPI microservice utilizing a trained Scikit-Learn Random Forest Classifier to forecast student turnout headcount based on venue capacity, time slot, category, and past attendance rates.
 
 ---

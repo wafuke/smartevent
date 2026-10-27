@@ -60,7 +60,7 @@ function table(id, columns, rows) {
 
 function buildConsoleLoginHtml({ nonce, forbidden }) {
   return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SmartEvent Admin Console</title><style>${STYLES}</style></head><body>
-<div class="login"><h1>🎓 SmartEvent Admin Console</h1><p>Database tables are visible to administrators only.</p>
+<div class="login"><h1>SmartEvent Admin Console</h1><p>Database tables are visible to administrators only.</p>
 <div class="err" id="err" style="${forbidden ? 'display:block' : ''}">${forbidden ? 'Your account is not an administrator.' : ''}</div>
 <form id="f"><label>Admin email</label><input id="email" type="email" required autocomplete="username"><label>Password</label><input id="pw" type="password" required autocomplete="current-password"><button class="btn" type="submit">Sign in</button></form></div>
 <script nonce="${nonce}">
@@ -160,7 +160,7 @@ function buildConsoleHtml({ db, user, nonce, engine }) {
 
   const count = (role) => users.filter((u) => u.role === role).length;
   return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SmartEvent Admin Console</title><style>${STYLES}</style></head><body>
-<div class="topbar"><div><h1>🎓 SmartEvent - Database Tables &amp; API Console</h1><p>Signed in as ${esc(user.name)} (ADMIN) · Engine: ${esc(engine)} · Strathmore University</p></div>
+<div class="topbar"><div><h1>SmartEvent - Database Tables &amp; API Console</h1><p>Signed in as ${esc(user.name)} (ADMIN) · Engine: ${esc(engine)} · Strathmore University</p></div>
 <div><button class="btn btn-primary" id="logout">Sign out</button></div></div>
 <div class="container">
 <div class="stats">

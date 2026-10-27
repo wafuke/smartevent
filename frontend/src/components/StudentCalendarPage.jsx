@@ -21,7 +21,7 @@ export default function StudentCalendarPage({ events, registeredEventIds, onUnre
       {registeredEvents.length === 0 ? (
         <div className="bg-white p-12 rounded-3xl border border-slate-200 text-center space-y-4 shadow-xs">
           <div className="w-16 h-16 bg-blue-50 text-[#003366] rounded-2xl mx-auto flex items-center justify-center font-bold text-2xl">
-            📅
+            <CalendarIcon className="w-8 h-8" />
           </div>
           <h3 className="text-lg font-bold text-slate-900">No Events Registered Yet</h3>
           <p className="text-xs text-slate-500 max-w-md mx-auto">

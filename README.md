@@ -1,4 +1,4 @@
-# 🎓 SmartEvent — University Event Management, Priority SMS & ML Prediction System
+# SmartEvent — University Event Management, Priority SMS & ML Prediction System
 
 **Author:** Elvis Wanyama Wafuke (154210)  
 **Supervisor:** Mr. Allan Vikiru  
@@ -6,11 +6,11 @@
 
 ---
 
-## 🛠️ System Architecture & Components
+## System Architecture & Components
 
 SmartEvent consists of three main services designed to run side-by-side:
 
-### 📂 Folder Structure
+### Folder Structure
 
 ```text
 smartevent/
@@ -23,11 +23,11 @@ smartevent/
 
 ---
 
-## 🚀 How to Run the System (Side-by-Side Terminals)
+## How to Run the System (Side-by-Side Terminals)
 
 Open **3 separate terminal windows** (or 3 terminal tabs in VS Code):
 
-### 1️⃣ Terminal 1: Backend Server (Node.js & Express API)
+### 1. Terminal 1: Backend Server (Node.js & Express API)
 ```bash
 cd backend
 npm install
@@ -39,7 +39,7 @@ npm run dev
 
 ---
 
-### 2️⃣ Terminal 2: ML Prediction Service (Python & FastAPI)
+### 2. Terminal 2: ML Prediction Service (Python & FastAPI)
 ```bash
 cd ml-service
 pip install -r requirements.txt
@@ -52,7 +52,7 @@ python main.py
 
 ---
 
-### 3️⃣ Terminal 3: Frontend Web Dashboard & Student App (React + Vite)
+### 3. Terminal 3: Frontend Web Dashboard & Student App (React + Vite)
 ```bash
 cd frontend
 npm install
@@ -62,8 +62,8 @@ npm run dev
 
 ---
 
-## 📓 Google Colab ML Notebook
+## Google Colab ML Notebook
 
 To run model training in Google Colab with Google Drive export:
 - Open [`notebooks/SmartEvent_ML_Attendance_Prediction.ipynb`](file:///c:/Users/userss/Desktop/is%20project%20stuff/smartevent/notebooks/SmartEvent_ML_Attendance_Prediction.ipynb) or open directly in Colab:
-- 👉 **[Open in Google Colab](https://colab.research.google.com/github/wafuke/smartevent/blob/main/notebooks/SmartEvent_ML_Attendance_Prediction.ipynb)**
+- **[Open in Google Colab](https://colab.research.google.com/github/wafuke/smartevent/blob/main/notebooks/SmartEvent_ML_Attendance_Prediction.ipynb)**

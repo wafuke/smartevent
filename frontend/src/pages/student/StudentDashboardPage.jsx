@@ -368,8 +368,8 @@ export default function StudentDashboardPage() {
                       <div className="flex items-center justify-between gap-2">
                         <Badge tone={isCheckedIn ? 'blue' : 'green'}>
                           {isCheckedIn
-                            ? '✓ Checked In at Venue'
-                            : `✓ Confirmed • Pass #${(reg?.id || evt.id).toUpperCase()}`}
+                            ? 'Checked In at Venue'
+                            : `Confirmed • Pass #${(reg?.id || evt.id).toUpperCase()}`}
                         </Badge>
                         <button
                           onClick={() => handleToggleFavorite(evt.id)}
@@ -591,7 +591,7 @@ export default function StudentDashboardPage() {
                         {evt.date} • {evt.venue}
                       </span>
                       {isRegistered ? (
-                        <Badge tone="green">✓ Registered</Badge>
+                        <Badge tone="green">Registered</Badge>
                       ) : (
                         <button
                           onClick={() => handleRegister(evt.id)}
@@ -617,7 +617,7 @@ export default function StudentDashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-base font-extrabold text-slate-900">
-                  📱 Africa&apos;s Talking Priority SMS Alerts
+                  Africa&apos;s Talking Priority SMS Alerts
                 </h2>
                 <p className="text-xs text-slate-500">
                   Broadcasts sent to your registered mobile ({user?.phone || '+254712345678'})

@@ -1,10 +1,10 @@
-# 📱 SmartEvent Mobile — React Native Expo Application
+# SmartEvent Mobile — React Native Expo Application
 
 The official React Native mobile application for Strathmore University students to browse campus events, register/RSVP, and receive Priority-Based SMS alerts.
 
 ---
 
-## 🚀 How to Run the Mobile App
+## How to Run the Mobile App
 
 ### 1. Install Dependencies
 ```bash

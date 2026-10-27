@@ -233,10 +233,10 @@ export default function AuthModal({ isOpen, initialTab = 'login', onClose }) {
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 text-sm font-bold p-1.5 rounded-full hover:bg-slate-100"
+          className="absolute top-5 right-5 text-slate-400 hover:text-slate-700 text-xs font-bold px-2.5 py-1 rounded-full hover:bg-slate-100"
           aria-label="Close modal"
         >
-          ✕
+          Close
         </button>
 
         {/* Modal Header */}

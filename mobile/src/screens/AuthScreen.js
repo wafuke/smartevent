@@ -202,7 +202,7 @@ export default function AuthScreen({
           onPress={() => setShowServerConfig(!showServerConfig)}
         >
           <Text style={styles.configToggleText}>
-            {showServerConfig ? 'Hide API Config' : '⚙️ Server'}
+            {showServerConfig ? 'Hide API Config' : 'Server API'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -258,7 +258,7 @@ export default function AuthScreen({
           {/* Error Banner */}
           {errorMsg ? (
             <View style={styles.errorBanner}>
-              <Text style={styles.errorText}>⚠️ {errorMsg}</Text>
+              <Text style={styles.errorText}>{errorMsg}</Text>
             </View>
           ) : null}
 
@@ -302,7 +302,7 @@ export default function AuthScreen({
                         style={styles.removeAcctBtn}
                         onPress={() => handleRemoveDeviceGoogleAccount(acct.email)}
                       >
-                        <Text style={styles.removeAcctText}>✕</Text>
+                        <Text style={styles.removeAcctText}>X</Text>
                       </TouchableOpacity>
                     </TouchableOpacity>
                   ))}
@@ -504,7 +504,7 @@ export default function AuthScreen({
                           signupRole === 'student' && styles.roleOptionTextActive
                         ]}
                       >
-                        🎓 Student
+                        Student
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -520,7 +520,7 @@ export default function AuthScreen({
                           signupRole === 'organizer' && styles.roleOptionTextActive
                         ]}
                       >
-                        🏛️ Organizer
+                        Organizer
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -649,7 +649,7 @@ export default function AuthScreen({
 
               <View style={styles.securityFooter}>
                 <Text style={styles.securityFooterText}>
-                  🔒 Protected by Bcrypt Password Hashing & Signed JWT RBAC
+                  Protected by Bcrypt Password Hashing & Signed JWT RBAC
                 </Text>
               </View>
             </View>

@@ -201,7 +201,7 @@ export default function AttendeeRosterModal({ isOpen, onClose, event, onRosterCh
                       </td>
                       <td className="p-3">
                         <Badge tone={isChecked ? 'blue' : 'green'}>
-                          {isChecked ? '✓ Checked In' : 'Confirmed'}
+                          {isChecked ? 'Checked In' : 'Confirmed'}
                         </Badge>
                       </td>
                       <td className="p-3 text-right whitespace-nowrap space-x-1.5">

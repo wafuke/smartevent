@@ -20,10 +20,10 @@ NOTE ON SECURITY:
 
 [ADMIN 1]
 Name:             Elvis Wanyama Wafuke
-Staff ID:         ADM-001
+Staff ID:         ADM-001 (Admission: 154210)
 Clearance Level:  Super Admin (Full CRUD & Gateway Control)
 Department:       ICT & Campus Operations Directorate
-Email:            admin@strathmore.edu
+Email:            elvis.wafuke@strathmore.edu (or admin@strathmore.edu)
 Password:         password123
 Phone:            +254712345678
 

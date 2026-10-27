@@ -163,7 +163,7 @@ export default function App() {
         smsPriority: 3,
         description: ''
       });
-      Alert.alert('Event Published ✓', `"${res.data.title}" is now live under your organizer profile.`);
+      Alert.alert('Event Published', `"${res.data.title}" is now live under your organizer profile.`);
       setOrganizerScope('mine');
       setActiveTab('home');
     } else {
@@ -202,13 +202,13 @@ export default function App() {
 
     if (res.success) {
       setSmsStatusMsg(
-        `✓ Dispatched (${res.data?.provider || "Africa's Talking"}) to ${
+        `Dispatched (${res.data?.provider || "Africa's Talking"}) to ${
           res.data?.recipientCount || phones.length
         } recipient(s) [${res.data?.status || 'SENT'}]`
       );
       loadData();
     } else {
-      setSmsStatusMsg(`✗ Error: ${res.error}`);
+      setSmsStatusMsg(`Error: ${res.error}`);
     }
   };
 
@@ -294,7 +294,7 @@ export default function App() {
         return (
           <ScrollView contentContainerStyle={styles.scrollPad} showsVerticalScrollIndicator={false}>
             <Text style={styles.sectionHeader}>
-              🎟️ My Digital Event Passes ({registeredEvents.length})
+              My Digital Event Passes ({registeredEvents.length})
             </Text>
             <Text style={styles.sectionSub}>
               Present your admission pass at the Strathmore venue entrance
@@ -321,20 +321,20 @@ export default function App() {
                   </View>
                   <Text style={styles.passTitle}>{evt.title}</Text>
                   <Text style={styles.passMeta}>
-                    📅 {evt.date} • {evt.time || evt.timeSlot}
+                    Date: {evt.date} • {evt.time || evt.timeSlot}
                   </Text>
-                  <Text style={styles.passMeta}>📍 {evt.venue}</Text>
+                  <Text style={styles.passMeta}>Venue: {evt.venue}</Text>
                 </TouchableOpacity>
               ))
             )}
 
             <Text style={[styles.sectionHeader, { marginTop: 18 }]}>
-              ★ Saved / Bookmarked Events ({savedEvents.length})
+              Saved / Bookmarked Events ({savedEvents.length})
             </Text>
             {savedEvents.length === 0 ? (
               <View style={styles.emptyCard}>
                 <Text style={styles.emptyText}>
-                  Tap ☆ on any event card to bookmark it for later.
+                  Tap Save on any event card to bookmark it for later.
                 </Text>
               </View>
             ) : (
@@ -346,7 +346,7 @@ export default function App() {
                 >
                   <Text style={styles.savedTitle}>{evt.title}</Text>
                   <Text style={styles.savedMeta}>
-                    📅 {evt.date} • 📍 {evt.venue}
+                    Date: {evt.date} • Venue: {evt.venue}
                   </Text>
                 </TouchableOpacity>
               ))
@@ -434,7 +434,7 @@ export default function App() {
             </View>
 
             <Text style={styles.sectionHeader}>
-              📋 {organizerScope === 'mine' ? 'My Listed Events Table' : 'All Campus Events Table'}
+              {organizerScope === 'mine' ? 'My Listed Events Table' : 'All Campus Events Table'}
             </Text>
             <View style={styles.tableCard}>
               <View style={styles.tableHeaderRow}>
@@ -476,7 +476,7 @@ export default function App() {
       if (activeTab === 'create') {
         return (
           <ScrollView contentContainerStyle={styles.scrollPad} showsVerticalScrollIndicator={false}>
-            <Text style={styles.sectionHeader}>➕ Create New Campus Event</Text>
+            <Text style={styles.sectionHeader}>Create New Campus Event</Text>
             <Text style={styles.sectionSub}>
               Listing as: {user.name} ({user.organizerCode || 'Organizer'})
             </Text>
@@ -624,7 +624,7 @@ export default function App() {
             </ScrollView>
 
             <Text style={styles.sectionHeader}>
-              👥 Users & Role Profiles Table ({filteredUsers.length})
+              Users & Role Profiles Table ({filteredUsers.length})
             </Text>
             <View style={styles.tableCard}>
               <View style={styles.tableHeaderRow}>
@@ -661,7 +661,7 @@ export default function App() {
         return (
           <ScrollView contentContainerStyle={styles.scrollPad} showsVerticalScrollIndicator={false}>
             <Text style={styles.sectionHeader}>
-              📅 Master Events Database Table ({allEvents.length})
+              Master Events Database Table ({allEvents.length})
             </Text>
             <Text style={styles.sectionSub}>
               16 Events listed across all 10 Strathmore Organizers
@@ -697,7 +697,7 @@ export default function App() {
                     style={{ flex: 0.5, alignItems: 'flex-end' }}
                     onPress={() => handleDeleteEvent(evt)}
                   >
-                    <Text style={styles.delLink}>✕</Text>
+                    <Text style={styles.delLink}>Del</Text>
                   </TouchableOpacity>
                 </View>
               ))}
@@ -716,7 +716,7 @@ export default function App() {
 
   const renderSmsStudio = () => (
     <ScrollView contentContainerStyle={styles.scrollPad} showsVerticalScrollIndicator={false}>
-      <Text style={styles.sectionHeader}>📲 Africa's Talking Priority SMS Gateway</Text>
+      <Text style={styles.sectionHeader}>Africa's Talking Priority SMS Gateway</Text>
       <Text style={styles.sectionSub}>
         Broadcast HIGH / MEDIUM / LOW priority alerts to Kenyan E.164 (+254) numbers
       </Text>
@@ -769,7 +769,7 @@ export default function App() {
       </View>
 
       <Text style={[styles.sectionHeader, { marginTop: 14 }]}>
-        📊 SMS Delivery Logs Table ({smsLogs.length})
+        SMS Delivery Logs Table ({smsLogs.length})
       </Text>
       <View style={styles.tableCard}>
         <View style={styles.tableHeaderRow}>
@@ -814,7 +814,7 @@ export default function App() {
       return (
         <View style={styles.tabBar}>
           <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('home')}>
-            <Text style={[styles.tabIcon, activeTab === 'home' && styles.activeTabIcon]}>🏠</Text>
+            <Text style={[styles.tabIcon, activeTab === 'home' && styles.activeTabIcon]}>HOME</Text>
             <Text style={[styles.tabLabel, activeTab === 'home' && styles.activeTabLabel]}>
               Home
             </Text>
@@ -822,7 +822,7 @@ export default function App() {
 
           <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('notifications')}>
             <Text style={[styles.tabIcon, activeTab === 'notifications' && styles.activeTabIcon]}>
-              🔔
+              SMS
             </Text>
             <Text style={[styles.tabLabel, activeTab === 'notifications' && styles.activeTabLabel]}>
               SMS Feed
@@ -830,12 +830,12 @@ export default function App() {
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.tabItem} onPress={() => handleOpenAuth('login')}>
-            <Text style={styles.tabIcon}>🔐</Text>
+            <Text style={styles.tabIcon}>IN</Text>
             <Text style={styles.tabLabel}>Sign In</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.tabItem} onPress={() => handleOpenAuth('register')}>
-            <Text style={styles.tabIcon}>✨</Text>
+            <Text style={styles.tabIcon}>NEW</Text>
             <Text style={styles.tabLabel}>Sign Up</Text>
           </TouchableOpacity>
         </View>
@@ -846,14 +846,14 @@ export default function App() {
       return (
         <View style={styles.tabBar}>
           <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('home')}>
-            <Text style={[styles.tabIcon, activeTab === 'home' && styles.activeTabIcon]}>📅</Text>
+            <Text style={[styles.tabIcon, activeTab === 'home' && styles.activeTabIcon]}>EVENTS</Text>
             <Text style={[styles.tabLabel, activeTab === 'home' && styles.activeTabLabel]}>
               Student Home
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('tickets')}>
-            <Text style={[styles.tabIcon, activeTab === 'tickets' && styles.activeTabIcon]}>🎟️</Text>
+            <Text style={[styles.tabIcon, activeTab === 'tickets' && styles.activeTabIcon]}>PASS</Text>
             <Text style={[styles.tabLabel, activeTab === 'tickets' && styles.activeTabLabel]}>
               Passes ({registeredIds.length})
             </Text>
@@ -861,7 +861,7 @@ export default function App() {
 
           <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('notifications')}>
             <Text style={[styles.tabIcon, activeTab === 'notifications' && styles.activeTabIcon]}>
-              🔔
+              SMS
             </Text>
             <Text style={[styles.tabLabel, activeTab === 'notifications' && styles.activeTabLabel]}>
               SMS Alerts
@@ -869,7 +869,7 @@ export default function App() {
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('profile')}>
-            <Text style={[styles.tabIcon, activeTab === 'profile' && styles.activeTabIcon]}>👤</Text>
+            <Text style={[styles.tabIcon, activeTab === 'profile' && styles.activeTabIcon]}>ME</Text>
             <Text style={[styles.tabLabel, activeTab === 'profile' && styles.activeTabLabel]}>
               Profile
             </Text>
@@ -882,28 +882,28 @@ export default function App() {
       return (
         <View style={styles.tabBar}>
           <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('home')}>
-            <Text style={[styles.tabIcon, activeTab === 'home' && styles.activeTabIcon]}>📊</Text>
+            <Text style={[styles.tabIcon, activeTab === 'home' && styles.activeTabIcon]}>LIST</Text>
             <Text style={[styles.tabLabel, activeTab === 'home' && styles.activeTabLabel]}>
               My Events
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('create')}>
-            <Text style={[styles.tabIcon, activeTab === 'create' && styles.activeTabIcon]}>➕</Text>
+            <Text style={[styles.tabIcon, activeTab === 'create' && styles.activeTabIcon]}>ADD</Text>
             <Text style={[styles.tabLabel, activeTab === 'create' && styles.activeTabLabel]}>
               Create
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('sms')}>
-            <Text style={[styles.tabIcon, activeTab === 'sms' && styles.activeTabIcon]}>📲</Text>
+            <Text style={[styles.tabIcon, activeTab === 'sms' && styles.activeTabIcon]}>SMS</Text>
             <Text style={[styles.tabLabel, activeTab === 'sms' && styles.activeTabLabel]}>
               AT SMS
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('profile')}>
-            <Text style={[styles.tabIcon, activeTab === 'profile' && styles.activeTabIcon]}>👤</Text>
+            <Text style={[styles.tabIcon, activeTab === 'profile' && styles.activeTabIcon]}>ME</Text>
             <Text style={[styles.tabLabel, activeTab === 'profile' && styles.activeTabLabel]}>
               Profile
             </Text>
@@ -915,7 +915,7 @@ export default function App() {
     return (
       <View style={styles.tabBar}>
         <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('home')}>
-          <Text style={[styles.tabIcon, activeTab === 'home' && styles.activeTabIcon]}>🛡️</Text>
+          <Text style={[styles.tabIcon, activeTab === 'home' && styles.activeTabIcon]}>USERS</Text>
           <Text style={[styles.tabLabel, activeTab === 'home' && styles.activeTabLabel]}>
             Users Table
           </Text>
@@ -923,7 +923,7 @@ export default function App() {
 
         <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('events_table')}>
           <Text style={[styles.tabIcon, activeTab === 'events_table' && styles.activeTabIcon]}>
-            📋
+            EVENTS
           </Text>
           <Text style={[styles.tabLabel, activeTab === 'events_table' && styles.activeTabLabel]}>
             Events Table
@@ -931,14 +931,14 @@ export default function App() {
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('sms')}>
-          <Text style={[styles.tabIcon, activeTab === 'sms' && styles.activeTabIcon]}>📲</Text>
+          <Text style={[styles.tabIcon, activeTab === 'sms' && styles.activeTabIcon]}>SMS</Text>
           <Text style={[styles.tabLabel, activeTab === 'sms' && styles.activeTabLabel]}>
             SMS Gateway
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.tabItem} onPress={() => setActiveTab('profile')}>
-          <Text style={[styles.tabIcon, activeTab === 'profile' && styles.activeTabIcon]}>👤</Text>
+          <Text style={[styles.tabIcon, activeTab === 'profile' && styles.activeTabIcon]}>ME</Text>
           <Text style={[styles.tabLabel, activeTab === 'profile' && styles.activeTabLabel]}>
             Profile
           </Text>
@@ -1297,7 +1297,9 @@ const styles = StyleSheet.create({
     flex: 1
   },
   tabIcon: {
-    fontSize: 16,
+    fontSize: 9,
+    fontWeight: '900',
+    color: '#003366',
     opacity: 0.45
   },
   activeTabIcon: {

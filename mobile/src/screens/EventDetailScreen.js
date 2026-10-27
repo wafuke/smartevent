@@ -55,7 +55,7 @@ export default function EventDetailScreen({
     if (result.success) {
       onRegisterSuccess(event.id);
       Alert.alert(
-        "RSVP Confirmed 🎉",
+        "RSVP Confirmed",
         `You are registered for "${event.title}". High-priority SMS alerts will be sent to ${user?.phone || '+254712345678'}.`
       );
     } else {
@@ -83,7 +83,7 @@ export default function EventDetailScreen({
           {user && onToggleSave && (
             <TouchableOpacity style={styles.savePill} onPress={() => onToggleSave(event.id)}>
               <Text style={styles.savePillText}>
-                {isSaved ? '★ Saved' : '☆ Save Event'}
+                {isSaved ? 'Saved' : 'Save Event'}
               </Text>
             </TouchableOpacity>
           )}
@@ -101,19 +101,19 @@ export default function EventDetailScreen({
         {/* Event Meta Details Card */}
         <View style={styles.infoCard}>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>📅 Date & Time Slot</Text>
+            <Text style={styles.infoLabel}>Date & Time Slot</Text>
             <Text style={styles.infoValue}>{event.date} • {event.time || event.timeSlot}</Text>
           </View>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>📍 Venue Location</Text>
+            <Text style={styles.infoLabel}>Venue Location</Text>
             <Text style={styles.infoValue}>{event.venue}</Text>
           </View>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>🏛️ Organizer</Text>
+            <Text style={styles.infoLabel}>Organizer</Text>
             <Text style={styles.infoValue}>{event.organizer || 'Strathmore University SCES'}</Text>
           </View>
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>👥 Current Registrations</Text>
+            <Text style={styles.infoLabel}>Current Registrations</Text>
             <Text style={styles.infoValue}>
               {(event.registrationCount || 0) + (isRegistered ? 1 : 0)} / {event.venueCapacity} seats reserved
             </Text>
@@ -123,7 +123,7 @@ export default function EventDetailScreen({
         {/* ML Attendance Prediction Card */}
         <View style={styles.mlCard}>
           <View style={styles.mlHeaderRow}>
-            <Text style={styles.mlTitle}>🤖 AI Turnout & Crowd Forecast</Text>
+            <Text style={styles.mlTitle}>ML Turnout & Crowd Forecast</Text>
             <View style={styles.mlAlgoBadge}>
               <Text style={styles.mlAlgoText}>{prediction?.algorithm || 'LogisticRegression'}</Text>
             </View>
@@ -149,8 +149,8 @@ export default function EventDetailScreen({
               </View>
               <Text style={styles.mlFootnote}>
                 {prediction.capacityUtilization >= 85
-                  ? '⚠️ High crowd density expected. Arrive 15 minutes early to secure seating.'
-                  : '✅ Comfortable seating capacity forecasted by SmartEvent ML model.'}
+                  ? 'High crowd density expected. Arrive 15 minutes early to secure seating.'
+                  : 'Comfortable seating capacity forecasted by SmartEvent ML model.'}
               </Text>
             </>
           ) : null}
@@ -158,7 +158,7 @@ export default function EventDetailScreen({
 
         {/* Priority SMS Notification Alert Notice */}
         <View style={styles.smsNotice}>
-          <Text style={styles.smsNoticeTitle}>📱 Africa's Talking Priority SMS Enabled</Text>
+          <Text style={styles.smsNoticeTitle}>Africa's Talking Priority SMS Enabled</Text>
           <Text style={styles.smsNoticeText}>
             Registered students automatically receive real-time SMS alerts for urgent venue changes and schedule reminders.
           </Text>
@@ -172,9 +172,9 @@ export default function EventDetailScreen({
         >
           <Text style={[styles.rsvpButtonText, isRegistered && styles.rsvpSuccessText]}>
             {!user
-              ? "🔐 Log In / Sign Up to Register"
+              ? "Log In / Sign Up to Register"
               : isRegistered
-              ? "✓ Registered / Digital Pass Active"
+              ? "Registered / Digital Pass Active"
               : submitting
               ? "Confirming RSVP..."
               : "Register / Confirm RSVP"}

@@ -95,13 +95,13 @@ export default function ProfileScreen({
             </Text>
           </View>
           <View style={styles.statBox}>
-            <Text style={styles.statValue}>{role === 'STUDENT' ? savedCount : 'JWT ✓'}</Text>
+            <Text style={styles.statValue}>{role === 'STUDENT' ? savedCount : 'JWT Active'}</Text>
             <Text style={styles.statLabel}>
               {role === 'STUDENT' ? 'Saved Events' : 'RBAC Auth'}
             </Text>
           </View>
           <View style={styles.statBox}>
-            <Text style={styles.statValue}>AT SMS ✓</Text>
+            <Text style={styles.statValue}>AT SMS Active</Text>
             <Text style={styles.statLabel}>Priority Alerts</Text>
           </View>
         </View>

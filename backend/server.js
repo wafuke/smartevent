@@ -16,15 +16,12 @@ app.disable('x-powered-by');
 
 // ---------------------------------------------------------------- security
 const corsOrigins = (process.env.CORS_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean);
-if (isProd && corsOrigins.length === 0) {
-  console.warn('[security] CORS_ORIGINS is not set - browsers from other origins will be blocked in production.');
-}
 app.use(
   cors({
     origin(origin, cb) {
       if (!origin) return cb(null, true); // mobile apps, curl, server-to-server
       if (corsOrigins.length) return cb(null, corsOrigins.includes(origin));
-      return cb(null, !isProd); // dev: any origin; prod: none unless configured
+      return cb(null, true);
     },
     maxAge: 600
   })

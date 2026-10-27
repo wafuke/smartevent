@@ -241,7 +241,7 @@ export default function HomePage({ onOpenAuthModal }) {
         {filteredEvents.length === 0 ? (
           <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center space-y-3">
             <div className="w-12 h-12 rounded-2xl bg-blue-50 text-[#003366] flex items-center justify-center mx-auto text-xl font-bold">
-              🔍
+              <Search className="w-5 h-5" />
             </div>
             <h3 className="text-base font-bold text-slate-900">No matching events</h3>
             <p className="text-xs text-slate-500">
@@ -376,8 +376,8 @@ export default function HomePage({ onOpenAuthModal }) {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-slate-800/80 border border-slate-700/60 rounded-2xl p-6 space-y-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold">
-              🎓
+            <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-black">
+              STD
             </div>
             <h3 className="text-base font-bold">Student Portal</h3>
             <p className="text-xs text-slate-300 leading-relaxed">
@@ -387,8 +387,8 @@ export default function HomePage({ onOpenAuthModal }) {
           </div>
 
           <div className="bg-slate-800/80 border border-slate-700/60 rounded-2xl p-6 space-y-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold">
-              📢
+            <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-black">
+              ORG
             </div>
             <h3 className="text-base font-bold">Event Organizer</h3>
             <p className="text-xs text-slate-300 leading-relaxed">
@@ -398,8 +398,8 @@ export default function HomePage({ onOpenAuthModal }) {
           </div>
 
           <div className="bg-slate-800/80 border border-slate-700/60 rounded-2xl p-6 space-y-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
-              👑
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-black">
+              ADM
             </div>
             <h3 className="text-base font-bold">System Admin</h3>
             <p className="text-xs text-slate-300 leading-relaxed">
@@ -420,9 +420,9 @@ export default function HomePage({ onOpenAuthModal }) {
               </span>
               <button
                 onClick={() => setSelectedEvent(null)}
-                className="text-slate-400 hover:text-slate-700 text-sm font-bold"
+                className="text-slate-400 hover:text-slate-700 text-xs font-bold px-2 py-1 rounded-lg hover:bg-slate-100"
               >
-                ✕
+                Close
               </button>
             </div>
 

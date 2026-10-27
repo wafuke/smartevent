@@ -55,7 +55,7 @@ export default function EventsScreen({
         <View style={styles.publicHero}>
           <View style={styles.heroTopRow}>
             <View style={styles.brandBadge}>
-              <Text style={styles.brandBadgeText}>🎓 STRATHMORE SMARTEVENT</Text>
+              <Text style={styles.brandBadgeText}>STRATHMORE SMARTEVENT</Text>
             </View>
             <TouchableOpacity style={styles.syncMiniBtn} onPress={loadEvents}>
               <Text style={styles.syncMiniText}>↻ Sync</Text>
@@ -153,7 +153,7 @@ export default function EventsScreen({
             </View>
             {item.smsPriority === 3 && (
               <View style={styles.priorityBadge}>
-                <Text style={styles.priorityText}>⚡ HIGH SMS</Text>
+                <Text style={styles.priorityText}>HIGH SMS</Text>
               </View>
             )}
           </View>
@@ -161,12 +161,12 @@ export default function EventsScreen({
           <View style={styles.badgeRow}>
             {isRegistered && (
               <View style={styles.registeredBadge}>
-                <Text style={styles.registeredText}>RSVP'D ✓</Text>
+                <Text style={styles.registeredText}>REGISTERED</Text>
               </View>
             )}
             {onToggleSave && (
               <TouchableOpacity style={styles.saveBtn} onPress={() => onToggleSave(item.id)}>
-                <Text style={styles.saveIcon}>{isSaved ? '★' : '☆'}</Text>
+                <Text style={styles.saveIcon}>{isSaved ? 'SAVED' : 'SAVE'}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -181,7 +181,7 @@ export default function EventsScreen({
         <View style={styles.progressSection}>
           <View style={styles.progressLabels}>
             <Text style={styles.progressText}>
-              👥 {reg} / {cap} Registered
+              {reg} / {cap} Registered
             </Text>
             <Text
               style={[
@@ -205,10 +205,10 @@ export default function EventsScreen({
 
         <View style={styles.cardMeta}>
           <Text style={styles.metaText} numberOfLines={1}>
-            📅 {item.date} • {item.time || item.timeSlot}
+            {item.date} • {item.time || item.timeSlot}
           </Text>
           <Text style={styles.metaText} numberOfLines={1}>
-            📍 {item.venue} {item.organizerName ? `• 🏛️ ${item.organizerName}` : ''}
+            {item.venue} {item.organizerName ? `• ${item.organizerName}` : ''}
           </Text>
         </View>
       </TouchableOpacity>

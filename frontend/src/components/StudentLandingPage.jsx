@@ -120,7 +120,7 @@ export default function StudentLandingPage({ events, registeredEventIds, onRegis
                 {/* Campus Event Hub Box */}
                 <div className="bg-white p-5 rounded-2xl border border-blue-100 shadow-md text-center space-y-3">
                   <div className="w-16 h-16 bg-blue-900 rounded-2xl mx-auto flex items-center justify-center text-amber-400 font-extrabold text-2xl shadow-md">
-                    🏫
+                    SU
                   </div>
                   <h4 className="font-extrabold text-slate-900 text-sm">Strathmore Campus Event Hub</h4>
                   <p className="text-xs text-slate-500">Priority SMS Alerts & ML Attendance Forecasting</p>
