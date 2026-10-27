@@ -17,7 +17,7 @@
       "clearanceLevel": "Super Admin",
       "authProvider": "local,google",
       "createdAt": "2026-08-01T08:00:00.000Z",
-      "lastLoginAt": "2026-10-27T10:45:02.512Z"
+      "lastLoginAt": "2026-10-27T10:47:04.672Z"
     },
     {
       "id": "usr-admin-2",
@@ -93,7 +93,8 @@
       "phone": "+254710887766",
       "verified": true,
       "authProvider": "local,google",
-      "createdAt": "2026-08-18T16:00:00.000Z"
+      "createdAt": "2026-08-18T16:00:00.000Z",
+      "lastLoginAt": "2026-10-27T10:47:46.853Z"
     },
     {
       "id": "usr-org-5",
@@ -240,7 +241,8 @@
       "department": "Bachelor of Commerce (Finance)",
       "yearOfStudy": 2,
       "authProvider": "local,google",
-      "createdAt": "2026-09-04T12:00:00.000Z"
+      "createdAt": "2026-09-04T12:00:00.000Z",
+      "lastLoginAt": "2026-10-27T10:49:14.705Z"
     },
     {
       "id": "usr-stud-5",

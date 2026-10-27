@@ -13,7 +13,9 @@ import {
 import { eventsApi, registrationsApi } from '../services/api';
 import { useToast, useConfirm, Badge } from './ui';
 
-export default function AttendeeRosterModal({ isOpen, onClose, event, onRosterChanged }) {
+export default function AttendeeRosterModal({ isOpen, open, onClose, event, onRosterChanged, onChanged }) {
+  const modalOpen = isOpen !== undefined ? Boolean(isOpen) : Boolean(open);
+  const notifyChange = onRosterChanged || onChanged;
   const toast = useToast();
   const confirm = useConfirm();
   const [attendees, setAttendees] = useState([]);
@@ -21,7 +23,7 @@ export default function AttendeeRosterModal({ isOpen, onClose, event, onRosterCh
   const [searchTerm, setSearchTerm] = useState('');
 
   const loadRoster = useCallback(async () => {
-    if (!isOpen || !event) return;
+    if (!modalOpen || !event) return;
     setLoading(true);
     try {
       const res = await eventsApi.attendees(event.id);
@@ -32,13 +34,13 @@ export default function AttendeeRosterModal({ isOpen, onClose, event, onRosterCh
     } finally {
       setLoading(false);
     }
-  }, [isOpen, event, toast]);
+  }, [modalOpen, event, toast]);
 
   useEffect(() => {
     loadRoster();
   }, [loadRoster]);
 
-  if (!isOpen || !event) return null;
+  if (!modalOpen || !event) return null;
 
   const handleToggleCheckIn = async (att) => {
     const nextChecked = att.status !== 'Checked In';
@@ -50,7 +52,7 @@ export default function AttendeeRosterModal({ isOpen, onClose, event, onRosterCh
           : `Reverted check-in for ${att.studentName}`
       );
       await loadRoster();
-      onRosterChanged?.();
+      notifyChange?.();
     } catch (err) {
       toast.error(err.message || 'Check-in update failed');
     }

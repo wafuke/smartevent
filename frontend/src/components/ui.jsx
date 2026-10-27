@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { CheckCircle2, AlertCircle, Info, X, ChevronUp, ChevronDown, Search, Loader2, Inbox } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Info, X, ChevronUp, ChevronDown, Search, Loader2, Inbox, Download } from 'lucide-react';
 
 /* ------------------------------------------------------------------ Toasts */
 const ToastContext = createContext(null);
@@ -82,7 +82,7 @@ export function ConfirmProvider({ children }) {
     <ConfirmContext.Provider value={confirm}>
       {children}
       {state && (
-        <Modal title={state.title || 'Are you sure?'} onClose={() => close(false)} size="sm">
+        <Modal open={true} title={state.title || 'Are you sure?'} onClose={() => close(false)} size="sm">
           <p className="text-sm text-slate-600 leading-relaxed">{state.message}</p>
           <div className="flex justify-end gap-2 pt-5">
             <button onClick={() => close(false)} className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100">
@@ -92,7 +92,7 @@ export function ConfirmProvider({ children }) {
               onClick={() => close(true)}
               className={`px-4 py-2 rounded-xl text-xs font-bold text-white ${state.danger === false ? 'bg-[#003366] hover:bg-[#002244]' : 'bg-red-600 hover:bg-red-700'}`}
             >
-              {state.confirmLabel || 'Confirm'}
+              {state.confirmLabel || state.confirmText || 'Confirm'}
             </button>
           </div>
         </Modal>
@@ -103,8 +103,12 @@ export function ConfirmProvider({ children }) {
 export const useConfirm = () => useContext(ConfirmContext);
 
 /* ------------------------------------------------------------------- Modal */
-export function Modal({ title, subtitle, onClose, children, size = 'md', icon: Icon }) {
+export function Modal({ open, isOpen, title, subtitle, onClose, children, size = 'md', maxWidth, icon: Icon }) {
+  // Support both <Modal open={bool}> / <Modal isOpen={bool}> and conditional rendering {cond && <Modal>}
+  const isModalVisible = open !== undefined ? Boolean(open) : isOpen !== undefined ? Boolean(isOpen) : true;
+
   useEffect(() => {
+    if (!isModalVisible) return undefined;
     const onKey = (e) => e.key === 'Escape' && onClose && onClose();
     document.addEventListener('keydown', onKey);
     document.body.style.overflow = 'hidden';
@@ -112,12 +116,16 @@ export function Modal({ title, subtitle, onClose, children, size = 'md', icon: I
       document.removeEventListener('keydown', onKey);
       document.body.style.overflow = '';
     };
-  }, [onClose]);
+  }, [isModalVisible, onClose]);
+
+  if (!isModalVisible) return null;
 
   const widths = { sm: 'max-w-md', md: 'max-w-xl', lg: 'max-w-3xl', xl: 'max-w-5xl' };
+  const widthClass = maxWidth || widths[size] || widths.md;
+
   return (
     <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm overflow-y-auto" onMouseDown={(e) => e.target === e.currentTarget && onClose && onClose()}>
-      <div role="dialog" aria-modal="true" className={`relative w-full ${widths[size]} bg-white rounded-2xl shadow-2xl border border-slate-200 my-6`}>
+      <div role="dialog" aria-modal="true" className={`relative w-full ${widthClass} bg-white rounded-2xl shadow-2xl border border-slate-200 my-6`}>
         <div className="flex items-start justify-between gap-3 px-5 sm:px-6 pt-5 pb-3 border-b border-slate-100">
           <div className="flex items-center gap-3 min-w-0">
             {Icon && (
@@ -162,11 +170,17 @@ const BADGE = {
   medium: 'bg-amber-100 text-amber-800 border-amber-200',
   low: 'bg-sky-100 text-sky-700 border-sky-200',
   completed: 'bg-slate-100 text-slate-600 border-slate-300',
-  ongoing: 'bg-blue-100 text-blue-700 border-blue-200'
+  ongoing: 'bg-blue-100 text-blue-700 border-blue-200',
+  blue: 'bg-blue-50 text-[#003366] border-blue-200',
+  green: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  amber: 'bg-amber-50 text-amber-800 border-amber-200',
+  red: 'bg-red-50 text-red-700 border-red-200',
+  purple: 'bg-purple-50 text-purple-700 border-purple-200',
+  slate: 'bg-slate-100 text-slate-700 border-slate-200'
 };
 
-export function Badge({ children, kind }) {
-  const key = String(kind || children || '').toLowerCase().split(' ')[0];
+export function Badge({ children, kind, tone }) {
+  const key = String(kind || tone || children || '').toLowerCase().split(' ')[0];
   return (
     <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide border ${BADGE[key] || 'bg-slate-100 text-slate-600 border-slate-200'}`}>
       {children}
@@ -175,7 +189,7 @@ export function Badge({ children, kind }) {
 }
 
 /* -------------------------------------------------------------- Stat cards */
-export function StatCard({ label, value, hint, icon: Icon, tone = 'blue' }) {
+export function StatCard({ label, title, value, hint, subtitle, icon: Icon, tone = 'blue' }) {
   const tones = {
     blue: 'text-[#003366] bg-blue-50',
     green: 'text-emerald-600 bg-emerald-50',
@@ -186,28 +200,29 @@ export function StatCard({ label, value, hint, icon: Icon, tone = 'blue' }) {
   return (
     <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 shadow-sm">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">{label}</span>
+        <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500">{label || title}</span>
         {Icon && (
-          <span className={`p-1.5 rounded-lg ${tones[tone]}`}>
+          <span className={`p-1.5 rounded-lg ${tones[tone] || tones.blue}`}>
             <Icon className="w-4 h-4" />
           </span>
         )}
       </div>
       <div className="text-2xl sm:text-3xl font-black text-slate-900 leading-none">{value}</div>
-      {hint && <div className="text-[11px] text-slate-500 font-medium mt-1.5">{hint}</div>}
+      {(hint || subtitle) && <div className="text-[11px] text-slate-500 font-medium mt-1.5">{hint || subtitle}</div>}
     </div>
   );
 }
 
 /* ------------------------------------------------------------- Empty / load */
-export function EmptyState({ title = 'Nothing here yet', message, action }) {
+export function EmptyState({ title = 'Nothing here yet', message, subtitle, action }) {
+  const desc = message || subtitle;
   return (
     <div className="py-12 text-center">
       <div className="w-12 h-12 mx-auto rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mb-3">
         <Inbox className="w-6 h-6" />
       </div>
       <p className="text-sm font-extrabold text-slate-700">{title}</p>
-      {message && <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">{message}</p>}
+      {desc && <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">{desc}</p>}
       {action && <div className="mt-4">{action}</div>}
     </div>
   );
@@ -251,24 +266,44 @@ export function PrimaryButton({ children, loading, className = '', ...props }) {
 
 /* --------------------------------------------------------------- DataTable */
 /**
- * columns: [{ key, label, render?(row), sortValue?(row), sortable?, className? }]
+ * columns: [{ key, label/header, render?(row), sortValue?(row), sortable?, className? }]
  */
-export function DataTable({ columns, rows, searchPlaceholder = 'Search...', searchText, pageSize = 10, empty, toolbar, rowKey = 'id' }) {
+export function DataTable({
+  columns = [],
+  rows = [],
+  searchPlaceholder = 'Search...',
+  searchText,
+  searchKeys,
+  exportFilename,
+  pageSize = 10,
+  empty,
+  toolbar,
+  rowKey = 'id'
+}) {
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState({ key: null, dir: 'asc' });
   const [page, setPage] = useState(1);
 
   useEffect(() => setPage(1), [query, rows.length]);
 
+  const effectiveSearchFn = useMemo(() => {
+    if (typeof searchText === 'function') return searchText;
+    if (Array.isArray(searchKeys) && searchKeys.length > 0) {
+      return (row) => searchKeys.map((k) => row?.[k] ?? '').join(' ');
+    }
+    return null;
+  }, [searchText, searchKeys]);
+
   const filtered = useMemo(() => {
-    if (!searchText || !query.trim()) return rows;
+    if (!effectiveSearchFn || !query.trim()) return rows;
     const q = query.toLowerCase();
-    return rows.filter((r) => String(searchText(r)).toLowerCase().includes(q));
-  }, [rows, query, searchText]);
+    return rows.filter((r) => String(effectiveSearchFn(r)).toLowerCase().includes(q));
+  }, [rows, query, effectiveSearchFn]);
 
   const sorted = useMemo(() => {
     if (!sort.key) return filtered;
     const col = columns.find((c) => c.key === sort.key);
+    if (!col) return filtered;
     const val = (r) => (col.sortValue ? col.sortValue(r) : r[col.key]);
     return [...filtered].sort((a, b) => {
       const A = val(a);
@@ -284,11 +319,29 @@ export function DataTable({ columns, rows, searchPlaceholder = 'Search...', sear
 
   const toggleSort = (key) => setSort((s) => (s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }));
 
+  const handleExportCsv = () => {
+    const exportCols = columns.filter((c) => c.key !== 'actions');
+    const headerRow = exportCols.map((c) => `"${String(c.label || c.header || c.key).replace(/"/g, '""')}"`).join(',');
+    const dataRows = sorted.map((r) =>
+      exportCols
+        .map((c) => `"${String(r?.[c.key] ?? '').replace(/"/g, '""')}"`)
+        .join(',')
+    );
+    const csvContent = [headerRow, ...dataRows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = exportFilename || 'smartevent_export.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-3">
-      {(searchText || toolbar) && (
+      {(effectiveSearchFn || toolbar || exportFilename) && (
         <div className="flex flex-col sm:flex-row gap-2 sm:items-center justify-between">
-          {searchText ? (
+          {effectiveSearchFn ? (
             <div className="relative sm:w-72">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={searchPlaceholder} className={`${inputCls} pl-9`} />
@@ -296,7 +349,19 @@ export function DataTable({ columns, rows, searchPlaceholder = 'Search...', sear
           ) : (
             <span />
           )}
-          {toolbar && <div className="flex flex-wrap items-center gap-2">{toolbar}</div>}
+          <div className="flex flex-wrap items-center gap-2">
+            {toolbar}
+            {exportFilename && sorted.length > 0 && (
+              <button
+                type="button"
+                onClick={handleExportCsv}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-bold text-slate-700"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Export CSV</span>
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -306,15 +371,16 @@ export function DataTable({ columns, rows, searchPlaceholder = 'Search...', sear
             <tr className="bg-slate-50 border-b border-slate-200">
               {columns.map((c) => {
                 const sortable = c.sortable !== false && c.key !== 'actions';
+                const colTitle = c.label || c.header || c.key;
                 return (
                   <th key={c.key} className={`px-4 py-3 text-[10px] font-extrabold uppercase tracking-wider text-slate-600 whitespace-nowrap ${c.className || ''}`}>
                     {sortable ? (
                       <button onClick={() => toggleSort(c.key)} className="inline-flex items-center gap-1 hover:text-[#003366]">
-                        {c.label}
+                        {colTitle}
                         {sort.key === c.key && (sort.dir === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />)}
                       </button>
                     ) : (
-                      c.label
+                      colTitle
                     )}
                   </th>
                 );

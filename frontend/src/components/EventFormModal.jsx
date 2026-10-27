@@ -34,7 +34,18 @@ const slotOf = (start) => {
  * Create / edit an event.
  *  event=null -> create mode;  isAdmin enables owner, featured & status controls.
  */
-export default function EventFormModal({ isOpen, onClose, event = null, onSubmit, isAdmin = false, organizers = [] }) {
+export default function EventFormModal({
+  isOpen,
+  open,
+  onClose,
+  event = null,
+  initialEvent = null,
+  onSubmit,
+  isAdmin = false,
+  organizers = []
+}) {
+  const modalOpen = isOpen !== undefined ? Boolean(isOpen) : Boolean(open);
+  const activeEvent = event || initialEvent;
   const toast = useToast();
   const [form, setForm] = useState(blank());
   const [categories, setCategories] = useState([]);
@@ -42,10 +53,10 @@ export default function EventFormModal({ isOpen, onClose, event = null, onSubmit
   const [forecast, setForecast] = useState(null);
   const [forecasting, setForecasting] = useState(false);
   const [saving, setSaving] = useState(false);
-  const editing = Boolean(event);
+  const editing = Boolean(activeEvent);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!modalOpen) return;
     Promise.all([categoriesApi.getAll(), venuesApi.getAll()])
       .then(([c, v]) => {
         setCategories(c.data || []);
@@ -54,37 +65,37 @@ export default function EventFormModal({ isOpen, onClose, event = null, onSubmit
       })
       .catch(() => toast.error('Could not load categories and venues.'));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen]);
+  }, [modalOpen]);
 
   useEffect(() => {
-    if (!isOpen) return;
-    if (event) {
+    if (!modalOpen) return;
+    if (activeEvent) {
       setForm({
         ...blank(),
-        title: event.title || '',
-        category: event.category || '',
-        description: event.description || '',
-        date: event.date || todayStr(),
-        ...splitTime(event.time),
-        venue: event.venue || '',
-        venueCapacity: event.venueCapacity || 100,
-        smsPriority: event.smsPriority || 2,
-        expectedRegistrations: event.registrationCount || 0,
-        organizerId: event.organizerId || '',
-        featured: Boolean(event.featured),
-        status: event.status || 'Upcoming'
+        title: activeEvent.title || '',
+        category: activeEvent.category || '',
+        description: activeEvent.description || '',
+        date: activeEvent.date || todayStr(),
+        ...splitTime(activeEvent.time),
+        venue: activeEvent.venue || '',
+        venueCapacity: activeEvent.venueCapacity || 100,
+        smsPriority: activeEvent.smsPriority || 2,
+        expectedRegistrations: activeEvent.registrationCount || 0,
+        organizerId: activeEvent.organizerId || '',
+        featured: Boolean(activeEvent.featured),
+        status: activeEvent.status || 'Upcoming'
       });
     } else {
       setForm(blank());
     }
     setForecast(null);
-  }, [isOpen, event]);
+  }, [modalOpen, activeEvent]);
 
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
 
   // Debounced forecast from the trained model (via the backend)
   useEffect(() => {
-    if (!isOpen || !form.date || !form.venueCapacity) return undefined;
+    if (!modalOpen || !form.date || !form.venueCapacity) return undefined;
     const timer = setTimeout(async () => {
       setForecasting(true);
       try {
@@ -95,8 +106,8 @@ export default function EventFormModal({ isOpen, onClose, event = null, onSubmit
           dayOfWeek: d.getDay(),
           timeSlot: slotOf(form.startTime),
           venueCapacity: Number(form.venueCapacity),
-          registrationCount: editing ? Number(event.registrationCount || 0) : Number(form.expectedRegistrations || 0),
-          pastAttendanceRate: Number(event?.pastAttendanceRate ?? 0.75),
+          registrationCount: editing ? Number(activeEvent.registrationCount || 0) : Number(form.expectedRegistrations || 0),
+          pastAttendanceRate: Number(activeEvent?.pastAttendanceRate ?? 0.75),
           smsPriority: Number(form.smsPriority),
           leadDays: Math.min(lead, 60)
         });
@@ -108,11 +119,11 @@ export default function EventFormModal({ isOpen, onClose, event = null, onSubmit
       }
     }, 600);
     return () => clearTimeout(timer);
-  }, [isOpen, form.category, form.date, form.startTime, form.venueCapacity, form.smsPriority, form.expectedRegistrations, editing, event]);
+  }, [modalOpen, form.category, form.date, form.startTime, form.venueCapacity, form.smsPriority, form.expectedRegistrations, editing, activeEvent]);
 
   const venueNames = useMemo(() => venues.map((v) => v.name), [venues]);
 
-  if (!isOpen) return null;
+  if (!modalOpen) return null;
 
   const pickVenue = (name) => {
     const v = venues.find((x) => x.name === name);
@@ -144,7 +155,7 @@ export default function EventFormModal({ isOpen, onClose, event = null, onSubmit
 
     setSaving(true);
     try {
-      await onSubmit(payload, event);
+      await onSubmit(payload, activeEvent);
       onClose();
     } catch (err) {
       toast.error(err.message || 'Could not save the event.');
