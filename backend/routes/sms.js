@@ -263,7 +263,7 @@ router.post('/send', requireRole(['admin', 'organizer']), sendLimiter, async (re
     message: gatewayNote
       ? gatewayNote
       : mode === 'SIMULATION'
-      ? `SIMULATION: ${logs.length} message(s) recorded locally - switch to Option B (Live Mode) with your AT App Username to deliver real SMS to handsets.`
+      ? `SIMULATION: ${logs.length} message(s) recorded locally (NOT sent to carrier) - switch to Option B (Live Mode) with your AT App Username to deliver real SMS to handsets.`
       : `${ok} of ${logs.length} SMS accepted by Africa's Talking (${mode})${failed ? `, ${failed} failed` : ''}.`,
     mode,
     gatewayNote: gatewayNote || null,
