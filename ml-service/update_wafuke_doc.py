@@ -944,7 +944,7 @@ insert_p_before(
 )
 insert_p_before(
     anchor_elm,
-    "Functional verification of the deployed web and mobile interfaces confirmed seamless integration between the React.js organizer portal, the Node.js/Express REST API, the Africa's Talking SMS gateway, and the FastAPI prediction engine. As shown in Figure 5.8, event organizers can inspect real-time machine learning attendance forecasts, capacity utilization percentages, and automated logistics recommendations across all active campus events.",
+    "Functional verification of the deployed web and mobile interfaces confirmed seamless integration between the React.js organizer portal, the Node.js/Express REST API, the Africa's Talking SMS gateway, and the FastAPI prediction engine. As shown in Figure 5.8, event organizers can inspect real-time machine learning attendance forecasts via the Scikit-Learn Logistic Regression Turnout Forecast modal (displaying the forecasted attendance of 311 out of 500 seats, 75% show-up probability, 62.2% venue utilization, +8.1% priority SMS turnout lift, and automated logistics recommendations) across active campus events.",
     align=WD_ALIGN_PARAGRAPH.JUSTIFY
 )
 
@@ -952,12 +952,13 @@ insert_image_with_caption_before(
     anchor_elm,
     os.path.join(FIG_DIR, "fig5_8_organizer_prediction_ui.png"),
     5, 8,
-    "SmartEvent Organizer Dashboard Showing Live ML Turnout Predictions"
+    "SmartEvent Organizer Dashboard Showing Live ML Turnout Predictions",
+    width_inches=5.8
 )
 
 insert_p_before(
     anchor_elm,
-    "Figure 5.9 illustrates the Priority-Based SMS Broadcast Studio, where event organizers classify outgoing notifications into High, Medium, or Low urgency levels, dispatch messages through the Africa's Talking API, and audit real-time delivery statuses and gateway costs.",
+    "Figure 5.9 illustrates the Priority-Based SMS Broadcast Studio, where event organizers classify outgoing notifications into High, Medium, or Low urgency levels, preview the formatted SMS payload, dispatch messages through the Africa's Talking API, and audit real-time delivery statuses in the Recent Priority SMS Dispatches log.",
     align=WD_ALIGN_PARAGRAPH.JUSTIFY
 )
 
@@ -965,12 +966,13 @@ insert_image_with_caption_before(
     anchor_elm,
     os.path.join(FIG_DIR, "fig5_9_priority_sms_studio_ui.png"),
     5, 9,
-    "Priority-Based SMS Broadcast Studio and Delivery Audit Logs"
+    "Priority-Based SMS Broadcast Studio and Delivery Audit Logs",
+    width_inches=5.8
 )
 
 insert_p_before(
     anchor_elm,
-    "Finally, Figure 5.10 displays the Executive Predictive Analytics view, which compares registered RSVPs, ML predicted turnout, and actual headcount across academic months and event categories, enabling data-driven resource allocation for venues, catering, and staffing at Strathmore University.",
+    "Finally, Figure 5.10 displays the SmartEvent Administration and Predictive Analytics Overview, which compares registered seats against total venue capacity across all six campus event categories, visualizes Africa's Talking SMS dispatches by priority tier, tracks capacity utilization for the most popular university events, and reports live telemetry from the deployed LogisticRegression pipeline (ROC-AUC 0.7301, 69.4% student-level accuracy, and 13.607-student event headcount MAE across 140 held-out test events). Additional real-time screenshots of the public authentication portal, student QR-code entry pass interface, priority SMS alert inbox, organizer event management table, and backend database console are provided in Appendices 4 through 8.",
     align=WD_ALIGN_PARAGRAPH.JUSTIFY
 )
 
@@ -978,7 +980,8 @@ insert_image_with_caption_before(
     anchor_elm,
     os.path.join(FIG_DIR, "fig5_10_analytics_dashboard_ui.png"),
     5, 10,
-    "SmartEvent Predictive Analytics and Turnout Comparison Report"
+    "SmartEvent Predictive Analytics and Turnout Comparison Report",
+    width_inches=5.8
 )
 
 # ------------------------------------------------------------------------------
@@ -992,7 +995,7 @@ insert_p_before(
 )
 insert_p_before(
     anchor_elm,
-    "At the root level, the frontend/ directory houses the React.js (Vite + Tailwind CSS) application, including role-guarded pages for administrators, event organizers, and students (OrganizerDashboard.jsx, EventCreationModal.jsx, PrioritySmsStudio.jsx, AnalyticsDashboard.jsx, and StudentMobileView.jsx). The mobile/ directory contains the standalone React Native (Expo) student mobile application. The backend/ directory holds the Node.js and Express.js REST API server (server.js), Firebase Firestore and local JSON persistence adapters (db.js), JWT role-verification middleware (middleware/auth.js), and modular route controllers (routes/auth.js, events.js, registrations.js, sms.js, predict.js, and analytics.js).",
+    "At the root level, the frontend/ directory houses the React.js (Vite + Tailwind CSS) application, including role-guarded pages and components for administrators, event organizers, and students (HomePage.jsx, AuthModal.jsx, OrganizerDashboardPage.jsx, StudentDashboardPage.jsx, AdminDashboardPage.jsx, EventFormModal.jsx, and SmsComposer.jsx). The mobile/ directory contains the standalone React Native (Expo) student mobile application. The backend/ directory holds the Node.js and Express.js REST API server (server.js), Firebase Firestore and local JSON persistence adapters (db.js), JWT role-verification middleware (middleware/auth.js), and modular route controllers (routes/auth.js, events.js, registrations.js, sms.js, predict.js, and analytics.js).",
     align=WD_ALIGN_PARAGRAPH.JUSTIFY
 )
 insert_p_before(
@@ -1047,9 +1050,8 @@ insert_p_before(
 
 
 # ==============================================================================
-# 7. APPENDICES ENHANCEMENT (ADD CALIBRATION CURVE AS APPENDIX 3)
+# 7. APPENDICES ENHANCEMENT (ADD REAL ML & SYSTEM SCREENSHOTS AS APPENDICES 3-8)
 # ==============================================================================
-# Center existing Appendix images & captions and add Appendix 3: Model Calibration Curve
 for p in doc.paragraphs:
     if p.text.strip().startswith("Appendix"):
         for r in p.runs:
@@ -1057,22 +1059,61 @@ for p in doc.paragraphs:
     if len(p._element.xpath(".//a:blip")) > 0:
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-# Add Appendix 3 at the very end of the document
-p_app3_head = doc.add_paragraph()
-p_app3_head.style = doc.styles["kevin"] if "kevin" in doc.styles else doc.styles["Heading 1"]
-r_app3 = p_app3_head.add_run("Appendix 3: Logistic Regression Probability Calibration Curve on Held-Out Test Events")
-set_run_tnr12(r_app3, bold=True, color_rgb=(0, 0, 0))
-format_paragraph(p_app3_head, align=WD_ALIGN_PARAGRAPH.LEFT, bold=True, space_before=12, space_after=6)
 
-p_app3_img = doc.add_paragraph()
-p_app3_img.alignment = WD_ALIGN_PARAGRAPH.CENTER
-p_app3_img.add_run().add_picture(os.path.join(FIG_DIR, "calibration.png"), width=Inches(4.6))
+def add_appendix_figure(app_title, img_filename, cap_text, width_in=5.6):
+    p_head = doc.add_paragraph()
+    p_head.style = doc.styles["kevin"] if "kevin" in doc.styles else doc.styles["Heading 1"]
+    r_h = p_head.add_run(app_title)
+    set_run_tnr12(r_h, bold=True, color_rgb=(0, 0, 0))
+    format_paragraph(p_head, align=WD_ALIGN_PARAGRAPH.LEFT, bold=True, space_before=12, space_after=6)
 
-p_app3_cap = doc.add_paragraph()
-p_app3_cap.style = doc.styles["Caption"] if "Caption" in doc.styles else doc.styles["Normal"]
-p_app3_cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
-r_app3_c = p_app3_cap.add_run("Appendix 3: Calibration Curve for the Deployed Logistic Regression Classifier")
-set_run_tnr12(r_app3_c, bold=False, italic=False, color_rgb=(0, 0, 0))
+    p_img = doc.add_paragraph()
+    p_img.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p_img.add_run().add_picture(os.path.join(FIG_DIR, img_filename), width=Inches(width_in))
+
+    p_cap = doc.add_paragraph()
+    p_cap.style = doc.styles["Caption"] if "Caption" in doc.styles else doc.styles["Normal"]
+    p_cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    r_c = p_cap.add_run(cap_text)
+    set_run_tnr12(r_c, bold=False, italic=False, color_rgb=(0, 0, 0))
+
+
+add_appendix_figure(
+    "Appendix 3: Logistic Regression Probability Calibration Curve on Held-Out Test Events",
+    "calibration.png",
+    "Appendix 3: Calibration Curve for the Deployed Logistic Regression Classifier",
+    width_in=4.6,
+)
+add_appendix_figure(
+    "Appendix 4: SmartEvent Public Homepage and Role-Based Authentication Interface",
+    "app3_public_home_auth.png",
+    "Appendix 4: SmartEvent Public Homepage and Sign-In Authentication Modal",
+    width_in=5.8,
+)
+add_appendix_figure(
+    "Appendix 5: Student Portal — Confirmed Event RSVPs and Digital QR Entry Pass",
+    "app4_student_rsvp_qr_pass.png",
+    "Appendix 5: Student Portal Displaying Confirmed RSVPs and Digital QR Code Entry Pass",
+    width_in=5.8,
+)
+add_appendix_figure(
+    "Appendix 6: Student Portal — Africa's Talking Priority SMS Alerts and Notification Inbox",
+    "app5_student_sms_alerts.png",
+    "Appendix 6: Student Portal Displaying Urgency-Tagged Priority SMS Alerts and In-App Notifications",
+    width_in=5.8,
+)
+add_appendix_figure(
+    "Appendix 7: Organizer Portal — Campus Event Management and Live ML Turnout Table",
+    "app6_organizer_analytics_simulator.png",
+    "Appendix 7: Organizer Portal Showing Listed Campus Events, RSVPs, and ML Turnout Column",
+    width_in=5.8,
+)
+add_appendix_figure(
+    "Appendix 8: SmartEvent Administration and Database Persistence Console",
+    "app7_fastapi_swagger_docs.png",
+    "Appendix 8: SmartEvent Backend Database Tables and REST API Administration Console",
+    width_in=5.8,
+)
 
 
 # ==============================================================================

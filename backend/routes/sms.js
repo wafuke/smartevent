@@ -42,16 +42,19 @@ router.get('/status', requireRole(['admin', 'organizer']), async (req, res) => {
   const count = (p) => logs.filter((l) => String(l.priority).toUpperCase() === p).length;
   const balance = req.user.role === 'admin' ? await sms.getBalance() : undefined;
 
-  res.json({
-    success: true,
+  const modeDescription = {
+    LIVE: 'Live gateway (Option B) - real SMS are delivered to handsets via Africa\'s Talking.',
+    SANDBOX: "Africa's Talking sandbox - API key configured; enter your Live App Username in Option B to send to real phones.",
+    SIMULATION: 'Simulation mode - messages are logged locally without carrier dispatch.'
+  }[cfg.mode];
+
+  const payload = {
     gateway: "Africa's Talking SMS API",
     mode: cfg.mode,
-    modeDescription: {
-      LIVE: 'Live gateway - real SMS are delivered to handsets.',
-      SANDBOX: "Africa's Talking sandbox - API is real but messages only appear in the AT simulator.",
-      SIMULATION: 'Simulation - no AT_API_KEY set, nothing is sent. Configure credentials to send real SMS.'
-    }[cfg.mode],
+    modeDescription,
     username: cfg.username || null,
+    maskedApiKey: cfg.maskedApiKey || null,
+    hasApiKey: cfg.hasApiKey,
     senderId: cfg.senderId || null,
     balance,
     stats: {
@@ -62,6 +65,27 @@ router.get('/status', requireRole(['admin', 'organizer']), async (req, res) => {
       delivered: logs.filter((l) => /DELIVERED/i.test(l.status || '')).length,
       failed: logs.filter((l) => /FAILED/i.test(l.status || '')).length
     }
+  };
+
+  res.json({
+    success: true,
+    ...payload,
+    data: payload
+  });
+});
+
+// PUT /api/sms/config - configure Africa's Talking credentials & Option B Live Mode (ADMIN / ORGANIZER)
+router.put('/config', requireRole(['admin', 'organizer']), (req, res) => {
+  const { username, apiKey, senderId, mode } = req.body || {};
+  const updated = sms.setRuntimeConfig({ username, apiKey, senderId, mode });
+  res.json({
+    success: true,
+    message: `Africa's Talking gateway updated (${updated.mode} mode).`,
+    mode: updated.mode,
+    username: updated.username,
+    maskedApiKey: updated.maskedApiKey,
+    hasApiKey: updated.hasApiKey,
+    senderId: updated.senderId
   });
 });
 
@@ -119,8 +143,9 @@ function resolveAudience(db, user, body) {
   const usersById = new Map((db.users || []).map((u) => [u.id, u]));
 
   if (testToMe) {
-    const own = normalizeKenyanPhone(user.phone);
-    if (!own) return { error: 'Add a valid mobile number to your profile to send a test SMS to yourself.' };
+    const rawTarget = body.testPhone ? String(body.testPhone).trim() : user.phone;
+    const own = normalizeKenyanPhone(rawTarget);
+    if (!own) return { error: 'Enter a valid Kenyan mobile number (e.g. 0712345678 or +254712345678) to send a test SMS.' };
     add(own, user.name, user.id);
     return out;
   }
@@ -191,7 +216,7 @@ router.post('/send', requireRole(['admin', 'organizer']), sendLimiter, async (re
   const eventTitle = event ? event.title : 'SmartEvent Campus Alert';
   const text = `[SmartEvent ${priority}] ${eventTitle}: ${message}`;
 
-  const { mode, results } = await sms.sendBulk(plan.recipients.map((r) => r.phone), text);
+  const { mode, results, gatewayNote } = await sms.sendBulk(plan.recipients.map((r) => r.phone), text);
   const byPhone = new Map(results.map((r) => [r.phone, r]));
   const batchId = `batch-${Date.now()}`;
   const now = new Date().toISOString();
@@ -235,11 +260,13 @@ router.post('/send', requireRole(['admin', 'organizer']), sendLimiter, async (re
   const failedLogs = logs.filter((l) => l.status === 'FAILED');
   res.status(failed === logs.length ? 502 : 200).json({
     success: failed !== logs.length,
-    message:
-      mode === 'SIMULATION'
-        ? `SIMULATION: ${logs.length} message(s) recorded but NOT sent - add Africa's Talking credentials to deliver real SMS.`
-        : `${ok} of ${logs.length} SMS accepted by Africa's Talking${failed ? `, ${failed} failed` : ''}.`,
+    message: gatewayNote
+      ? gatewayNote
+      : mode === 'SIMULATION'
+      ? `SIMULATION: ${logs.length} message(s) recorded locally - switch to Option B (Live Mode) with your AT App Username to deliver real SMS to handsets.`
+      : `${ok} of ${logs.length} SMS accepted by Africa's Talking (${mode})${failed ? `, ${failed} failed` : ''}.`,
     mode,
+    gatewayNote: gatewayNote || null,
     priority,
     dispatchedCount: ok,
     failedCount: failed,

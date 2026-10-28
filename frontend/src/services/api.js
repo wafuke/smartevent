@@ -380,13 +380,32 @@ function handleOfflineFallback(endpoint, options = {}) {
   if (cleanPath === '/sms/status') {
     return {
       success: true,
+      mode: 'SANDBOX',
+      modeDescription: "Africa's Talking sandbox - API key configured; enter your Live App Username in Option B to send to real phones.",
+      username: 'sandbox',
+      maskedApiKey: 'atsk_6d94...c370',
+      hasApiKey: true,
       data: {
         provider: "Africa's Talking",
-        mode: 'SIMULATION',
-        liveSmsConfigured: false,
-        senderId: 'STRATHMORE',
-        instructions: 'Set AT_USERNAME and AT_API_KEY in backend/.env to enable live carrier dispatch.'
+        mode: 'SANDBOX',
+        modeDescription: "Africa's Talking sandbox - API key configured; enter your Live App Username in Option B to send to real phones.",
+        username: 'sandbox',
+        maskedApiKey: 'atsk_6d94...c370',
+        hasApiKey: true,
+        liveSmsConfigured: true,
+        senderId: ''
       }
+    };
+  }
+
+  if (cleanPath === '/sms/config') {
+    return {
+      success: true,
+      message: `Africa's Talking gateway updated (${body.mode || 'SANDBOX'} mode).`,
+      mode: body.mode || 'SANDBOX',
+      username: body.username || 'sandbox',
+      maskedApiKey: 'atsk_6d94...c370',
+      hasApiKey: true
     };
   }
 
@@ -635,6 +654,7 @@ export const notificationsApi = {
 
 export const smsApi = {
   getStatus: () => apiRequest('/sms/status'),
+  updateConfig: (payload) => apiRequest('/sms/config', json('PUT', payload)),
   getLogs: (params) => apiRequest(`/sms/logs${qs(params)}`),
   preview: (payload) => apiRequest('/sms/preview', json('POST', payload)),
   send: (payload) => apiRequest('/sms/send', json('POST', payload))

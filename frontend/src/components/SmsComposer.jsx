@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { MessageSquare, Send, AlertTriangle, CheckCircle2, Info } from 'lucide-react';
+import { MessageSquare, Send, AlertTriangle, CheckCircle2, Info, Settings } from 'lucide-react';
 import { smsApi } from '../services/api';
 import { Field, inputCls, PrimaryButton, useToast, Badge } from './ui';
 
@@ -21,24 +21,49 @@ const segmentsOf = (text) => {
 
 /**
  * Shared Africa's Talking SMS composer for organizers and admins.
- * Organizers can only message the roster of their own events (or send a test to themselves).
- * Admins can also target all students or an explicit list of numbers.
  */
-export default function SmsComposer({ events, role, defaultEventId, onSent }) {
+export default function SmsComposer({ events = [], role, user, defaultEventId, onSent }) {
   const toast = useToast();
-  const isAdmin = role === 'admin';
+  const isAdmin = role === 'admin' || String(user?.role || '').toLowerCase() === 'admin';
   const [audience, setAudience] = useState('EVENT');
   const [eventId, setEventId] = useState(defaultEventId || '');
   const [priority, setPriority] = useState('MEDIUM');
   const [numbers, setNumbers] = useState('');
+  const [testPhone, setTestPhone] = useState(user?.phone || '+254712345678');
   const [message, setMessage] = useState('');
   const [preview, setPreview] = useState(null);
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState(null);
   const [status, setStatus] = useState(null);
 
+  // Option B Live SMS Configuration state
+  const [showConfig, setShowConfig] = useState(false);
+  const [savingConfig, setSavingConfig] = useState(false);
+  const [cfgForm, setCfgForm] = useState({
+    mode: 'SANDBOX',
+    username: 'sandbox',
+    apiKey: '',
+    senderId: ''
+  });
+
+  const loadGatewayStatus = () => {
+    smsApi
+      .getStatus()
+      .then((s) => {
+        const st = s.data || s;
+        setStatus(st);
+        setCfgForm((prev) => ({
+          ...prev,
+          mode: st.mode || 'SANDBOX',
+          username: st.username || 'sandbox',
+          senderId: st.senderId || ''
+        }));
+      })
+      .catch(() => {});
+  };
+
   useEffect(() => {
-    smsApi.getStatus().then(setStatus).catch(() => {});
+    loadGatewayStatus();
   }, []);
 
   useEffect(() => {
@@ -47,11 +72,11 @@ export default function SmsComposer({ events, role, defaultEventId, onSent }) {
 
   const payload = useMemo(() => {
     const base = { priority, message };
-    if (audience === 'TEST') return { ...base, testToMe: true };
+    if (audience === 'TEST') return { ...base, testToMe: true, testPhone };
     if (audience === 'ALL_STUDENTS') return { ...base, audience: 'ALL_STUDENTS' };
     if (audience === 'NUMBERS') return { ...base, phoneNumbers: numbers };
     return { ...base, eventId };
-  }, [audience, eventId, priority, message, numbers]);
+  }, [audience, eventId, priority, message, numbers, testPhone]);
 
   // Live recipient count / cost preview
   useEffect(() => {
@@ -68,6 +93,21 @@ export default function SmsComposer({ events, role, defaultEventId, onSent }) {
 
   const segs = segmentsOf(message);
   const selectedEvent = events.find((e) => e.id === eventId);
+
+  const handleSaveGatewayConfig = async (e) => {
+    e.preventDefault();
+    setSavingConfig(true);
+    try {
+      const res = await smsApi.updateConfig(cfgForm);
+      toast.success(res.message || "Africa's Talking gateway settings saved.");
+      loadGatewayStatus();
+      setShowConfig(false);
+    } catch (err) {
+      toast.error(err.message || 'Could not update gateway settings.');
+    } finally {
+      setSavingConfig(false);
+    }
+  };
 
   const send = async (e) => {
     e.preventDefault();
@@ -89,21 +129,151 @@ export default function SmsComposer({ events, role, defaultEventId, onSent }) {
 
   const modeBanner = status && (
     <div
-      className={`flex items-start gap-2.5 p-3 rounded-xl border text-xs font-semibold ${
-        status.mode === 'LIVE' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : status.mode === 'SANDBOX' ? 'bg-sky-50 border-sky-200 text-sky-800' : 'bg-amber-50 border-amber-200 text-amber-900'
+      className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl border text-xs font-semibold ${
+        status.mode === 'LIVE'
+          ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+          : status.mode === 'SANDBOX'
+          ? 'bg-sky-50 border-sky-200 text-sky-900'
+          : 'bg-amber-50 border-amber-200 text-amber-900'
       }`}
     >
-      {status.mode === 'LIVE' ? <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" /> : <Info className="w-4 h-4 shrink-0 mt-0.5" />}
-      <div>
-        <b>Gateway mode: {status.mode}</b> - {status.modeDescription}
-        {isAdmin && status.balance && <span className="block mt-0.5">Africa's Talking balance: {status.balance}</span>}
+      <div className="flex items-start gap-2.5">
+        {status.mode === 'LIVE' ? (
+          <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+        ) : (
+          <Info className="w-4 h-4 shrink-0 mt-0.5" />
+        )}
+        <div>
+          <div>
+            <b>Gateway mode: {status.mode}</b> — {status.modeDescription}
+          </div>
+          <div className="text-[11px] opacity-85 mt-0.5">
+            API Key: <b>{status.maskedApiKey || 'Configured'}</b> • Username: <b>{status.username || 'sandbox'}</b>
+            {status.balance ? ` • Balance: ${status.balance}` : ''}
+          </div>
+        </div>
       </div>
+
+      <button
+        type="button"
+        onClick={() => setShowConfig(!showConfig)}
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/90 hover:bg-white border border-slate-300 text-slate-800 font-bold text-xs shrink-0 self-start sm:self-center shadow-2xs"
+      >
+        <Settings className="w-3.5 h-3.5 text-[#003366]" />
+        <span>{showConfig ? 'Hide Gateway Config' : 'Configure Option B (Live SMS)'}</span>
+      </button>
     </div>
   );
 
   return (
     <div className="space-y-4">
       {modeBanner}
+
+      {showConfig && (
+        <form
+          onSubmit={handleSaveGatewayConfig}
+          className="bg-slate-900 text-white rounded-2xl p-5 space-y-4 border border-slate-700 shadow-lg text-xs"
+        >
+          <div className="flex items-center justify-between border-b border-slate-700 pb-3">
+            <div>
+              <h4 className="text-sm font-black text-amber-400">
+                Africa&apos;s Talking Gateway Configuration (Sandbox vs Option B Live SMS)
+              </h4>
+              <p className="text-[11px] text-slate-300 mt-0.5">
+                Your API key ({status?.maskedApiKey || 'atsk_6d94...c370'}) is saved in backend/.env. To send real-life SMS to actual phones (Option B), switch Mode to LIVE and enter your Live App Username from account.africastalking.com.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div>
+              <label className="block text-[10px] font-extrabold uppercase text-slate-300 mb-1">
+                Gateway Mode
+              </label>
+              <select
+                value={cfgForm.mode}
+                onChange={(e) => {
+                  const nextMode = e.target.value;
+                  setCfgForm((f) => ({
+                    ...f,
+                    mode: nextMode,
+                    username: nextMode === 'SANDBOX' ? 'sandbox' : f.username === 'sandbox' ? '' : f.username
+                  }));
+                }}
+                className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-600 text-white font-bold text-xs"
+              >
+                <option value="SANDBOX">Option A: Sandbox (AT Simulator)</option>
+                <option value="LIVE">Option B: LIVE (Real Phone SMS)</option>
+                <option value="SIMULATION">Local Simulation (Offline Safe)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-extrabold uppercase text-slate-300 mb-1">
+                AT App Username
+              </label>
+              <input
+                type="text"
+                required
+                value={cfgForm.username}
+                onChange={(e) => setCfgForm({ ...cfgForm, username: e.target.value })}
+                placeholder={cfgForm.mode === 'LIVE' ? 'Your Live App Username' : 'sandbox'}
+                className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-600 text-white font-semibold text-xs"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-extrabold uppercase text-slate-300 mb-1">
+                API Key ({status?.maskedApiKey || 'Saved'})
+              </label>
+              <input
+                type="password"
+                value={cfgForm.apiKey}
+                onChange={(e) => setCfgForm({ ...cfgForm, apiKey: e.target.value })}
+                placeholder="Leave blank to keep saved atsk_... key"
+                className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-600 text-white font-semibold text-xs"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-extrabold uppercase text-slate-300 mb-1">
+                Sender ID (Optional)
+              </label>
+              <input
+                type="text"
+                value={cfgForm.senderId}
+                onChange={(e) => setCfgForm({ ...cfgForm, senderId: e.target.value })}
+                placeholder="Blank = default AFRICASTKNG"
+                className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-600 text-white font-semibold text-xs"
+              />
+            </div>
+          </div>
+
+          <div className="bg-slate-800/90 border border-slate-700 rounded-xl p-3 text-[11px] text-slate-300 space-y-1">
+            <div className="font-bold text-amber-300">How to activate Option B (Real-Life SMS to Kenyan Handsets):</div>
+            <div>1. Log into <b>https://account.africastalking.com</b> and switch from Sandbox to your <b>Live Team / App</b>.</div>
+            <div>2. Note your <b>App Username</b> (e.g. <code>smartevent</code>) and top up KES 20–50 via M-Pesa Paybill <b>525900</b>.</div>
+            <div>3. Select <b>Option B: LIVE (Real Phone SMS)</b> above, enter your Live App Username, leave Sender ID blank (uses default <code>AFRICASTKNG</code>), and click <b>Save Gateway Settings</b>.</div>
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setShowConfig(false)}
+              className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={savingConfig}
+              className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold"
+            >
+              {savingConfig ? 'Saving...' : 'Save Gateway Settings'}
+            </button>
+          </div>
+        </form>
+      )}
 
       <form onSubmit={send} className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-sm">
         <div className="flex items-center gap-2 text-sm font-black text-slate-900">
@@ -114,7 +284,7 @@ export default function SmsComposer({ events, role, defaultEventId, onSent }) {
           <Field label="Send to">
             <select className={inputCls} value={audience} onChange={(e) => setAudience(e.target.value)}>
               <option value="EVENT">Registered students of an event</option>
-              <option value="TEST">Test - send only to my own phone</option>
+              <option value="TEST">Test - send to my phone / custom test number</option>
               {isAdmin && <option value="ALL_STUDENTS">All active students</option>}
               {isAdmin && <option value="NUMBERS">Specific phone numbers</option>}
             </select>
@@ -130,6 +300,19 @@ export default function SmsComposer({ events, role, defaultEventId, onSent }) {
                   </option>
                 ))}
               </select>
+            </Field>
+          )}
+
+          {audience === 'TEST' && (
+            <Field label="Test recipient phone number" hint="Accepts 07XXXXXXXX or +2547XXXXXXXX">
+              <input
+                type="text"
+                required
+                className={inputCls}
+                value={testPhone}
+                onChange={(e) => setTestPhone(e.target.value)}
+                placeholder="+254712345678"
+              />
             </Field>
           )}
         </div>

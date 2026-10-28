@@ -17,7 +17,7 @@
       "clearanceLevel": "Super Admin",
       "authProvider": "local,google",
       "createdAt": "2026-08-01T08:00:00.000Z",
-      "lastLoginAt": "2026-10-27T10:47:04.672Z"
+      "lastLoginAt": "2026-10-27T16:08:27.542Z"
     },
     {
       "id": "usr-admin-2",
@@ -48,7 +48,7 @@
       "verified": true,
       "authProvider": "local,google",
       "createdAt": "2026-08-10T10:15:00.000Z",
-      "lastLoginAt": "2026-10-27T10:45:03.480Z"
+      "lastLoginAt": "2026-10-27T16:09:59.311Z"
     },
     {
       "id": "usr-org-2",
@@ -94,7 +94,7 @@
       "verified": true,
       "authProvider": "local,google",
       "createdAt": "2026-08-18T16:00:00.000Z",
-      "lastLoginAt": "2026-10-27T10:47:46.853Z"
+      "lastLoginAt": "2026-10-27T10:59:57.993Z"
     },
     {
       "id": "usr-org-5",
@@ -199,7 +199,7 @@
       "yearOfStudy": 4,
       "authProvider": "local,google",
       "createdAt": "2026-09-01T08:00:00.000Z",
-      "lastLoginAt": "2026-10-27T10:45:03.960Z"
+      "lastLoginAt": "2026-10-27T16:09:59.073Z"
     },
     {
       "id": "usr-stud-2",
@@ -722,14 +722,15 @@
       "dayOfWeek": "Thursday",
       "venue": "Main Auditorium",
       "venueCapacity": 500,
-      "registrationCount": 412,
+      "registrationCount": 413,
       "smsPriority": 3,
       "featured": true,
       "status": "Upcoming",
       "organizerId": "usr-org-1",
       "organizerName": "Dr. Joseph Orero (SCES Dean's Office)",
       "description": "Keynote research symposium featuring live demonstrations of predictive campus analytics, computer vision, and NLP systems built by Strathmore SCES final-year researchers.",
-      "createdAt": "2026-10-01T09:00:00.000Z"
+      "createdAt": "2026-10-01T09:00:00.000Z",
+      "predictedAttendance": 330
     },
     {
       "id": "evt-102",
@@ -855,14 +856,15 @@
       "dayOfWeek": "Tuesday",
       "venue": "Strathmore Business School (SBS) Auditorium",
       "venueCapacity": 300,
-      "registrationCount": 238,
+      "registrationCount": 237,
       "smsPriority": 2,
       "featured": false,
       "status": "Upcoming",
       "organizerId": "usr-org-5",
       "organizerName": "Strathmore Business School (SBS) Executive Events",
       "description": "Executive panel exploring algorithmic trading, credit risk modeling, and central bank digital currencies across East African markets.",
-      "createdAt": "2026-10-08T10:30:00.000Z"
+      "createdAt": "2026-10-08T10:30:00.000Z",
+      "predictedAttendance": 190
     },
     {
       "id": "evt-109",
@@ -1079,18 +1081,6 @@
       "registeredAt": "2026-10-14T09:45:00.000Z"
     },
     {
-      "id": "reg-1006",
-      "eventId": "evt-108",
-      "eventTitle": "East Africa Quantitative Finance & Data Science Summit",
-      "userId": "usr-stud-4",
-      "studentId": "155102",
-      "studentName": "Grace Wanjiku",
-      "studentEmail": "grace.wanjiku@strathmore.edu",
-      "phone": "+254715998811",
-      "status": "Confirmed",
-      "registeredAt": "2026-10-14T15:20:00.000Z"
-    },
-    {
       "id": "reg-1007",
       "eventId": "evt-104",
       "eventTitle": "Fintech & Africa's Talking API Developer Hackathon",
@@ -1161,6 +1151,18 @@
       "phone": "+254719889900",
       "status": "Confirmed",
       "registeredAt": "2026-10-17T14:40:00.000Z"
+    },
+    {
+      "id": "reg-1793098769674-254",
+      "eventId": "evt-101",
+      "eventTitle": "Strathmore AI & Machine Learning Annual Colloquium",
+      "userId": "usr-stud-4",
+      "studentId": "155102",
+      "studentName": "Grace Wanjiku",
+      "studentEmail": "grace.wanjiku@strathmore.edu",
+      "phone": "+254715998811",
+      "status": "Confirmed",
+      "registeredAt": "2026-10-27T10:59:29.674Z"
     }
   ],
   "smsLogs": [
@@ -1273,6 +1275,16 @@
   ],
   "notifications": [
     {
+      "id": "notif-1793098769674-191",
+      "userId": "usr-stud-4",
+      "title": "Registration confirmed",
+      "message": "You are registered for \"Strathmore AI & Machine Learning Annual Colloquium\" on 2026-11-12 at Main Auditorium.",
+      "type": "REGISTRATION",
+      "priority": "MEDIUM",
+      "read": false,
+      "createdAt": "2026-10-27T10:59:29.674Z"
+    },
+    {
       "id": "notif-1",
       "userId": "usr-stud-1",
       "title": "Registration Confirmed",
@@ -1294,6 +1306,18 @@
     }
   ],
   "activity": [
+    {
+      "id": "act-1793098769674-538",
+      "type": "STUDENT_RSVP",
+      "detail": "Grace Wanjiku (155102) registered for \"Strathmore AI & Machine Learning Annual Colloquium\"",
+      "createdAt": "2026-10-27T10:59:29.674Z"
+    },
+    {
+      "id": "act-1793098426610-925",
+      "type": "RSVP_CANCELLED",
+      "detail": "Grace Wanjiku cancelled the registration of Grace Wanjiku for \"East Africa Quantitative Finance & Data Science Summit\"",
+      "createdAt": "2026-10-27T10:53:46.622Z"
+    },
     {
       "id": "act-1",
       "type": "EVENT_CREATED",
