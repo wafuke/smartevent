@@ -1,8 +1,8 @@
 {
   "model_name": "SmartEvent attendance model",
   "algorithm": "LogisticRegression",
-  "version": "202610181900",
-  "trained_at": "2026-10-18T19:00:58.584810+00:00",
+  "version": "202610300602",
+  "trained_at": "2026-10-30T06:02:10.597006+00:00",
   "sklearn_version": "1.9.1",
   "input_columns": [
     "event_category",

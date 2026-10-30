@@ -20,7 +20,7 @@ from smartevent_ml import kaggle_prep, synthetic, clean, train
 
 def run_full_pipeline(skip_data_gen: bool = False):
     print("=================================================================")
-    print("🎓 SMARTEVENT ML PIPELINE — STRATHMORE UNIVERSITY (154210)")
+    print("SMARTEVENT ML PIPELINE — STRATHMORE UNIVERSITY (154210)")
     print("=================================================================")
     if not skip_data_gen:
         kaggle_prep.run()
@@ -28,7 +28,7 @@ def run_full_pipeline(skip_data_gen: bool = False):
         clean.run()
     results = train.run()
     print("=================================================================")
-    print("✅ END-TO-END PIPELINE COMPLETE")
+    print("END-TO-END PIPELINE COMPLETE")
     print(f"   Student-Level Test ROC-AUC : {results['test_default']['roc_auc']:.4f}")
     print(f"   Student-Level Test F1 Score: {results['test_default']['f1']:.4f}")
     print(f"   Event Headcount Test MAE   : {results['event_metrics']['mae_attendees']:.2f} attendees")
