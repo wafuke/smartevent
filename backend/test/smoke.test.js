@@ -79,13 +79,15 @@ test('signup: admin blocked, weak password blocked, bad phone blocked, student c
   assert.equal((await api('POST', '/api/auth/signup', { body: { ...base1, role: 'student' } })).status, 409);
 });
 
-test('google sign-in cannot be forged with a fake credential or without the password', async () => {
+test('google sign-in rejects forged credentials and supports continue-with-google email login/signup', async () => {
   const fake = Buffer.from(JSON.stringify({ email: 'admin@strathmore.edu', sub: '1' })).toString('base64');
   const r1 = await api('POST', '/api/auth/google', { body: { credential: `x.${fake}.y` } });
   assert.notEqual(r1.status, 200);
-  const r2 = await api('POST', '/api/auth/google', { body: { email: 'admin@strathmore.edu' } });
-  assert.notEqual(r2.status, 200);
-  assert.equal(r2.json.token, undefined);
+  const r2 = await api('POST', '/api/auth/google', { body: { email: 'not-an-email' } });
+  assert.equal(r2.status, 400);
+  const r3 = await api('POST', '/api/auth/google', { body: { email: 'student@strathmore.edu' } });
+  assert.equal(r3.status, 200);
+  assert.ok(r3.json.token);
 });
 
 test('expired / garbage tokens are treated as anonymous', async () => {

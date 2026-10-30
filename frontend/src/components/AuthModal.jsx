@@ -78,14 +78,13 @@ export default function AuthModal({ isOpen, initialTab = 'login', onClose }) {
   const [errorMsg, setErrorMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Google OAuth Account Chooser State (stores ONLY accounts signed in on this user's browser)
+  // Google OAuth Account Chooser & 1-Step Email Sign-In/Sign-Up State
   const [showGoogleFlow, setShowGoogleFlow] = useState(false);
   const [deviceGoogleAccounts, setDeviceGoogleAccounts] = useState([]);
-  const [googleStep, setGoogleStep] = useState('chooser'); // 'chooser' | 'email' | 'password'
+  const [googleStep, setGoogleStep] = useState('chooser'); // 'chooser' | 'email'
   const [googleEmail, setGoogleEmail] = useState('');
   const [googleName, setGoogleName] = useState('');
-  const [googlePassword, setGooglePassword] = useState('');
-  const [googleRole] = useState('auto');
+  const [googleRole, setGoogleRole] = useState('student');
 
   useEffect(() => {
     setIsLogin(initialTab === 'login');
@@ -104,17 +103,44 @@ export default function AuthModal({ isOpen, initialTab = 'login', onClose }) {
     const saved = getDeviceGoogleAccounts();
     setDeviceGoogleAccounts(saved);
     setGoogleEmail('');
-    setGooglePassword('');
+    setGoogleName('');
+    setGoogleRole(signupRole || 'student');
     setGoogleStep(saved.length > 0 ? 'chooser' : 'email');
     setShowGoogleFlow(true);
   };
 
-  const handleSelectSavedGoogleAccount = (acct) => {
+  const completeGoogleAuth = async ({ email, name, role }) => {
+    const trimmed = String(email || '').trim().toLowerCase();
+    if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      setErrorMsg('Enter a valid @strathmore.edu Google Workspace or Gmail address.');
+      return;
+    }
+
     setErrorMsg('');
-    setGoogleEmail(acct.email);
-    setGoogleName(acct.name || '');
-    setGooglePassword('');
-    setGoogleStep('password');
+    setIsLoading(true);
+    try {
+      const res = await authApi.googleLogin({
+        email: trimmed,
+        name: name && String(name).trim() ? String(name).trim() : undefined,
+        role: role || 'student'
+      });
+      const updated = saveDeviceGoogleAccount(res.user);
+      setDeviceGoogleAccounts(updated);
+      login(res.user, res.token);
+      onClose();
+    } catch (err) {
+      setErrorMsg(err.message || 'Google authentication failed. Please check your email.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSelectSavedGoogleAccount = (acct) => {
+    completeGoogleAuth({
+      email: acct.email,
+      name: acct.name,
+      role: acct.role || 'student'
+    });
   };
 
   const handleRemoveSavedGoogleAccount = (e, email) => {
@@ -126,43 +152,13 @@ export default function AuthModal({ isOpen, initialTab = 'login', onClose }) {
     }
   };
 
-  const handleGoogleEmailNext = (e) => {
+  const handleGoogleEmailSubmit = (e) => {
     e.preventDefault();
-    setErrorMsg('');
-    const trimmed = googleEmail.trim().toLowerCase();
-    if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
-      setErrorMsg('Enter a valid @strathmore.edu Google Workspace or Gmail address.');
-      return;
-    }
-    setGoogleEmail(trimmed);
-    setGoogleStep('password');
-  };
-
-  const handleGooglePasswordSubmit = async (e) => {
-    e.preventDefault();
-    setErrorMsg('');
-    if (!googlePassword) {
-      setErrorMsg('Please enter your Google account password.');
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const res = await authApi.googleLogin({
-        email: googleEmail.trim().toLowerCase(),
-        name: googleName.trim() || undefined,
-        password: googlePassword,
-        role: googleRole
-      });
-      const updated = saveDeviceGoogleAccount(res.user);
-      setDeviceGoogleAccounts(updated);
-      login(res.user, res.token);
-      onClose();
-    } catch (err) {
-      setErrorMsg(err.message || 'Google authentication failed. Check your password.');
-    } finally {
-      setIsLoading(false);
-    }
+    completeGoogleAuth({
+      email: googleEmail,
+      name: googleName,
+      role: googleRole
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -246,14 +242,14 @@ export default function AuthModal({ isOpen, initialTab = 'login', onClose }) {
           </div>
           <h3 className="text-xl font-black text-slate-900 tracking-tight">
             {showGoogleFlow
-              ? 'Sign in with Google'
+              ? 'Continue with Google'
               : isLogin
               ? 'Sign In to SmartEvent'
               : 'Create SmartEvent Account'}
           </h3>
           <p className="text-xs text-slate-500 font-medium">
             {showGoogleFlow
-              ? 'Continue to Strathmore University SmartEvent Portal'
+              ? 'Enter your Google or @strathmore.edu email to sign in or sign up instantly'
               : isLogin
               ? 'Enter your Strathmore email & password to access your portal'
               : 'Register as a Student or Event Organizer'}
@@ -268,13 +264,13 @@ export default function AuthModal({ isOpen, initialTab = 'login', onClose }) {
           </div>
         )}
 
-        {/* GOOGLE OAUTH ACCOUNT CHOOSER FLOW */}
+        {/* GOOGLE OAUTH ACCOUNT CHOOSER & 1-CLICK EMAIL FLOW */}
         {showGoogleFlow ? (
           <div className="space-y-4">
             {googleStep === 'chooser' && (
               <div className="space-y-3">
                 <p className="text-xs font-bold text-slate-600">
-                  Choose an account signed in on this browser:
+                  Choose an account to continue to SmartEvent:
                 </p>
                 <div className="space-y-2 max-h-60 overflow-y-auto">
                   {deviceGoogleAccounts.map((acct) => (
@@ -310,14 +306,14 @@ export default function AuthModal({ isOpen, initialTab = 'login', onClose }) {
                   type="button"
                   onClick={() => {
                     setGoogleEmail('');
-                    setGooglePassword('');
+                    setGoogleName('');
                     setErrorMsg('');
                     setGoogleStep('email');
                   }}
                   className="w-full p-3 rounded-2xl border border-dashed border-slate-300 hover:border-[#003366] hover:bg-slate-50 text-xs font-bold text-slate-700 flex items-center justify-center space-x-2"
                 >
                   <User className="w-4 h-4 text-[#003366]" />
-                  <span>Use another Google account</span>
+                  <span>Use another Google / Strathmore email</span>
                 </button>
 
                 <button
@@ -328,26 +324,74 @@ export default function AuthModal({ isOpen, initialTab = 'login', onClose }) {
                   }}
                   className="w-full py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50"
                 >
-                  ← Back to Sign In
+                  ← Back
                 </button>
               </div>
             )}
 
             {googleStep === 'email' && (
-              <form onSubmit={handleGoogleEmailNext} className="space-y-3.5">
+              <form onSubmit={handleGoogleEmailSubmit} className="space-y-3.5">
                 <div>
                   <label className="block text-[11px] font-bold uppercase text-slate-700 mb-1">
-                    Google Workspace or Gmail Address
+                    Google or Strathmore Email Address
                   </label>
                   <input
                     type="email"
                     required
                     autoFocus
-                    placeholder="name@strathmore.edu"
+                    placeholder="name@strathmore.edu or name@gmail.com"
                     value={googleEmail}
                     onChange={(e) => setGoogleEmail(e.target.value)}
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-blue-600"
                   />
+                  <span className="block text-[11px] text-slate-500 mt-1">
+                    Existing accounts sign in immediately. New emails are automatically registered.
+                  </span>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold uppercase text-slate-700 mb-1">
+                    Full Name <span className="font-normal text-slate-400">(optional for new accounts)</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Elvis Wanyama Wafuke"
+                    value={googleName}
+                    onChange={(e) => setGoogleName(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-blue-600"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold uppercase text-slate-700 mb-1.5">
+                    Account Type <span className="font-normal text-slate-400">(if creating a new account)</span>
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setGoogleRole('student')}
+                      className={`p-2 rounded-xl border text-xs font-bold flex items-center justify-center space-x-1.5 transition-all ${
+                        googleRole === 'student'
+                          ? 'border-[#003366] bg-blue-50/70 text-[#003366]'
+                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      <GraduationCap className="w-4 h-4" />
+                      <span>Student</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setGoogleRole('organizer')}
+                      className={`p-2 rounded-xl border text-xs font-bold flex items-center justify-center space-x-1.5 transition-all ${
+                        googleRole === 'organizer'
+                          ? 'border-[#003366] bg-blue-50/70 text-[#003366]'
+                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      <Building2 className="w-4 h-4" />
+                      <span>Organizer</span>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="flex gap-2 pt-1">
@@ -367,76 +411,10 @@ export default function AuthModal({ isOpen, initialTab = 'login', onClose }) {
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-sm"
-                  >
-                    Next
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {googleStep === 'password' && (
-              <form onSubmit={handleGooglePasswordSubmit} className="space-y-3.5">
-                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
-                  <div className="flex items-center space-x-2.5">
-                    <div className="w-7 h-7 rounded-full bg-[#003366] text-amber-400 flex items-center justify-center font-bold text-xs">
-                      {googleEmail.charAt(0).toUpperCase()}
-                    </div>
-                    <span className="text-xs font-bold text-slate-800">{googleEmail}</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setGoogleStep('email');
-                      setErrorMsg('');
-                    }}
-                    className="text-[11px] font-bold text-blue-600 hover:underline"
-                  >
-                    Change
-                  </button>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold uppercase text-slate-700 mb-1">
-                    Enter Your Google / Workspace Password
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      required
-                      autoFocus
-                      placeholder="Enter your account password"
-                      value={googlePassword}
-                      onChange={(e) => setGooglePassword(e.target.value)}
-                      className="w-full px-3.5 py-2.5 pr-10 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-900 outline-none focus:ring-2 focus:ring-blue-600"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-700"
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setGoogleStep(deviceGoogleAccounts.length > 0 ? 'chooser' : 'email');
-                      setErrorMsg('');
-                    }}
-                    className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50"
-                  >
-                    Back
-                  </button>
-                  <button
-                    type="submit"
                     disabled={isLoading}
-                    className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-sm"
+                    className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-xs font-bold shadow-sm"
                   >
-                    {isLoading ? 'Verifying...' : 'Sign In'}
+                    {isLoading ? 'Signing in...' : 'Continue with Google'}
                   </button>
                 </div>
               </form>
@@ -496,13 +474,13 @@ export default function AuthModal({ isOpen, initialTab = 'login', onClose }) {
                   d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.99 3.14c.95-2.85 3.6-4.96 6.72-4.96z"
                 />
               </svg>
-              <span>Continue with Google (@strathmore.edu)</span>
+              <span>Continue with Google</span>
             </button>
 
             <div className="relative flex py-0.5 items-center">
               <div className="flex-grow border-t border-slate-200"></div>
               <span className="flex-shrink mx-3 text-[10px] text-slate-400 font-bold uppercase">
-                or {isLogin ? 'sign in with email' : 'register with email'}
+                or {isLogin ? 'sign in with email & password' : 'register with email & password'}
               </span>
               <div className="flex-grow border-t border-slate-200"></div>
             </div>

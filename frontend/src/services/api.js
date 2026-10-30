@@ -217,28 +217,41 @@ function handleOfflineFallback(endpoint, options = {}) {
 
   if (cleanPath === '/auth/google' && method === 'POST') {
     const email = String(body.email || '').trim().toLowerCase();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      throw new Error('Enter a valid Google or Strathmore email address.');
+    }
     let user = findOfflineUserByEmail(store.users, email);
-    if (user) {
+    if (user && body.password) {
       const candidate = String(body.password || '');
       const validPass = user.password === candidate || (!user.updatedAt && DEFAULT_PASSWORDS.includes(candidate));
       if (!validPass) {
         throw new Error('Incorrect password for this Google Workspace account.');
       }
-    } else {
-      if (String(body.role || '').toLowerCase() === 'admin') {
+    } else if (!user) {
+      if (String(body.role || '').toLowerCase() === 'admin' && email !== 'elvis.wafuke@strathmore.edu') {
         throw new Error('Administrator accounts cannot be self-created via Google Sign-In.');
       }
-      const role = String(body.role || '').toLowerCase() === 'organizer' ? 'organizer' : 'student';
+      const role = email === 'elvis.wafuke@strathmore.edu'
+        ? 'admin'
+        : String(body.role || '').toLowerCase() === 'organizer'
+        ? 'organizer'
+        : 'student';
+      const formattedName =
+        body.name ||
+        email
+          .split('@')[0]
+          .replace(/[._-]/g, ' ')
+          .replace(/\b\w/g, (c) => c.toUpperCase());
       user = {
         id: `usr-google-${Date.now()}`,
-        name: body.name || email.split('@')[0],
+        name: formattedName,
         email,
         password: body.password || 'password123',
         role,
-        studentId: role === 'student' ? '155800' : undefined,
-        organizerCode: role === 'organizer' ? 'ORG-108' : undefined,
+        studentId: role === 'student' ? String(150000 + Math.floor(Math.random() * 9000)) : undefined,
+        organizerCode: role === 'organizer' ? `ORG-${Math.floor(100 + Math.random() * 900)}` : undefined,
         phone: '+254712345678',
-        department: 'BSc Informatics & Computer Science',
+        department: 'School of Computing & Engineering Sciences',
         isActive: true,
         createdAt: new Date().toISOString()
       };

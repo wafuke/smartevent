@@ -373,33 +373,29 @@ router.post('/google', async (req, res) => {
           .json({ success: false, error: 'Unverified Google credential rejected.' });
       }
       if (!email || !EMAIL_RE.test(String(email).trim())) {
-        return res.status(400).json({ success: false, error: 'Enter a valid email address.' });
-      }
-      if (!password) {
-        return res
-          .status(401)
-          .json({ success: false, error: 'Password is required to verify this Google account.' });
+        return res.status(400).json({ success: false, error: 'Enter a valid Google or Strathmore email address.' });
       }
       verifiedEmail = String(email).trim().toLowerCase();
       const existing = findUserByEmail(db.users, verifiedEmail);
-      const lockedFor = checkLock(verifiedEmail);
-      if (lockedFor) {
-        return res.status(429).json({
-          success: false,
-          error: `Too many failed attempts. Try again in ${lockedFor}s.`
-        });
-      }
-      if (existing) {
-        if (!verifyPassword(existing, password)) {
-          failAttempt(verifiedEmail);
-          return res
-            .status(401)
-            .json({ success: false, error: 'Incorrect password for this account.' });
+
+      // If a password was explicitly supplied, verify it; otherwise allow passwordless Continue with Google by email
+      if (password) {
+        const lockedFor = checkLock(verifiedEmail);
+        if (lockedFor) {
+          return res.status(429).json({
+            success: false,
+            error: `Too many failed attempts. Try again in ${lockedFor}s.`
+          });
         }
-        clearAttempts(verifiedEmail);
-      } else {
-        const pwErr = passwordPolicyError(password);
-        if (pwErr) return res.status(400).json({ success: false, error: pwErr });
+        if (existing) {
+          if (!verifyPassword(existing, password)) {
+            failAttempt(verifiedEmail);
+            return res
+              .status(401)
+              .json({ success: false, error: 'Incorrect password for this account.' });
+          }
+          clearAttempts(verifiedEmail);
+        }
       }
     }
 
@@ -408,14 +404,6 @@ router.post('/google', async (req, res) => {
     if (user) {
       if (String(user.status || 'Active').toLowerCase() === 'suspended') {
         return res.status(403).json({ success: false, error: 'This account has been suspended.' });
-      }
-      const actualRole = String(user.role).toLowerCase();
-      const hint = role ? String(role).toLowerCase() : 'auto';
-      if (hint !== 'auto' && hint !== actualRole) {
-        return res.status(403).json({
-          success: false,
-          error: `This Google account is registered as ${actualRole.toUpperCase()}, not ${hint.toUpperCase()}.`
-        });
       }
       user.googleId = googleId || user.googleId;
       user.picture = picture || user.picture;

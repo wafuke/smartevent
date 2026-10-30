@@ -73,11 +73,33 @@ export default function AuthScreen({
     setShowGoogleFlow(true);
   };
 
-  const handleSelectDeviceGoogleAccount = (acct) => {
+  const completeMobileGoogleAuth = async (targetEmail, targetName) => {
     setErrorMsg('');
-    setGoogleEmail(acct.email);
-    setGooglePassword('');
-    setGoogleStep('password');
+    const trimmed = String(targetEmail || '').trim().toLowerCase();
+    if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      setErrorMsg('Please enter a valid @strathmore.edu or Gmail address.');
+      return;
+    }
+    setLoading(true);
+    setBackendUrl(apiUrl);
+
+    const res = await googleSignInMobile({
+      email: trimmed,
+      name: targetName,
+      role: signupRole || 'student'
+    });
+    setLoading(false);
+
+    if (res && res.success && res.user) {
+      setDeviceAccounts(getDeviceGoogleAccounts());
+      onAuthenticate(res.user);
+    } else {
+      setErrorMsg(res?.error || 'Google authentication failed.');
+    }
+  };
+
+  const handleSelectDeviceGoogleAccount = (acct) => {
+    completeMobileGoogleAuth(acct.email, acct.name);
   };
 
   const handleRemoveDeviceGoogleAccount = (emailToRemove) => {
@@ -89,38 +111,7 @@ export default function AuthScreen({
   };
 
   const handleGoogleEmailNext = () => {
-    setErrorMsg('');
-    const trimmed = googleEmail.trim().toLowerCase();
-    if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
-      setErrorMsg('Please enter a valid @strathmore.edu or Gmail address.');
-      return;
-    }
-    setGoogleEmail(trimmed);
-    setGoogleStep('password');
-  };
-
-  const handleGooglePasswordSubmit = async () => {
-    setErrorMsg('');
-    if (!googlePassword) {
-      setErrorMsg('Please enter your Google account password.');
-      return;
-    }
-    setLoading(true);
-    setBackendUrl(apiUrl);
-
-    const res = await googleSignInMobile({
-      email: googleEmail.trim().toLowerCase(),
-      password: googlePassword,
-      role: 'auto'
-    });
-    setLoading(false);
-
-    if (res && res.success && res.user) {
-      setDeviceAccounts(getDeviceGoogleAccounts());
-      onAuthenticate(res.user);
-    } else {
-      setErrorMsg(res?.error || 'Google authentication failed.');
-    }
+    completeMobileGoogleAuth(googleEmail);
   };
 
   const handleSubmit = async () => {
@@ -333,10 +324,10 @@ export default function AuthScreen({
 
               {googleStep === 'email' && (
                 <View>
-                  <Text style={styles.fieldLabel}>Google / Strathmore Email</Text>
+                  <Text style={styles.fieldLabel}>Google / Strathmore Email Address</Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="name@strathmore.edu"
+                    placeholder="name@strathmore.edu or name@gmail.com"
                     placeholderTextColor="#94a3b8"
                     value={googleEmail}
                     onChangeText={setGoogleEmail}
@@ -362,8 +353,13 @@ export default function AuthScreen({
                     <TouchableOpacity
                       style={[styles.primaryBtn, { flex: 1, marginTop: 0 }]}
                       onPress={handleGoogleEmailNext}
+                      disabled={loading}
                     >
-                      <Text style={styles.primaryBtnText}>Next →</Text>
+                      {loading ? (
+                        <ActivityIndicator size="small" color="#ffffff" />
+                      ) : (
+                        <Text style={styles.primaryBtnText}>Continue with Google</Text>
+                      )}
                     </TouchableOpacity>
                   </View>
                 </View>
