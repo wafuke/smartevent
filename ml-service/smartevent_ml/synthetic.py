@@ -223,5 +223,7 @@ def inject_quality_issues(df: pd.DataFrame, rng) -> tuple[pd.DataFrame, dict]:
     return df, log
 
 
+run = generate
+
 if __name__ == "__main__":
     generate()
