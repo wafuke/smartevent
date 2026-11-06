@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -8,6 +8,7 @@ import {
   ScrollView,
   ActivityIndicator,
   KeyboardAvoidingView,
+  Keyboard,
   Platform
 } from 'react-native';
 import {
@@ -43,6 +44,31 @@ export default function AuthScreen({
   const [phone, setPhone] = useState('+2547');
 
   const [loading, setLoading] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const scrollRef = useRef(null);
+
+  const scrollToInput = (yOffset = 120) => {
+    setTimeout(() => {
+      if (scrollRef.current && scrollRef.current.scrollTo) {
+        scrollRef.current.scrollTo({ y: yOffset, animated: true });
+      }
+    }, 120);
+  };
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (e) => setKeyboardHeight(e?.endCoordinates?.height || 280)
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardHeight(0)
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
   const [errorMsg, setErrorMsg] = useState('');
 
   // Device Google Account Chooser State (stores ONLY accounts used on THIS device)
@@ -177,7 +203,8 @@ export default function AuthScreen({
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 12 : 0}
     >
       {/* Top Navigation Bar */}
       <View style={styles.topNav}>
@@ -199,8 +226,17 @@ export default function AuthScreen({
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        ref={scrollRef}
+        contentContainerStyle={[
+          styles.scrollContent,
+          keyboardHeight > 0 && {
+            justifyContent: 'flex-start',
+            paddingTop: 4,
+            paddingBottom: keyboardHeight + 160
+          }
+        ]}
         keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets={true}
         showsVerticalScrollIndicator={false}
       >
         {/* Optional API URL Configuration */}
@@ -223,26 +259,28 @@ export default function AuthScreen({
           </View>
         )}
 
-        {/* Brand Hero Card */}
-        <View style={styles.brandSection}>
-          <View style={styles.logoCircle}>
-            <Text style={styles.logoText}>SE</Text>
+        {/* Brand Hero Card - collapses while keyboard is open so inputs stay above keyboard */}
+        {keyboardHeight === 0 && (
+          <View style={styles.brandSection}>
+            <View style={styles.logoCircle}>
+              <Text style={styles.logoText}>SE</Text>
+            </View>
+            <Text style={styles.brandTitle}>
+              {showGoogleFlow
+                ? 'Sign in with Google'
+                : isLogin
+                ? 'Welcome Back'
+                : 'Create Account'}
+            </Text>
+            <Text style={styles.brandSub}>
+              {showGoogleFlow
+                ? 'Continue to Strathmore University SmartEvent'
+                : isLogin
+                ? 'Sign in with your Strathmore University credentials'
+                : 'Join SmartEvent as a Student or Event Organizer'}
+            </Text>
           </View>
-          <Text style={styles.brandTitle}>
-            {showGoogleFlow
-              ? 'Sign in with Google'
-              : isLogin
-              ? 'Welcome Back'
-              : 'Create Account'}
-          </Text>
-          <Text style={styles.brandSub}>
-            {showGoogleFlow
-              ? 'Continue to Strathmore University SmartEvent'
-              : isLogin
-              ? 'Sign in with your Strathmore University credentials'
-              : 'Join SmartEvent as a Student or Event Organizer'}
-          </Text>
-        </View>
+        )}
 
         {/* Auth Card */}
         <View style={styles.card}>
@@ -331,6 +369,7 @@ export default function AuthScreen({
                     placeholderTextColor="#94a3b8"
                     value={googleEmail}
                     onChangeText={setGoogleEmail}
+                    onFocus={() => scrollToInput(40)}
                     autoCapitalize="none"
                     keyboardType="email-address"
                   />
@@ -538,6 +577,7 @@ export default function AuthScreen({
                     placeholderTextColor="#94a3b8"
                     value={name}
                     onChangeText={setName}
+                    onFocus={() => scrollToInput(80)}
                   />
                 </View>
               )}
@@ -549,6 +589,7 @@ export default function AuthScreen({
                 placeholderTextColor="#94a3b8"
                 value={email}
                 onChangeText={setEmail}
+                onFocus={() => scrollToInput(isLogin ? 60 : 140)}
                 autoCapitalize="none"
                 keyboardType="email-address"
               />
@@ -564,6 +605,7 @@ export default function AuthScreen({
                         placeholderTextColor="#94a3b8"
                         value={studentId}
                         onChangeText={setStudentId}
+                        onFocus={() => scrollToInput(200)}
                         keyboardType="numeric"
                       />
                     </View>
@@ -576,6 +618,7 @@ export default function AuthScreen({
                         placeholderTextColor="#94a3b8"
                         value={department}
                         onChangeText={setDepartment}
+                        onFocus={() => scrollToInput(200)}
                       />
                     </View>
                   )}
@@ -588,6 +631,7 @@ export default function AuthScreen({
                       placeholderTextColor="#94a3b8"
                       value={phone}
                       onChangeText={setPhone}
+                      onFocus={() => scrollToInput(200)}
                       keyboardType="phone-pad"
                     />
                   </View>
@@ -603,6 +647,7 @@ export default function AuthScreen({
                   secureTextEntry={!showPassword}
                   value={password}
                   onChangeText={setPassword}
+                  onFocus={() => scrollToInput(isLogin ? 130 : 270)}
                   autoCapitalize="none"
                 />
                 <TouchableOpacity
@@ -623,6 +668,7 @@ export default function AuthScreen({
                     secureTextEntry={!showPassword}
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
+                    onFocus={() => scrollToInput(330)}
                     autoCapitalize="none"
                   />
                 </View>

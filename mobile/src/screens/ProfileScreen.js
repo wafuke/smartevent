@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   Text,
@@ -6,7 +6,10 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
-  Alert
+  Alert,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform
 } from 'react-native';
 import { getBackendUrl, updateUserProfileMobile } from '../services/api';
 
@@ -25,6 +28,31 @@ export default function ProfileScreen({
     user?.department || 'School of Computing & Engineering Sciences (SCES)'
   );
   const [saving, setSaving] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const scrollRef = useRef(null);
+
+  const scrollToInput = (y = 200) => {
+    setTimeout(() => {
+      if (scrollRef.current && scrollRef.current.scrollTo) {
+        scrollRef.current.scrollTo({ y, animated: true });
+      }
+    }, 120);
+  };
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (e) => setKeyboardHeight(e?.endCoordinates?.height || 280)
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardHeight(0)
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const handleSave = async () => {
     setSaving(true);
@@ -52,8 +80,20 @@ export default function ProfileScreen({
   };
 
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={[
+          styles.content,
+          keyboardHeight > 0 && { paddingBottom: keyboardHeight + 160 }
+        ]}
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets={true}
+        showsVerticalScrollIndicator={false}
+      >
         {/* Profile Card */}
         <View style={styles.profileHeader}>
           <View style={styles.avatar}>
@@ -119,7 +159,12 @@ export default function ProfileScreen({
             <View style={{ gap: 10 }}>
               <View>
                 <Text style={styles.label}>Full Name</Text>
-                <TextInput style={styles.input} value={name} onChangeText={setName} />
+                <TextInput
+                  style={styles.input}
+                  value={name}
+                  onChangeText={setName}
+                  onFocus={() => scrollToInput(180)}
+                />
               </View>
               <View>
                 <Text style={styles.label}>Kenyan Mobile Phone (+2547...)</Text>
@@ -127,12 +172,18 @@ export default function ProfileScreen({
                   style={styles.input}
                   value={phone}
                   onChangeText={setPhone}
+                  onFocus={() => scrollToInput(240)}
                   keyboardType="phone-pad"
                 />
               </View>
               <View>
                 <Text style={styles.label}>Department / Degree Program</Text>
-                <TextInput style={styles.input} value={department} onChangeText={setDepartment} />
+                <TextInput
+                  style={styles.input}
+                  value={department}
+                  onChangeText={setDepartment}
+                  onFocus={() => scrollToInput(300)}
+                />
               </View>
               <TouchableOpacity
                 style={styles.saveButton}
@@ -177,7 +228,7 @@ export default function ProfileScreen({
           <Text style={styles.signOutText}>Sign Out & Return to Public Home</Text>
         </TouchableOpacity>
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

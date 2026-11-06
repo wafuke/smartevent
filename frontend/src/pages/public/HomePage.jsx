@@ -417,8 +417,8 @@ export default function HomePage({ onOpenAuthModal }) {
 
       {/* Single Event Detail Modal */}
       {selectedEvent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-6 space-y-5 shadow-2xl">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 space-y-5 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-200 pb-3">
               <span className="text-xs font-bold px-2.5 py-1 rounded-md bg-blue-50 text-[#003366] border border-blue-200">
                 {selectedEvent.category}

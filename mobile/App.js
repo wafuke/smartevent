@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   StyleSheet,
   View,
@@ -8,6 +8,8 @@ import {
   TextInput,
   Alert,
   Platform,
+  Keyboard,
+  KeyboardAvoidingView,
   StatusBar as RNStatusBar
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
@@ -67,6 +69,32 @@ export default function App() {
     message: '[Strathmore SmartEvent] Reminder: Please arrive 15 mins early with your student ID pass.'
   });
   const [smsStatusMsg, setSmsStatusMsg] = useState('');
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const createScrollRef = useRef(null);
+  const smsScrollRef = useRef(null);
+
+  const scrollFormTo = (ref, y = 120) => {
+    setTimeout(() => {
+      if (ref?.current && ref.current.scrollTo) {
+        ref.current.scrollTo({ y, animated: true });
+      }
+    }, 120);
+  };
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (e) => setKeyboardHeight(e?.endCoordinates?.height || 280)
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardHeight(0)
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const loadData = async () => {
     const evts = await fetchEvents();
@@ -474,81 +502,102 @@ export default function App() {
 
       if (activeTab === 'create') {
         return (
-          <ScrollView contentContainerStyle={styles.scrollPad} showsVerticalScrollIndicator={false}>
-            <Text style={styles.sectionHeader}>Create New Campus Event</Text>
-            <Text style={styles.sectionSub}>
-              Listing as: {user.name} ({user.organizerCode || 'Organizer'})
-            </Text>
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          >
+            <ScrollView
+              ref={createScrollRef}
+              contentContainerStyle={[
+                styles.scrollPad,
+                keyboardHeight > 0 && { paddingBottom: keyboardHeight + 160 }
+              ]}
+              keyboardShouldPersistTaps="handled"
+              automaticallyAdjustKeyboardInsets={true}
+              showsVerticalScrollIndicator={false}
+            >
+              <Text style={styles.sectionHeader}>Create New Campus Event</Text>
+              <Text style={styles.sectionSub}>
+                Listing as: {user.name} ({user.organizerCode || 'Organizer'})
+              </Text>
 
-            <View style={styles.formCard}>
-              <Text style={styles.inputLabel}>Event Title *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g., AI & Cybersecurity Workshop"
-                value={newEvt.title}
-                onChangeText={(t) => setNewEvt({ ...newEvt, title: t })}
-              />
+              <View style={styles.formCard}>
+                <Text style={styles.inputLabel}>Event Title *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g., AI & Cybersecurity Workshop"
+                  value={newEvt.title}
+                  onChangeText={(t) => setNewEvt({ ...newEvt, title: t })}
+                  onFocus={() => scrollFormTo(createScrollRef, 20)}
+                />
 
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.inputLabel}>Category</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={newEvt.category}
-                    onChangeText={(t) => setNewEvt({ ...newEvt, category: t })}
-                  />
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.inputLabel}>Category</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={newEvt.category}
+                      onChangeText={(t) => setNewEvt({ ...newEvt, category: t })}
+                      onFocus={() => scrollFormTo(createScrollRef, 80)}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.inputLabel}>Capacity</Text>
+                    <TextInput
+                      style={styles.input}
+                      keyboardType="numeric"
+                      value={String(newEvt.venueCapacity)}
+                      onChangeText={(t) => setNewEvt({ ...newEvt, venueCapacity: t })}
+                      onFocus={() => scrollFormTo(createScrollRef, 80)}
+                    />
+                  </View>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.inputLabel}>Capacity</Text>
-                  <TextInput
-                    style={styles.input}
-                    keyboardType="numeric"
-                    value={String(newEvt.venueCapacity)}
-                    onChangeText={(t) => setNewEvt({ ...newEvt, venueCapacity: t })}
-                  />
+
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.inputLabel}>Date (YYYY-MM-DD)</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={newEvt.date}
+                      onChangeText={(t) => setNewEvt({ ...newEvt, date: t })}
+                      onFocus={() => scrollFormTo(createScrollRef, 140)}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.inputLabel}>Time Slot</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={newEvt.time}
+                      onChangeText={(t) => setNewEvt({ ...newEvt, time: t })}
+                      onFocus={() => scrollFormTo(createScrollRef, 140)}
+                    />
+                  </View>
                 </View>
+
+                <Text style={styles.inputLabel}>Venue Location</Text>
+                <TextInput
+                  style={styles.input}
+                  value={newEvt.venue}
+                  onChangeText={(t) => setNewEvt({ ...newEvt, venue: t })}
+                  onFocus={() => scrollFormTo(createScrollRef, 200)}
+                />
+
+                <Text style={styles.inputLabel}>Description</Text>
+                <TextInput
+                  style={[styles.input, { height: 68, textAlignVertical: 'top' }]}
+                  multiline
+                  placeholder="Describe event agenda, speakers, and requirements..."
+                  value={newEvt.description}
+                  onChangeText={(t) => setNewEvt({ ...newEvt, description: t })}
+                  onFocus={() => scrollFormTo(createScrollRef, 260)}
+                />
+
+                <TouchableOpacity style={styles.primaryBtn} onPress={handleCreateEvent}>
+                  <Text style={styles.primaryBtnText}>Publish Campus Event</Text>
+                </TouchableOpacity>
               </View>
-
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.inputLabel}>Date (YYYY-MM-DD)</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={newEvt.date}
-                    onChangeText={(t) => setNewEvt({ ...newEvt, date: t })}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.inputLabel}>Time Slot</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={newEvt.time}
-                    onChangeText={(t) => setNewEvt({ ...newEvt, time: t })}
-                  />
-                </View>
-              </View>
-
-              <Text style={styles.inputLabel}>Venue Location</Text>
-              <TextInput
-                style={styles.input}
-                value={newEvt.venue}
-                onChangeText={(t) => setNewEvt({ ...newEvt, venue: t })}
-              />
-
-              <Text style={styles.inputLabel}>Description</Text>
-              <TextInput
-                style={[styles.input, { height: 68, textAlignVertical: 'top' }]}
-                multiline
-                placeholder="Describe event agenda, speakers, and requirements..."
-                value={newEvt.description}
-                onChangeText={(t) => setNewEvt({ ...newEvt, description: t })}
-              />
-
-              <TouchableOpacity style={styles.primaryBtn} onPress={handleCreateEvent}>
-                <Text style={styles.primaryBtnText}>Publish Campus Event</Text>
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
+            </ScrollView>
+          </KeyboardAvoidingView>
         );
       }
 
@@ -714,96 +763,112 @@ export default function App() {
   };
 
   const renderSmsStudio = () => (
-    <ScrollView contentContainerStyle={styles.scrollPad} showsVerticalScrollIndicator={false}>
-      <Text style={styles.sectionHeader}>Africa's Talking Priority SMS Gateway</Text>
-      <Text style={styles.sectionSub}>
-        Broadcast HIGH / MEDIUM / LOW priority alerts to Kenyan E.164 (+254) numbers
-      </Text>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView
+        ref={smsScrollRef}
+        contentContainerStyle={[
+          styles.scrollPad,
+          keyboardHeight > 0 && { paddingBottom: keyboardHeight + 160 }
+        ]}
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets={true}
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={styles.sectionHeader}>Africa's Talking Priority SMS Gateway</Text>
+        <Text style={styles.sectionSub}>
+          Broadcast HIGH / MEDIUM / LOW priority alerts to Kenyan E.164 (+254) numbers
+        </Text>
 
-      <View style={styles.formCard}>
-        <Text style={styles.inputLabel}>Message Type (Filtered by Each Student's Chosen SMS Priority)</Text>
-        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
-          {['URGENT', 'REMINDER', 'ANNOUNCEMENT'].map((k) => (
-            <TouchableOpacity
-              key={k}
-              style={[styles.prioBtn, smsForm.kind === k && styles.prioBtnActive]}
-              onPress={() => setSmsForm({ ...smsForm, kind: k })}
-            >
+        <View style={styles.formCard}>
+          <Text style={styles.inputLabel}>Message Type (Filtered by Each Student's Chosen SMS Priority)</Text>
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
+            {['URGENT', 'REMINDER', 'ANNOUNCEMENT'].map((k) => (
+              <TouchableOpacity
+                key={k}
+                style={[styles.prioBtn, smsForm.kind === k && styles.prioBtnActive]}
+                onPress={() => setSmsForm({ ...smsForm, kind: k })}
+              >
+                <Text
+                  style={[
+                    styles.prioBtnText,
+                    smsForm.kind === k && styles.prioBtnTextActive
+                  ]}
+                >
+                  {k}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <Text style={styles.inputLabel}>Recipient Phone Numbers (+254...)</Text>
+          <TextInput
+            style={styles.input}
+            value={smsForm.phoneNumbers}
+            onChangeText={(t) => setSmsForm({ ...smsForm, phoneNumbers: t })}
+            onFocus={() => scrollFormTo(smsScrollRef, 80)}
+          />
+
+          <Text style={styles.inputLabel}>SMS Broadcast Content</Text>
+          <TextInput
+            style={[styles.input, { height: 64, textAlignVertical: 'top' }]}
+            multiline
+            value={smsForm.message}
+            onChangeText={(t) => setSmsForm({ ...smsForm, message: t })}
+            onFocus={() => scrollFormTo(smsScrollRef, 160)}
+          />
+
+          {smsStatusMsg ? (
+            <View style={styles.smsFeedbackBox}>
+              <Text style={styles.smsFeedbackText}>{smsStatusMsg}</Text>
+            </View>
+          ) : null}
+
+          <TouchableOpacity style={styles.primaryBtn} onPress={handleSendSms}>
+            <Text style={styles.primaryBtnText}>Send Priority SMS Broadcast</Text>
+          </TouchableOpacity>
+        </View>
+
+        <Text style={[styles.sectionHeader, { marginTop: 14 }]}>
+          SMS Delivery Logs Table ({smsLogs.length})
+        </Text>
+        <View style={styles.tableCard}>
+          <View style={styles.tableHeaderRow}>
+            <Text style={[styles.th, { flex: 0.9 }]}>Priority</Text>
+            <Text style={[styles.th, { flex: 2.2 }]}>Event & Message</Text>
+            <Text style={[styles.th, { flex: 1 }]}>Status</Text>
+          </View>
+          {smsLogs.map((log, i) => (
+            <View key={log.id || i} style={styles.tableDataRow}>
               <Text
                 style={[
-                  styles.prioBtnText,
-                  smsForm.kind === k && styles.prioBtnTextActive
+                  styles.tdBold,
+                  {
+                    flex: 0.9,
+                    color: log.priority === 'HIGH' ? '#dc2626' : '#0284c7'
+                  }
                 ]}
               >
-                {k}
+                {log.priority || 'HIGH'}
               </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        <Text style={styles.inputLabel}>Recipient Phone Numbers (+254...)</Text>
-        <TextInput
-          style={styles.input}
-          value={smsForm.phoneNumbers}
-          onChangeText={(t) => setSmsForm({ ...smsForm, phoneNumbers: t })}
-        />
-
-        <Text style={styles.inputLabel}>SMS Broadcast Content</Text>
-        <TextInput
-          style={[styles.input, { height: 64, textAlignVertical: 'top' }]}
-          multiline
-          value={smsForm.message}
-          onChangeText={(t) => setSmsForm({ ...smsForm, message: t })}
-        />
-
-        {smsStatusMsg ? (
-          <View style={styles.smsFeedbackBox}>
-            <Text style={styles.smsFeedbackText}>{smsStatusMsg}</Text>
-          </View>
-        ) : null}
-
-        <TouchableOpacity style={styles.primaryBtn} onPress={handleSendSms}>
-          <Text style={styles.primaryBtnText}>Send Priority SMS Broadcast</Text>
-        </TouchableOpacity>
-      </View>
-
-      <Text style={[styles.sectionHeader, { marginTop: 14 }]}>
-        SMS Delivery Logs Table ({smsLogs.length})
-      </Text>
-      <View style={styles.tableCard}>
-        <View style={styles.tableHeaderRow}>
-          <Text style={[styles.th, { flex: 0.9 }]}>Priority</Text>
-          <Text style={[styles.th, { flex: 2.2 }]}>Event & Message</Text>
-          <Text style={[styles.th, { flex: 1 }]}>Status</Text>
-        </View>
-        {smsLogs.map((log, i) => (
-          <View key={log.id || i} style={styles.tableDataRow}>
-            <Text
-              style={[
-                styles.tdBold,
-                {
-                  flex: 0.9,
-                  color: log.priority === 'HIGH' ? '#dc2626' : '#0284c7'
-                }
-              ]}
-            >
-              {log.priority || 'HIGH'}
-            </Text>
-            <View style={{ flex: 2.2 }}>
-              <Text style={styles.tdBold} numberOfLines={1}>
-                {log.eventTitle || 'Campus Alert'}
-              </Text>
-              <Text style={styles.tdSub} numberOfLines={2}>
-                {log.message}
+              <View style={{ flex: 2.2 }}>
+                <Text style={styles.tdBold} numberOfLines={1}>
+                  {log.eventTitle || 'Campus Alert'}
+                </Text>
+                <Text style={styles.tdSub} numberOfLines={2}>
+                  {log.message}
+                </Text>
+              </View>
+              <Text style={[styles.td, { flex: 1, color: '#059669', fontWeight: 'bold' }]}>
+                {log.status || 'SENT'}
               </Text>
             </View>
-            <Text style={[styles.td, { flex: 1, color: '#059669', fontWeight: 'bold' }]}>
-              {log.status || 'SENT'}
-            </Text>
-          </View>
-        ))}
-      </View>
-    </ScrollView>
+          ))}
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 
   const renderBottomTabs = () => {
