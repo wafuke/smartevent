@@ -1,12 +1,14 @@
 ================================================================================
   SMARTEVENT - STEP-BY-STEP INSTRUCTIONS TO RUN ALL SERVICES SIDE-BY-SIDE
   Strathmore University Capstone Project | Elvis Wanyama Wafuke (154210)
+  Supervisor: Mr. Allan Vikiru
 ================================================================================
 
-HOW TO OPEN 3 TERMINALS IN VS CODE:
-------------------------------------
+HOW TO OPEN TERMINALS IN VS CODE:
+---------------------------------
 1. Press Ctrl + ~ (or click Terminal -> New Terminal).
-2. Click the '+' button in the top-right corner of the terminal window TWICE to open 3 terminal tabs.
+2. Click the '+' button in the top-right corner of the terminal panel to open
+   separate terminal tabs for each service below.
 
 --------------------------------------------------------------------------------
 TERMINAL 1: NODE.JS BACKEND REST API & PRIORITY SMS ENGINE (PORT 5000)
@@ -14,13 +16,20 @@ TERMINAL 1: NODE.JS BACKEND REST API & PRIORITY SMS ENGINE (PORT 5000)
 Commands to run:
   cd backend
   npm install
-  npm run dev
+  npm start
+  (or: npm run dev)
+
+Run automated backend test suite (19 tests):
+  cd backend
+  npm test
 
 Access Points:
   - Backend Root / API Gateway: http://localhost:5000
+  - API Health & DB Metrics:    http://localhost:5000/api/health
   - Full Database Inspection:   http://localhost:5000/api/db
   - Events API:                 http://localhost:5000/api/events
   - Student RSVPs API:          http://localhost:5000/api/registrations
+  - Priority SMS Status API:    http://localhost:5000/api/sms/status
   - Priority SMS Logs API:      http://localhost:5000/api/sms/logs
 
 --------------------------------------------------------------------------------
@@ -32,13 +41,18 @@ Commands to run:
   python train_model.py
   python main.py
 
+Note: Even if Terminal 2 is not running, the Node.js backend includes a built-in
+trained Scikit-Learn Logistic Regression fallback engine (/api/ml/predict and
+/api/ml/metrics) so ML predictions and model diagnostics always work offline.
+
 Access Points:
   - ML Prediction API Health:   http://localhost:8000/health
   - Interactive Swagger Docs:   http://localhost:8000/docs
   - ML Prediction Endpoint:     POST http://localhost:8000/predict
+  - Backend ML Metrics Proxy:   http://localhost:5000/api/ml/metrics
 
 --------------------------------------------------------------------------------
-TERMINAL 3: REACT + VITE FRONTEND WEB DASHBOARD & STUDENT MOBILE APP (PORT 5173)
+TERMINAL 3: REACT + VITE FRONTEND WEB DASHBOARD (PORT 5173)
 --------------------------------------------------------------------------------
 Commands to run:
   cd frontend
@@ -46,12 +60,67 @@ Commands to run:
   npm run dev
 
 Access Points:
-  - SmartEvent Web & Mobile App: http://localhost:5173
+  - SmartEvent Web Application: http://localhost:5173
 
 --------------------------------------------------------------------------------
-GOOGLE COLAB NOTEBOOK LINK (GOOGLE DRIVE INTEGRATION)
+TERMINAL 4 (OPTIONAL): REACT NATIVE / EXPO MOBILE APPLICATION
 --------------------------------------------------------------------------------
-To run the ML training model in Google Colab with Google Drive sync, open:
-https://colab.research.google.com/github/wafuke/smartevent/blob/main/notebooks/SmartEvent_ML_Attendance_Prediction.ipynb
+Commands to run:
+  cd mobile
+  npm install
+  npx expo start
+  (Press 'w' for Web preview, 'a' for Android Emulator, or scan the QR code
+   with the Expo Go app on your phone)
 
+--------------------------------------------------------------------------------
+AUTHENTICATION & 1-STEP "CONTINUE WITH GOOGLE"
+--------------------------------------------------------------------------------
+1. 1-Step Continue with Google (Passwordless Sign-In & Sign-Up):
+   - Click "Continue with Google (@strathmore.edu)" on the Web or Mobile login screen.
+   - Enter ANY existing email below to sign straight into that account without a password.
+   - Or enter ANY new @strathmore.edu or @gmail.com email address (and pick Student
+     or Event Organizer) to automatically create a new account and log in immediately.
+
+2. Primary Accounts (Standard Login Password: password123):
+   - Super Admin (Elvis Wanyama Wafuke):
+       Email:    elvis.wafuke@strathmore.edu (or admin@strathmore.edu)
+       Password: password123
+   - Executive Admin (Mr. Allan Vikiru):
+       Email:    allan.vikiru@strathmore.edu
+       Password: password123
+   - Event Organizer (SCES Dean's Office):
+       Email:    organizer@strathmore.edu
+       Password: password123
+   - Student (Elvis Wanyama Wafuke - 154210):
+       Email:    student@strathmore.edu
+       Password: password123
+   - Full list of 22 seeded accounts & 16 campus events: see DUMMY_LOGINS.txt
+
+--------------------------------------------------------------------------------
+AFRICA'S TALKING SMS GATEWAY (OPTION A SANDBOX vs. OPTION B LIVE CARRIER SMS)
+--------------------------------------------------------------------------------
+- Pre-configured in backend/.env with Africa's Talking API Key.
+- Option A (Sandbox / Simulation Mode):
+    Uses AT_USERNAME=sandbox. Dispatches to the Africa's Talking Sandbox Simulator
+    and logs delivery receipts without requiring airtime.
+- Option B (Live Carrier SMS to Real Phone Numbers):
+    1. Log in as Super Admin (elvis.wafuke@strathmore.edu) or Organizer.
+    2. Open the Priority SMS Engine panel and click "Configure Option B (Live SMS)".
+    3. Enter your Live App Username from https://account.africastalking.com
+       (not "sandbox") and your API Key, then click "Save & Activate Gateway".
+    4. Alternatively, update AT_USERNAME in backend/.env to your live username.
+    5. Use "Direct Live / Test SMS to Any Phone Number" to send an instant SMS
+       to any Kenyan phone number (+2547XXXXXXXX or 07XXXXXXXX).
+
+--------------------------------------------------------------------------------
+GOOGLE COLAB NOTEBOOK (MACHINE LEARNING PIPELINE)
+--------------------------------------------------------------------------------
+To run or inspect the ML training pipeline in Google Colab:
+1. Direct GitHub-to-Colab Link:
+   https://colab.research.google.com/github/wafuke/smartevent/blob/main/notebooks/SmartEvent_ML_Attendance_Prediction.ipynb
+2. Or open https://colab.research.google.com -> File -> Upload Notebook ->
+   select notebooks/SmartEvent_ML_Attendance_Prediction.ipynb from this folder.
+   (The notebook automatically generates the 2,500-record synthetic dataset if
+   no CSV is uploaded, trains Logistic Regression vs. Random Forest vs. Gradient
+   Boosting, and exports backend/data/ml_model.json).
 ================================================================================
