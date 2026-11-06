@@ -3,6 +3,7 @@ const router = express.Router();
 const { readLocalData, writeLocalData, logActivity, addNotification } = require('../db');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const { normalizeKenyanPhone } = require('../utils/phone');
+const { normalizeTier, tierLabel, recomputeEventSms } = require('../utils/smsTier');
 
 function ownsEvent(db, user, eventId) {
   const ev = (db.events || []).find((e) => e.id === eventId);
@@ -71,6 +72,15 @@ router.post('/', requireRole(['student']), (req, res) => {
     });
   }
 
+  // The STUDENT decides how much SMS they want for this event (0 none, 1 low, 2 medium, 3 high).
+  // Falls back to their saved default preference, then to MEDIUM.
+  const me = (db.users || []).find((u) => u.id === req.user.id) || {};
+  const rawTier = (req.body || {}).smsPriority;
+  if (rawTier !== undefined && normalizeTier(rawTier, -1) === -1) {
+    return res.status(400).json({ success: false, error: 'SMS priority must be NONE, LOW, MEDIUM or HIGH.' });
+  }
+  const smsPriority = normalizeTier(rawTier, normalizeTier(me.smsPriority));
+
   const registration = {
     id: `reg-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
     eventId,
@@ -80,6 +90,8 @@ router.post('/', requireRole(['student']), (req, res) => {
     studentName: req.user.name,
     studentEmail: req.user.email,
     phone,
+    smsPriority,
+    smsPriorityLabel: tierLabel(smsPriority),
     status: 'Confirmed',
     registeredAt: new Date().toISOString()
   };
@@ -87,6 +99,7 @@ router.post('/', requireRole(['student']), (req, res) => {
 
   event.registrationCount = (event.registrationCount || 0) + 1;
   event.predictedAttendance = Math.round(event.registrationCount * (event.pastAttendanceRate || 0.8));
+  recomputeEventSms(db, event);
 
   addNotification(db, {
     userId: req.user.id,
@@ -108,6 +121,7 @@ function cancelRegistration(db, index, actor) {
     event.registrationCount -= 1;
     event.predictedAttendance = Math.round(event.registrationCount * (event.pastAttendanceRate || 0.8));
   }
+  recomputeEventSms(db, event);
   if (removed.userId && removed.userId !== actor.id) {
     addNotification(db, {
       userId: removed.userId,
@@ -120,6 +134,22 @@ function cancelRegistration(db, index, actor) {
   logActivity(db, 'RSVP_CANCELLED', `${actor.name} cancelled the registration of ${removed.studentName} for "${removed.eventTitle || removed.eventId}"`);
   return removed;
 }
+
+// PUT /api/registrations/event/:eventId/sms-priority - the student changes their own SMS tier for an event
+router.put('/event/:eventId/sms-priority', requireRole(['student']), (req, res) => {
+  const tier = normalizeTier((req.body || {}).smsPriority, -1);
+  if (tier === -1) return res.status(400).json({ success: false, error: 'SMS priority must be NONE, LOW, MEDIUM or HIGH.' });
+
+  const db = readLocalData();
+  const reg = (db.registrations || []).find((r) => r.eventId === req.params.eventId && r.userId === req.user.id);
+  if (!reg) return res.status(404).json({ success: false, error: 'You are not registered for this event.' });
+
+  reg.smsPriority = tier;
+  reg.smsPriorityLabel = tierLabel(tier);
+  recomputeEventSms(db, (db.events || []).find((e) => e.id === reg.eventId));
+  writeLocalData(db);
+  res.json({ success: true, message: `SMS priority for this event set to ${tierLabel(tier)}.`, data: reg });
+});
 
 // DELETE /api/registrations/event/:eventId - the student cancels their own RSVP for an event
 router.delete('/event/:eventId', requireRole(['student']), (req, res) => {

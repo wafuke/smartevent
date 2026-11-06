@@ -13,6 +13,7 @@ import {
 import { eventsApi, categoriesApi, registrationsApi } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../components/ui';
+import SmsPriorityPicker from '../../components/SmsPriorityPicker';
 
 export default function HomePage({ onOpenAuthModal }) {
   const { user, navigate, getRoleDashboardPath } = useAuth();
@@ -24,6 +25,7 @@ export default function HomePage({ onOpenAuthModal }) {
   const [sortBy, setSortBy] = useState('date'); // 'date' | 'popular'
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [rsvpLoading, setRsvpLoading] = useState(false);
+  const [homeTier, setHomeTier] = useState(2);
 
   const loadPublicData = () => {
     eventsApi
@@ -72,7 +74,7 @@ export default function HomePage({ onOpenAuthModal }) {
     }
     setRsvpLoading(true);
     try {
-      await registrationsApi.register(evt.id);
+      await registrationsApi.register({ eventId: evt.id, smsPriority: homeTier });
       toast.success(`RSVP confirmed for "${evt.title}"! Digital Pass generated.`);
       setSelectedEvent(null);
       loadPublicData();
@@ -334,11 +336,14 @@ export default function HomePage({ onOpenAuthModal }) {
                     {user ? (
                       String(user.role).toLowerCase() === 'student' ? (
                         <button
-                          onClick={() => handleQuickRsvp(evt)}
+                          onClick={() => {
+                            setHomeTier(Number(user?.smsPriority ?? 2));
+                            setSelectedEvent(evt);
+                          }}
                           disabled={isFull || rsvpLoading}
                           className="py-2 px-4 text-xs font-bold text-white bg-[#003366] hover:bg-[#002244] disabled:opacity-50 rounded-xl transition-all shadow-2xs"
                         >
-                          {isFull ? 'Event Full' : '1-Tap RSVP'}
+                          {isFull ? 'Event Full' : 'RSVP'}
                         </button>
                       ) : (
                         <button
@@ -463,6 +468,15 @@ export default function HomePage({ onOpenAuthModal }) {
                 </div>
               </div>
             </div>
+
+            {user && String(user.role).toLowerCase() === 'student' && (
+              <div className="space-y-2 p-3 rounded-xl bg-slate-50 border border-slate-200">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
+                  Your SMS priority for this event
+                </div>
+                <SmsPriorityPicker value={homeTier} onChange={setHomeTier} />
+              </div>
+            )}
 
             <div className="pt-2 flex justify-end space-x-3">
               <button

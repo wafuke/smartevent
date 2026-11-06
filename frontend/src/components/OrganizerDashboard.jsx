@@ -138,10 +138,13 @@ export default function OrganizerDashboard({ events, setEvents, onOpenCreateModa
                       <span className="text-[11px] font-bold px-2.5 py-1 rounded-md bg-blue-50 text-blue-900 border border-blue-200">
                         {evt.category}
                       </span>
-                      <span className={`text-[11px] font-bold px-2.5 py-1 rounded-md ${
-                        evt.smsPriority === 3 ? 'badge-priority-high' : evt.smsPriority === 2 ? 'badge-priority-medium' : 'badge-priority-low'
-                      }`}>
-                        {evt.smsPriority === 3 ? 'High Priority' : evt.smsPriority === 2 ? 'Medium Priority' : 'Low Priority'}
+                      <span
+                        title=`Chosen by the students: ${evt.smsMix?.high || 0} high, ${evt.smsMix?.medium || 0} medium, ${evt.smsMix?.low || 0} low, ${evt.smsMix?.none || 0} none`}
+                        className={`text-[11px] font-bold px-2.5 py-1 rounded-md ${
+                          evt.smsPriority === 3 ? 'badge-priority-high' : evt.smsPriority === 2 ? 'badge-priority-medium' : 'badge-priority-low'
+                        }`}
+                      >
+                        Students SMS: {evt.registrationCount ? ['None', 'Low', 'Medium', 'High'][evt.smsPriority ?? 2] : 'not set yet'}
                       </span>
                     </div>
 

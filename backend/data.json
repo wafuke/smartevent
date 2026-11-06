@@ -17,7 +17,7 @@
       "clearanceLevel": "Super Admin",
       "authProvider": "local,google",
       "createdAt": "2026-08-01T08:00:00.000Z",
-      "lastLoginAt": "2026-10-30T05:26:06.292Z"
+      "lastLoginAt": "2026-11-06T05:26:33.041Z"
     },
     {
       "id": "usr-admin-2",
@@ -139,7 +139,8 @@
       "phone": "+254715778899",
       "verified": true,
       "authProvider": "local,google",
-      "createdAt": "2026-08-21T11:45:00.000Z"
+      "createdAt": "2026-08-21T11:45:00.000Z",
+      "lastLoginAt": "2026-11-06T05:38:26.055Z"
     },
     {
       "id": "usr-org-8",
@@ -199,7 +200,7 @@
       "yearOfStudy": 4,
       "authProvider": "local,google",
       "createdAt": "2026-09-01T08:00:00.000Z",
-      "lastLoginAt": "2026-10-27T16:09:59.073Z"
+      "lastLoginAt": "2026-11-06T05:27:58.735Z"
     },
     {
       "id": "usr-stud-2",
@@ -213,7 +214,8 @@
       "department": "BSc Computer Networks & Cyber Security",
       "yearOfStudy": 3,
       "authProvider": "local,google",
-      "createdAt": "2026-09-02T09:10:00.000Z"
+      "createdAt": "2026-09-02T09:10:00.000Z",
+      "lastLoginAt": "2026-11-06T05:53:00.974Z"
     },
     {
       "id": "usr-stud-3",
@@ -742,14 +744,21 @@
       "dayOfWeek": "Thursday",
       "venue": "SCES Lecture Theatre 4 (LT4)",
       "venueCapacity": 180,
-      "registrationCount": 164,
+      "registrationCount": 165,
       "smsPriority": 3,
       "featured": false,
       "status": "Upcoming",
       "organizerId": "usr-org-1",
       "organizerName": "Dr. Joseph Orero (SCES Dean's Office)",
       "description": "Official BSc Informatics & Computer Science project defense showcase evaluated by SCES faculty panels and industry supervisors.",
-      "createdAt": "2026-10-02T10:00:00.000Z"
+      "createdAt": "2026-10-02T10:00:00.000Z",
+      "predictedAttendance": 132,
+      "smsMix": {
+        "none": 0,
+        "low": 0,
+        "medium": 0,
+        "high": 1
+      }
     },
     {
       "id": "evt-103",
@@ -1163,6 +1172,20 @@
       "phone": "+254715998811",
       "status": "Confirmed",
       "registeredAt": "2026-10-27T10:59:29.674Z"
+    },
+    {
+      "id": "reg-1793944428264-495",
+      "eventId": "evt-102",
+      "eventTitle": "Final Year IS Project Defense & Poster Exhibition",
+      "userId": "usr-stud-2",
+      "studentId": "154382",
+      "studentName": "Amina Hassan",
+      "studentEmail": "amina.hassan@strathmore.edu",
+      "phone": "+254722112233",
+      "smsPriority": 3,
+      "smsPriorityLabel": "HIGH",
+      "status": "Confirmed",
+      "registeredAt": "2026-11-06T05:53:48.264Z"
     }
   ],
   "smsLogs": [
@@ -1275,6 +1298,16 @@
   ],
   "notifications": [
     {
+      "id": "notif-1793944428264-515",
+      "userId": "usr-stud-2",
+      "title": "Registration confirmed",
+      "message": "You are registered for \"Final Year IS Project Defense & Poster Exhibition\" on 2026-11-26 at SCES Lecture Theatre 4 (LT4).",
+      "type": "REGISTRATION",
+      "priority": "MEDIUM",
+      "read": false,
+      "createdAt": "2026-11-06T05:53:48.264Z"
+    },
+    {
       "id": "notif-1793098769674-191",
       "userId": "usr-stud-4",
       "title": "Registration confirmed",
@@ -1306,6 +1339,12 @@
     }
   ],
   "activity": [
+    {
+      "id": "act-1793944428264-874",
+      "type": "STUDENT_RSVP",
+      "detail": "Amina Hassan (154382) registered for \"Final Year IS Project Defense & Poster Exhibition\"",
+      "createdAt": "2026-11-06T05:53:48.264Z"
+    },
     {
       "id": "act-1793098769674-538",
       "type": "STUDENT_RSVP",

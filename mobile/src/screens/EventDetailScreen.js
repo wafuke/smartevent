@@ -8,7 +8,20 @@ import {
   Alert,
   ActivityIndicator
 } from 'react-native';
-import { registerStudentForEvent, cancelRegistrationForEvent, fetchEventPrediction } from '../services/api';
+import {
+  registerStudentForEvent,
+  cancelRegistrationForEvent,
+  fetchEventPrediction,
+  setRegistrationSmsPriority
+} from '../services/api';
+
+// SMS priority is chosen by the STUDENT (never the organizer).
+const SMS_TIERS = [
+  { value: 0, label: 'None', description: 'In-app notifications only. No SMS.' },
+  { value: 1, label: 'Low', description: 'SMS for urgent changes only (cancellation, venue or time change).' },
+  { value: 2, label: 'Medium', description: 'Urgent changes plus event reminders.' },
+  { value: 3, label: 'High', description: 'Urgent changes, reminders and general announcements.' }
+];
 
 export default function EventDetailScreen({
   event,
@@ -24,6 +37,7 @@ export default function EventDetailScreen({
   const [submitting, setSubmitting] = useState(false);
   const [prediction, setPrediction] = useState(null);
   const [loadingPred, setLoadingPred] = useState(true);
+  const [smsTier, setSmsTier] = useState(Number(user?.smsPriority ?? 2));
 
   useEffect(() => {
     let mounted = true;
@@ -49,17 +63,25 @@ export default function EventDetailScreen({
       return;
     }
     setSubmitting(true);
-    const result = await registerStudentForEvent(event.id, user);
+    const result = await registerStudentForEvent(event.id, user, smsTier);
     setSubmitting(false);
 
     if (result.success) {
       onRegisterSuccess(event.id);
       Alert.alert(
         "RSVP Confirmed",
-        `You are registered for "${event.title}". High-priority SMS alerts will be sent to ${user?.phone || '+254712345678'}.`
+        `You are registered for "${event.title}". Your SMS priority is ${SMS_TIERS[smsTier].label}; alerts go to ${user?.phone || '+254712345678'}.`
       );
     } else {
       Alert.alert("Registration Notice", result.error || "Unable to register.");
+    }
+  };
+
+  const handleTierChange = async (tier) => {
+    setSmsTier(tier);
+    if (isRegistered && user) {
+      const res = await setRegistrationSmsPriority(event.id, tier, user?.token);
+      if (!res.success) Alert.alert('SMS priority', res.error || 'Could not update your SMS priority.');
     }
   };
 
@@ -156,12 +178,23 @@ export default function EventDetailScreen({
           ) : null}
         </View>
 
-        {/* Priority SMS Notification Alert Notice */}
+        {/* Student-chosen SMS priority */}
         <View style={styles.smsNotice}>
-          <Text style={styles.smsNoticeTitle}>Africa's Talking Priority SMS Enabled</Text>
+          <Text style={styles.smsNoticeTitle}>Your SMS priority for this event</Text>
           <Text style={styles.smsNoticeText}>
-            Registered students automatically receive real-time SMS alerts for urgent venue changes and schedule reminders.
+            You decide how much SMS you get, not the organizer. {SMS_TIERS[smsTier].description}
           </Text>
+          <View style={styles.tierRow}>
+            {SMS_TIERS.map((t) => (
+              <TouchableOpacity
+                key={t.value}
+                style={[styles.tierBtn, smsTier === t.value && styles.tierBtnActive]}
+                onPress={() => handleTierChange(t.value)}
+              >
+                <Text style={[styles.tierBtnText, smsTier === t.value && styles.tierBtnTextActive]}>{t.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
         {/* RSVP Action Buttons */}
@@ -192,6 +225,19 @@ export default function EventDetailScreen({
 }
 
 const styles = StyleSheet.create({
+  tierRow: { flexDirection: 'row', gap: 6, marginTop: 10 },
+  tierBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    backgroundColor: '#ffffff',
+    alignItems: 'center'
+  },
+  tierBtnActive: { backgroundColor: '#003366', borderColor: '#003366' },
+  tierBtnText: { fontSize: 12, fontWeight: 'bold', color: '#475569' },
+  tierBtnTextActive: { color: '#ffffff' },
   container: {
     flex: 1,
     backgroundColor: '#f8fafc',

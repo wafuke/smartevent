@@ -141,11 +141,25 @@ function getCurrentOfflineUser(store) {
   return store.users[0];
 }
 
+function offlineTier(value, fallback = 2) {
+  if (typeof value === 'string' && ['NONE', 'LOW', 'MEDIUM', 'HIGH'].includes(value.toUpperCase())) {
+    return ['NONE', 'LOW', 'MEDIUM', 'HIGH'].indexOf(value.toUpperCase());
+  }
+  const n = parseInt(value, 10);
+  return [0, 1, 2, 3].includes(n) ? n : [0, 1, 2, 3].includes(Number(fallback)) ? Number(fallback) : 2;
+}
+
 function computePrediction(payload = {}) {
   const cap = Number(payload.venueCapacity) || 150;
   const reg = Number(payload.registrationCount) || Math.round(cap * 0.72);
-  const prio = Number(payload.smsPriority) || 2;
-  const baseRate = prio === 3 ? 0.84 : prio === 2 ? 0.78 : 0.71;
+  // SMS priority is chosen by the students; use their average tier (0 none ... 3 high).
+  let prio = Number.isFinite(Number(payload.smsPriority)) ? Number(payload.smsPriority) : 2;
+  if (payload.smsMix) {
+    const m = payload.smsMix;
+    const total = (m.none || 0) + (m.low || 0) + (m.medium || 0) + (m.high || 0);
+    if (total > 0) prio = Math.round(((m.low || 0) + 2 * (m.medium || 0) + 3 * (m.high || 0)) / total);
+  }
+  const baseRate = prio === 3 ? 0.84 : prio === 2 ? 0.78 : prio === 1 ? 0.74 : 0.71;
   const pred = Math.min(cap, Math.round(reg * baseRate));
   const util = Math.round((pred / cap) * 1000) / 10;
   return {
@@ -159,7 +173,7 @@ function computePrediction(payload = {}) {
     recommendation: util > 90
       ? 'Expected attendance nears venue capacity. Consider allocating overflow seating.'
       : 'Projected attendance is well-aligned with venue capacity.',
-    smsImpactBoostPct: prio === 3 ? 13.5 : 6.5,
+    smsImpactBoostPct: prio === 3 ? 13.5 : prio === 2 ? 6.5 : prio === 1 ? 2.5 : 0,
     algorithm: 'LogisticRegression'
   };
 }
@@ -295,7 +309,8 @@ function handleOfflineFallback(endpoint, options = {}) {
       venueCapacity: Number(body.venueCapacity) || 150,
       registrationCount: 0,
       predictedAttendance: Math.round((Number(body.venueCapacity) || 150) * 0.78),
-      smsPriority: Number(body.smsPriority) || 2,
+      smsPriority: 2,
+      smsMix: { none: 0, low: 0, medium: 0, high: 0 },
       status: body.status || 'Upcoming',
       organizerId: user.id,
       organizerName: user.organizationName || user.name
@@ -349,10 +364,42 @@ function handleOfflineFallback(endpoint, options = {}) {
     return { success: true, data: store.venues };
   }
 
+  if (cleanPath.startsWith('/registrations/event/') && cleanPath.endsWith('/sms-priority') && method === 'PUT') {
+    const eventId = cleanPath.split('/')[3];
+    const user = getCurrentOfflineUser(store);
+    const reg = store.registrations.find((r) => r.eventId === eventId && r.userId === user.id);
+    if (!reg) throw new Error('You are not registered for this event.');
+    reg.smsPriority = offlineTier(body.smsPriority);
+    saveOfflineStore(store);
+    return { success: true, data: reg };
+  }
+
+  if (cleanPath === '/predict/simulate' && method === 'POST') {
+    const row = (label, patch) => {
+      const p = computePrediction({ ...body, ...patch });
+      return { label, predictedAttendance: p.predictedAttendance, predictedTurnoutRate: p.predictedTurnoutRate, capacityUtilization: p.capacityUtilization, riskLevel: p.riskLevel };
+    };
+    const cap = Number(body.venueCapacity) || 150;
+    return {
+      success: true,
+      source: 'offline',
+      baseline: computePrediction(body),
+      sweeps: {
+        studentSmsPriority: ['NONE', 'LOW', 'MEDIUM', 'HIGH'].map((n, i) => row('All students ' + n, { smsPriority: i, smsMix: undefined })),
+        registrations: [0.25, 0.5, 0.75, 1].map((f) => row(Math.round(f * 100) + '% of capacity', { registrationCount: Math.max(1, Math.floor(cap * f)) }))
+      }
+    };
+  }
+
+  if (cleanPath === '/predict/model') {
+    return { success: true, online: false, error: 'Backend offline - start it to see the real training report.' };
+  }
+
   if (cleanPath === '/registrations' || cleanPath === '/registrations/mine') {
     if (method === 'POST') {
       const user = getCurrentOfflineUser(store);
       const reg = {
+        smsPriority: offlineTier(body.smsPriority, user.smsPriority),
         id: `reg-${Date.now()}`,
         eventId: body.eventId,
         userId: user.id,
@@ -447,7 +494,8 @@ function handleOfflineFallback(endpoint, options = {}) {
       eventTitle: body.eventTitle || 'Strathmore Campus Notice',
       recipientCount: Array.isArray(body.phoneNumbers) && body.phoneNumbers.length ? body.phoneNumbers.length : 1,
       message: body.message,
-      priority: body.priority || 'HIGH',
+      kind: body.kind || 'REMINDER',
+      priority: 'MEDIUM',
       status: 'DELIVERED',
       provider: "Africa's Talking (Simulated)",
       sentAt: new Date().toISOString()
@@ -650,6 +698,8 @@ export const registrationsApi = {
   checkIn: (registrationId, checkedIn = true) =>
     apiRequest(`/registrations/${registrationId}/checkin`, json('PATCH', { checkedIn })),
   cancel: (registrationId) => apiRequest(`/registrations/${registrationId}`, { method: 'DELETE' }),
+  setSmsPriority: (eventId, smsPriority) =>
+    apiRequest(`/registrations/event/${eventId}/sms-priority`, json('PUT', { smsPriority })),
   cancelForEvent: (eventId) => apiRequest(`/registrations/event/${eventId}`, { method: 'DELETE' })
 };
 
@@ -675,7 +725,9 @@ export const smsApi = {
 
 export const predictApi = {
   forecast: (payload) => apiRequest('/predict', json('POST', payload)),
-  forEvent: (eventId) => apiRequest('/predict', json('POST', { eventId }))
+  forEvent: (eventId) => apiRequest('/predict', json('POST', { eventId })),
+  simulate: (payload) => apiRequest('/predict/simulate', json('POST', payload)),
+  model: () => apiRequest('/predict/model')
 };
 
 export const analyticsApi = {

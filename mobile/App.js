@@ -47,7 +47,7 @@ export default function App() {
   const [organizerScope, setOrganizerScope] = useState('mine');
   const [adminRoleFilter, setAdminRoleFilter] = useState('ALL');
 
-  // Organizer / Admin Event Creation Form
+  // Organizer / Admin Event Creation Form (SMS priority is set by students on RSVP, not organizers)
   const [newEvt, setNewEvt] = useState({
     title: '',
     category: 'Workshop',
@@ -55,14 +55,13 @@ export default function App() {
     time: '14:00 - 16:30',
     venue: 'iLab Africa Innovation Room 302',
     venueCapacity: '120',
-    smsPriority: 3,
     description: ''
   });
 
-  // Africa's Talking SMS Dispatch Form
+  // Africa's Talking SMS Dispatch Form (Message Type: URGENT / REMINDER / ANNOUNCEMENT)
   const [smsForm, setSmsForm] = useState({
     eventId: 'evt-101',
-    priority: 'HIGH',
+    kind: 'REMINDER',
     phoneNumbers: '+254712345678, +254711223344',
     broadcastToEventRoster: true,
     message: '[Strathmore SmartEvent] Reminder: Please arrive 15 mins early with your student ID pass.'
@@ -192,7 +191,7 @@ export default function App() {
       {
         eventId: targetEvt?.id || 'evt-101',
         eventTitle: targetEvt?.title || 'Strathmore Campus Event',
-        priority: smsForm.priority,
+        kind: smsForm.kind || 'REMINDER',
         phoneNumbers: phones,
         broadcastToEventRoster: smsForm.broadcastToEventRoster,
         message: smsForm.message
@@ -722,21 +721,21 @@ export default function App() {
       </Text>
 
       <View style={styles.formCard}>
-        <Text style={styles.inputLabel}>Priority Tier</Text>
+        <Text style={styles.inputLabel}>Message Type (Filtered by Each Student's Chosen SMS Priority)</Text>
         <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
-          {['HIGH', 'MEDIUM', 'LOW'].map((p) => (
+          {['URGENT', 'REMINDER', 'ANNOUNCEMENT'].map((k) => (
             <TouchableOpacity
-              key={p}
-              style={[styles.prioBtn, smsForm.priority === p && styles.prioBtnActive]}
-              onPress={() => setSmsForm({ ...smsForm, priority: p })}
+              key={k}
+              style={[styles.prioBtn, smsForm.kind === k && styles.prioBtnActive]}
+              onPress={() => setSmsForm({ ...smsForm, kind: k })}
             >
               <Text
                 style={[
                   styles.prioBtnText,
-                  smsForm.priority === p && styles.prioBtnTextActive
+                  smsForm.kind === k && styles.prioBtnTextActive
                 ]}
               >
-                {p}
+                {k}
               </Text>
             </TouchableOpacity>
           ))}

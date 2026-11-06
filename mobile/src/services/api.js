@@ -461,7 +461,9 @@ export async function fetchEventPrediction(event) {
         venueCapacity: Number(event.venueCapacity) || 150,
         registrationCount: Number(event.registrationCount) || 95,
         pastAttendanceRate: 0.78,
-        smsPriority: Number(event.smsPriority) || 2
+        // SMS priority is chosen by the students; send the real split when known.
+        smsPriority: Number.isFinite(Number(event.smsPriority)) ? Number(event.smsPriority) : 2,
+        ...(event.smsMix ? { smsMix: event.smsMix } : {})
       })
     });
     const data = await response.json();
@@ -473,7 +475,7 @@ export async function fetchEventPrediction(event) {
   }
   const cap = Number(event.venueCapacity) || 150;
   const reg = Number(event.registrationCount) || Math.round(cap * 0.72);
-  const rate = event.smsPriority === 3 ? 0.84 : event.smsPriority === 2 ? 0.78 : 0.71;
+  const rate = event.smsPriority === 3 ? 0.84 : event.smsPriority === 2 ? 0.78 : event.smsPriority === 1 ? 0.74 : 0.71;
   const pred = Math.min(cap, Math.round(reg * rate));
   const util = Math.round((pred / cap) * 1000) / 10;
   return {
@@ -488,12 +490,13 @@ export async function fetchEventPrediction(event) {
   };
 }
 
-export async function registerStudentForEvent(eventId, studentInfo) {
+/** The STUDENT picks how much SMS they want for each event: 0 none, 1 low, 2 medium, 3 high. */
+export async function registerStudentForEvent(eventId, studentInfo, smsPriority) {
   try {
     const response = await fetch(`${BACKEND_URL}/registrations`, {
       method: "POST",
       headers: getHeaders(studentInfo?.token),
-      body: JSON.stringify({ eventId })
+      body: JSON.stringify({ eventId, smsPriority: smsPriority ?? studentInfo?.smsPriority ?? 2 })
     });
     const data = await response.json();
     if (response.ok && data.success) {
@@ -506,6 +509,22 @@ export async function registerStudentForEvent(eventId, studentInfo) {
     // Offline fallback
   }
   return { success: true, offline: true, message: "RSVP confirmed!" };
+}
+
+export async function setRegistrationSmsPriority(eventId, smsPriority, tokenOverride) {
+  try {
+    const response = await fetch(`${BACKEND_URL}/registrations/event/${eventId}/sms-priority`, {
+      method: "PUT",
+      headers: getHeaders(tokenOverride),
+      body: JSON.stringify({ smsPriority })
+    });
+    const data = await response.json();
+    if (response.ok && data.success) return data;
+    if (data && data.error) return { success: false, error: data.error };
+  } catch (error) {
+    // Offline fallback
+  }
+  return { success: true, offline: true };
 }
 
 export async function cancelRegistrationForEvent(eventId, tokenOverride) {
@@ -605,7 +624,7 @@ export async function fetchPriorityNotifications() {
   return localSmsCache;
 }
 
-export async function sendPrioritySmsMobile({ eventId, eventTitle, priority, message, phoneNumbers, broadcastToEventRoster }, tokenOverride) {
+export async function sendPrioritySmsMobile({ eventId, eventTitle, kind, priority, message, phoneNumbers, broadcastToEventRoster }, tokenOverride) {
   try {
     const response = await fetch(`${BACKEND_URL}/sms/send`, {
       method: "POST",
@@ -613,7 +632,8 @@ export async function sendPrioritySmsMobile({ eventId, eventTitle, priority, mes
       body: JSON.stringify({
         eventId,
         eventTitle,
-        priority: priority || "HIGH",
+        kind: kind || "REMINDER",
+        priority: priority || "MEDIUM",
         broadcastToEventRoster: Boolean(broadcastToEventRoster),
         phoneNumbers: Array.isArray(phoneNumbers) ? phoneNumbers : [],
         message

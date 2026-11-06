@@ -6,7 +6,11 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 const { normalizeKenyanPhone } = require('../utils/phone');
 const sms = require('../services/sms');
 
-const PRIORITIES = { HIGH: 3, MEDIUM: 2, LOW: 1 };
+const { normalizeTier, tierLabel, tierReceivesKind, KIND_MIN_TIER } = require('../utils/smsTier');
+
+const PRIORITIES = { HIGH: 3, MEDIUM: 2, LOW: 1, NONE: 0 };
+// What the organiser is sending. Delivery by SMS depends on each STUDENT's own priority tier.
+const KINDS = Object.keys(KIND_MIN_TIER);
 const MAX_MESSAGE_LENGTH = 480; // 3 SMS segments
 
 const sendLimiter = rateLimit({
@@ -119,12 +123,22 @@ router.post('/preview', requireRole(['admin', 'organizer']), (req, res) => {
     success: true,
     recipientCount: plan.recipients.length,
     skippedOptOut: plan.skippedOptOut,
+    skippedByPreference: plan.skippedByPreference,
+    kind: plan.kind,
+    byTier: tierBreakdown(plan.recipients),
     invalidNumbers: plan.invalid,
     segments: sms.estimateSegments(message),
     estimatedCostKES: sms.estimateCost(plan.recipients.length, message),
     mode: sms.getConfig().mode
   });
 });
+
+/** How many recipients sit on each student-chosen tier. */
+function tierBreakdown(recipients) {
+  const out = { HIGH: 0, MEDIUM: 0, LOW: 0 };
+  recipients.forEach((r) => { const l = tierLabel(r.tier); if (out[l] !== undefined) out[l] += 1; });
+  return out;
+}
 
 /**
  * Work out who should receive a broadcast, enforcing role rules:
@@ -133,12 +147,23 @@ router.post('/preview', requireRole(['admin', 'organizer']), (req, res) => {
  */
 function resolveAudience(db, user, body) {
   const { eventId, audience, phoneNumbers, recipients, testToMe } = body;
-  const out = { recipients: [], invalid: [], skippedOptOut: 0 };
+  const kind = String(body.kind || 'REMINDER').toUpperCase();
+  const out = { recipients: [], invalid: [], skippedOptOut: 0, skippedByPreference: 0, inAppOnly: [], kind };
+  if (!KINDS.includes(kind)) return { error: `Message type must be one of ${KINDS.join(', ')}.` };
   const seen = new Set();
-  const add = (phone, name, userId) => {
+  const add = (phone, name, userId, tier) => {
     if (!phone || seen.has(phone)) return;
     seen.add(phone);
-    out.recipients.push({ phone, name: name || 'Recipient', userId: userId || null });
+    out.recipients.push({ phone, name: name || 'Recipient', userId: userId || null, tier: normalizeTier(tier) });
+  };
+  // Student-chosen tier gate: students whose tier is too low for this kind of message get an in-app copy only.
+  const addByPreference = (phone, name, userId, tier) => {
+    if (!tierReceivesKind(tier, kind)) {
+      out.skippedByPreference += 1;
+      if (userId) out.inAppOnly.push({ userId, name });
+      return;
+    }
+    add(phone, name, userId, tier);
   };
   const usersById = new Map((db.users || []).map((u) => [u.id, u]));
 
@@ -146,7 +171,7 @@ function resolveAudience(db, user, body) {
     const rawTarget = body.testPhone ? String(body.testPhone).trim() : user.phone;
     const own = normalizeKenyanPhone(rawTarget);
     if (!own) return { error: 'Enter a valid Kenyan mobile number (e.g. 0712345678 or +254712345678) to send a test SMS.' };
-    add(own, user.name, user.id);
+    add(own, user.name, user.id, user.smsPriority);
     return out;
   }
 
@@ -162,7 +187,7 @@ function resolveAudience(db, user, body) {
     (db.users || []).filter((u) => u.role === 'student' && String(u.status) !== 'Suspended').forEach((u) => {
       if (u.smsOptOut) return void (out.skippedOptOut += 1);
       const p = normalizeKenyanPhone(u.phone);
-      p ? add(p, u.name, u.id) : out.invalid.push(u.phone || '(empty)');
+      p ? addByPreference(p, u.name, u.id, u.smsPriority) : out.invalid.push(u.phone || '(empty)');
     });
   } else if (eventId && !explicit) {
     if (!(db.events || []).some((e) => e.id === eventId)) return { status: 404, error: 'Event not found.' };
@@ -170,7 +195,7 @@ function resolveAudience(db, user, body) {
       const u = usersById.get(r.userId);
       if (u && u.smsOptOut) return void (out.skippedOptOut += 1);
       const p = normalizeKenyanPhone(r.phone || (u && u.phone));
-      p ? add(p, r.studentName, r.userId) : out.invalid.push(r.phone || '(empty)');
+      p ? addByPreference(p, r.studentName, r.userId, r.smsPriority) : out.invalid.push(r.phone || '(empty)');
     });
   } else if (explicit) {
     const list = Array.isArray(explicit) ? explicit : String(explicit).split(/[,\n;]+/);
@@ -179,7 +204,7 @@ function resolveAudience(db, user, body) {
       if (!p) return void out.invalid.push(raw);
       const u = (db.users || []).find((x) => normalizeKenyanPhone(x.phone) === p);
       if (u && u.smsOptOut) return void (out.skippedOptOut += 1);
-      add(p, u ? u.name : 'Recipient', u ? u.id : null);
+      add(p, u ? u.name : 'Recipient', u ? u.id : null, u ? u.smsPriority : undefined);
     });
   } else {
     return { error: 'Choose an event, or (admins) enter phone numbers / select all students.' };
@@ -197,24 +222,56 @@ router.post('/send', requireRole(['admin', 'organizer']), sendLimiter, async (re
     return res.status(400).json({ success: false, error: `Message is too long (${message.length}/${MAX_MESSAGE_LENGTH} characters).` });
   }
 
-  const priority = String(body.priority || 'MEDIUM').toUpperCase();
-  if (!PRIORITIES[priority]) return res.status(400).json({ success: false, error: 'Priority must be HIGH, MEDIUM or LOW.' });
+  // SMS priority belongs to the STUDENT (chosen at registration). The organiser only picks the kind of message.
+  const kind = String(body.kind || 'REMINDER').toUpperCase();
+  if (!KINDS.includes(kind)) return res.status(400).json({ success: false, error: `Message type must be one of ${KINDS.join(', ')}.` });
 
   const db = readLocalData();
   db.smsLogs = db.smsLogs || [];
 
   const plan = resolveAudience(db, req.user, body);
   if (plan.error) return res.status(plan.status || 400).json({ success: false, error: plan.error });
+
+  const event = (db.events || []).find((e) => e.id === body.eventId);
+  const eventTitle = event ? event.title : 'SmartEvent Campus Alert';
+  const text = `[SmartEvent ${kind}] ${eventTitle}: ${message}`;
+
+  // Students whose own SMS tier is too low for this kind of message still get the in-app notification.
+  const notifyInApp = (list) =>
+    list.filter((r) => r.userId).forEach((r) =>
+      addNotification(db, {
+        userId: r.userId,
+        title: `${kind === 'URGENT' ? 'Urgent' : kind === 'REMINDER' ? 'Reminder' : 'Announcement'}: ${eventTitle}`,
+        message,
+        type: 'SMS_PRIORITY',
+        priority: kind === 'URGENT' ? 'HIGH' : kind === 'REMINDER' ? 'MEDIUM' : 'LOW'
+      })
+    );
+
   if (plan.recipients.length === 0) {
+    if (plan.inAppOnly.length) {
+      notifyInApp(plan.inAppOnly);
+      logActivity(db, 'SMS_DISPATCHED', `${req.user.name} sent a ${kind} message "${eventTitle}" - ${plan.inAppOnly.length} student(s) receive it in-app only (their SMS priority is too low)`);
+      writeLocalData(db);
+      return res.json({
+        success: true,
+        message: `No SMS sent: all ${plan.inAppOnly.length} registered student(s) chose an SMS priority that excludes ${kind} messages. They received an in-app notification instead.`,
+        mode: sms.getConfig().mode,
+        kind,
+        dispatchedCount: 0,
+        failedCount: 0,
+        skippedByPreference: plan.skippedByPreference,
+        skippedOptOut: plan.skippedOptOut,
+        invalidNumbers: plan.invalid,
+        logs: [],
+        data: { provider: "Africa's Talking", recipientCount: 0, status: 'IN_APP_ONLY' }
+      });
+    }
     return res.status(400).json({
       success: false,
       error: plan.invalid.length ? `No valid recipients. Invalid numbers: ${plan.invalid.slice(0, 5).join(', ')}` : 'No recipients found (nobody has registered yet, or everyone opted out).'
     });
   }
-
-  const event = (db.events || []).find((e) => e.id === body.eventId);
-  const eventTitle = event ? event.title : 'SmartEvent Campus Alert';
-  const text = `[SmartEvent ${priority}] ${eventTitle}: ${message}`;
 
   const { mode, results, gatewayNote } = await sms.sendBulk(plan.recipients.map((r) => r.phone), text);
   const byPhone = new Map(results.map((r) => [r.phone, r]));
@@ -223,6 +280,7 @@ router.post('/send', requireRole(['admin', 'organizer']), sendLimiter, async (re
 
   const logs = plan.recipients.map((rec, i) => {
     const r = byPhone.get(rec.phone) || { status: 'FAILED', reason: 'No result' };
+    const priority = tierLabel(rec.tier); // the RECIPIENT's own SMS priority
     const log = {
       id: `sms-${Date.now()}-${i}`,
       batchId,
@@ -232,8 +290,10 @@ router.post('/send', requireRole(['admin', 'organizer']), sendLimiter, async (re
       recipient: rec.phone,
       recipientName: rec.name,
       message: text,
+      kind,
       priority,
       priorityLevel: PRIORITIES[priority],
+      priorityChosenBy: 'student',
       status: r.status,
       failureReason: r.reason || null,
       messageId: r.messageId,
@@ -247,14 +307,13 @@ router.post('/send', requireRole(['admin', 'organizer']), sendLimiter, async (re
     return log;
   });
 
-  // in-app copy for students who have an account
-  plan.recipients.filter((r) => r.userId).forEach((r) =>
-    addNotification(db, { userId: r.userId, title: `${priority} priority: ${eventTitle}`, message, type: 'SMS_PRIORITY', priority })
-  );
+  // in-app copy for every student on the roster (SMS recipients and in-app-only students)
+  notifyInApp(plan.recipients);
+  notifyInApp(plan.inAppOnly);
 
   const ok = logs.filter((l) => l.status !== 'FAILED').length;
   const failed = logs.length - ok;
-  logActivity(db, 'SMS_DISPATCHED', `${req.user.name} sent ${priority} SMS "${eventTitle}" to ${logs.length} recipient(s) [${mode}] - ${failed} failed`);
+  logActivity(db, 'SMS_DISPATCHED', `${req.user.name} sent ${kind} SMS "${eventTitle}" to ${logs.length} recipient(s) [${mode}] - ${failed} failed, ${plan.skippedByPreference} in-app only by student preference`);
   writeLocalData(db);
 
   const failedLogs = logs.filter((l) => l.status === 'FAILED');
@@ -267,10 +326,12 @@ router.post('/send', requireRole(['admin', 'organizer']), sendLimiter, async (re
       : `${ok} of ${logs.length} SMS accepted by Africa's Talking (${mode})${failed ? `, ${failed} failed` : ''}.`,
     mode,
     gatewayNote: gatewayNote || null,
-    priority,
+    kind,
+    byTier: tierBreakdown(plan.recipients),
     dispatchedCount: ok,
     failedCount: failed,
     skippedOptOut: plan.skippedOptOut,
+    skippedByPreference: plan.skippedByPreference,
     invalidNumbers: plan.invalid,
     segments: sms.estimateSegments(text),
     batchId,

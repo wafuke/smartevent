@@ -7,7 +7,7 @@ and exposes it over HTTP for the Node.js backend and frontend dashboards.
 import json
 import os
 from pathlib import Path
-from typing import Optional
+from typing import Dict, Optional
 
 import joblib
 import numpy as np
@@ -104,7 +104,8 @@ class PredictionRequest(BaseModel):
     venueCapacity: int = Field(..., ge=10, example=150)
     registrationCount: int = Field(..., ge=0, example=110)
     pastAttendanceRate: float = Field(default=0.75, ge=0.0, le=1.0, example=0.78)
-    smsPriority: int = Field(default=2, ge=0, le=3, example=3)
+    smsPriority: int = Field(default=2, ge=0, le=3, example=3, description="Average SMS tier the registrants chose (0 none, 1 low, 2 medium, 3 high)")
+    smsMix: Optional[Dict[str, float]] = Field(default=None, example={"none": 5, "low": 10, "medium": 40, "high": 25}, description="How many registrants chose each SMS tier. Overrides smsPriority when present.")
     weather: Optional[str] = Field(default="sunny", example="sunny")
     examPeriod: Optional[int] = Field(default=0, ge=0, le=1, example=0)
     leadDays: Optional[int] = Field(default=5, ge=0, le=60, example=5)
@@ -123,6 +124,9 @@ class PredictionResponse(BaseModel):
     loadedModelPath: str
     algorithm: Optional[str] = None
     modelMetrics: Optional[dict] = None
+    predictionInterval: Optional[dict] = None
+    smsMixUsed: Optional[dict] = None
+    effectiveSmsPriority: Optional[int] = None
 
 
 def _build_cohort_dataframe(payload: PredictionRequest, sms_override: Optional[str] = None) -> pd.DataFrame:
@@ -213,31 +217,67 @@ def get_model_info():
     }
 
 
-@app.post("/predict", response_model=PredictionResponse)
-def predict_attendance(payload: PredictionRequest):
+SMS_LABELS = ["none", "low", "medium", "high"]
+
+
+def _mean_prob(payload: PredictionRequest, sms_override: Optional[str] = None) -> float:
+    """
+    Mean show-up probability of the representative cohort.
+
+    SMS priority is chosen by each STUDENT at registration. When the backend sends
+    `smsMix` (how many registrants picked none/low/medium/high) the probability is
+    the registrant-weighted average of the per-tier model outputs; otherwise the
+    single `smsPriority` value is used.
+    """
+    if sms_override is not None:
+        return float(np.mean(model.predict_proba(_build_cohort_dataframe(payload, sms_override))[:, 1]))
+    mix = {k: float(v) for k, v in (payload.smsMix or {}).items() if k in SMS_LABELS and float(v) > 0}
+    total = sum(mix.values())
+    if total > 0:
+        return sum((w / total) * _mean_prob(payload, label) for label, w in mix.items())
+    return float(np.mean(model.predict_proba(_build_cohort_dataframe(payload))[:, 1]))
+
+
+def _effective_sms_priority(payload: PredictionRequest) -> int:
+    mix = {k: float(v) for k, v in (payload.smsMix or {}).items() if k in SMS_LABELS and float(v) > 0}
+    total = sum(mix.values())
+    if total <= 0:
+        return payload.smsPriority
+    avg = sum(SMS_LABELS.index(k) * w for k, w in mix.items()) / total
+    return int(round(avg))
+
+
+def _run_prediction(payload: PredictionRequest) -> dict:
     if model is None:
         load_artifacts()
 
     is_model_based = False
-    sms_boost = {0: 0.0, 1: 2.5, 2: 6.5, 3: 13.5}.get(payload.smsPriority, 6.5)
+    eff_sms = _effective_sms_priority(payload)
+    sms_boost = {0: 0.0, 1: 2.5, 2: 6.5, 3: 13.5}.get(eff_sms, 6.5)
     eff_reg = payload.registrationCount if payload.registrationCount > 0 else int(round(payload.venueCapacity * 0.75))
+    interval = None
 
     if model is not None:
         try:
             if hasattr(model, "predict_proba"):
-                cohort_df = _build_cohort_dataframe(payload)
-                probs = model.predict_proba(cohort_df)[:, 1]
-                mean_prob = float(np.mean(probs))
+                mean_prob = _mean_prob(payload)
 
                 # Counterfactual SMS lift directly from the trained Logistic Regression pipeline
-                cohort_no_sms = _build_cohort_dataframe(payload, sms_override="none")
-                prob_no_sms = float(np.mean(model.predict_proba(cohort_no_sms)[:, 1]))
+                prob_no_sms = _mean_prob(payload, sms_override="none")
                 sms_boost = round(max(0.0, (mean_prob - prob_no_sms) * 100.0), 1)
 
                 raw_expected = eff_reg * mean_prob
                 predicted_count = int(np.clip(round(raw_expected), 0, payload.venueCapacity))
                 turnout_rate = round(mean_prob, 3)
                 is_model_based = True
+
+                # 80% prediction interval: each registrant shows up ~ Bernoulli(p)
+                sd = float(np.sqrt(eff_reg * mean_prob * (1.0 - mean_prob)))
+                interval = {
+                    "low": int(np.clip(round(raw_expected - 1.2816 * sd), 0, payload.venueCapacity)),
+                    "high": int(np.clip(round(raw_expected + 1.2816 * sd), 0, payload.venueCapacity)),
+                    "confidence": 0.8,
+                }
             else:
                 # Legacy regressor pipeline fallback
                 legacy_df = pd.DataFrame([{
@@ -247,7 +287,7 @@ def predict_attendance(payload: PredictionRequest):
                     "venueCapacity": payload.venueCapacity,
                     "registrationCount": eff_reg,
                     "pastAttendanceRate": payload.pastAttendanceRate,
-                    "smsPriority": payload.smsPriority
+                    "smsPriority": eff_sms
                 }])
                 raw_pred = model.predict(legacy_df)[0]
                 predicted_count = int(np.clip(round(raw_pred), 0, payload.venueCapacity))
@@ -273,7 +313,8 @@ def predict_attendance(payload: PredictionRequest):
         risk = "LOW_TURNOUT_RISK"
         rec = (
             f"Predicted attendance ({predicted_count} students, {capacity_util}% of venue capacity) is below 40%. "
-            f"Dispatch a High-Priority SMS reminder via Africa's Talking (+{max(sms_boost, 11.5)}% expected turnout lift)."
+            f"Send an URGENT/REMINDER message: students who chose higher SMS priority turn out more "
+            f"(+{max(sms_boost, 0.0)}% modelled lift for this audience). Encourage registrants to raise their SMS priority."
         )
     else:
         risk = "OPTIMAL_ATTENDANCE"
@@ -294,15 +335,110 @@ def predict_attendance(payload: PredictionRequest):
         "isModelBased": is_model_based,
         "loadedModelPath": loaded_path or "Rule-based Engine",
         "algorithm": metadata.get("algorithm", "LogisticRegression"),
-        "modelMetrics": metadata.get("test_metrics", {}).get("threshold_0_5")
+        "modelMetrics": metadata.get("test_metrics", {}).get("threshold_0_5"),
+        "predictionInterval": interval,
+        "smsMixUsed": {k: int(float(v)) for k, v in (payload.smsMix or {}).items() if k in SMS_LABELS} or None,
+        "effectiveSmsPriority": eff_sms,
+    }
+
+
+@app.post("/predict", response_model=PredictionResponse)
+def predict_attendance(payload: PredictionRequest):
+    return _run_prediction(payload)
+
+
+def _scenario(payload: PredictionRequest, label: str, **changes) -> dict:
+    data = payload.model_dump() if hasattr(payload, "model_dump") else payload.dict()
+    data.update(changes)
+    res = _run_prediction(PredictionRequest(**data))
+    return {
+        "label": label,
+        "predictedAttendance": res["predictedAttendance"],
+        "predictedTurnoutRate": res["predictedTurnoutRate"],
+        "capacityUtilization": res["capacityUtilization"],
+        "riskLevel": res["riskLevel"],
+    }
+
+
+@app.post("/simulate")
+def simulate(payload: PredictionRequest):
+    """
+    What-if simulator. Takes one event and re-runs the trained model while varying ONE factor at a time,
+    so an organiser can see exactly how SMS priority, registrations, time slot, weather and lead time move turnout.
+    """
+    base = _run_prediction(payload)
+    cap = payload.venueCapacity
+    sweeps = {
+        "studentSmsPriority": [
+            _scenario(payload, f"All students {name.upper()}", smsMix={name: 1}, smsPriority=i)
+            for i, name in enumerate(SMS_LABELS)
+        ],
+        "registrations": [
+            _scenario(payload, f"{int(f * 100)}% of capacity ({int(cap * f)} registered)", registrationCount=max(1, int(cap * f)))
+            for f in (0.25, 0.5, 0.75, 1.0)
+        ],
+        "timeSlot": [_scenario(payload, s, timeSlot=s) for s in ("Morning", "Afternoon", "Evening")],
+        "weather": [_scenario(payload, w.title(), weather=w) for w in ("sunny", "cloudy", "rainy", "hot", "cold")],
+        "leadDays": [_scenario(payload, f"{d} day(s) before the event", leadDays=d) for d in (1, 3, 7, 14, 30)],
+        "examPeriod": [
+            _scenario(payload, "Normal teaching period", examPeriod=0),
+            _scenario(payload, "Exam period", examPeriod=1),
+        ],
+    }
+    return {"baseline": base, "sweeps": sweeps, "algorithm": metadata.get("algorithm", "LogisticRegression")}
+
+
+@app.get("/feature-importance")
+def feature_importance(top: int = 15):
+    """Largest standardised Logistic Regression coefficients: which inputs drive show-up probability."""
+    if model is None:
+        load_artifacts()
+    if model is None or not hasattr(model, "named_steps") or not hasattr(model.named_steps.get("model"), "coef_"):
+        return {"status": "unavailable", "features": []}
+    try:
+        names = [n.split("__", 1)[-1] for n in model[:-1].get_feature_names_out()]
+        coefs = model.named_steps["model"].coef_[0]
+        order = np.argsort(-np.abs(coefs))[: max(1, min(top, len(coefs)))]
+        return {
+            "status": "ok",
+            "intercept": float(model.named_steps["model"].intercept_[0]),
+            "features": [
+                {
+                    "feature": names[i],
+                    "coefficient": round(float(coefs[i]), 4),
+                    "effect": "raises turnout" if coefs[i] > 0 else "lowers turnout",
+                    "oddsMultiplierPerStdUnit": round(float(np.exp(coefs[i])), 3),
+                }
+                for i in order
+            ],
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e), "features": []}
+
+
+@app.get("/training-report")
+def training_report():
+    """How the model was trained: the full markdown training report plus the key metadata."""
+    report_path = BASE_DIR / "reports" / "training_report.md"
+    return {
+        "status": "ok" if report_path.exists() else "missing",
+        "report_markdown": report_path.read_text(encoding="utf-8") if report_path.exists() else "",
+        "metadata": metadata,
+        "how_to_retrain": [
+            "cd ml-service",
+            "pip install -r requirements.txt",
+            "python train_model.py",
+            "python main.py",
+        ],
     }
 
 
 def _fallback_predict(payload: PredictionRequest, eff_reg: int) -> int:
     base = eff_reg * payload.pastAttendanceRate
-    if payload.smsPriority == 3:
+    sms = _effective_sms_priority(payload)
+    if sms == 3:
         base *= 1.12
-    elif payload.smsPriority == 2:
+    elif sms == 2:
         base *= 1.05
     return int(np.clip(round(base), 0, payload.venueCapacity))
 

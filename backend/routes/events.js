@@ -68,11 +68,8 @@ function validateEventInput(db, body, { partial = false } = {}) {
   }
   if (has('time')) out.time = String(body.time).trim();
   if (has('description')) out.description = String(body.description).trim().slice(0, 2000);
-  if (has('smsPriority')) {
-    const p = parseInt(body.smsPriority, 10);
-    if (![1, 2, 3].includes(p)) errors.push('SMS priority must be 1 (Low), 2 (Medium) or 3 (High).');
-    out.smsPriority = p;
-  }
+  // NOTE: SMS priority is chosen by each student when they register, never by the organiser.
+  // event.smsPriority / event.smsMix are derived from the registrations (see utils/smsTier.js).
   if (has('featured')) out.featured = Boolean(body.featured);
   if (has('status')) {
     if (!EVENT_STATUSES.includes(body.status)) errors.push(`Status must be one of ${EVENT_STATUSES.join(', ')}.`);
@@ -174,7 +171,8 @@ router.post('/', requireRole(['organizer', 'admin']), (req, res) => {
     registrationCount: 0,
     pastAttendanceRate: 0.75,
     predictedAttendance: Math.round(out.venueCapacity * 0.6),
-    smsPriority: out.smsPriority || 2,
+    smsPriority: 2,
+    smsMix: { none: 0, low: 0, medium: 0, high: 0 },
     featured: Boolean(out.featured && req.user.role === 'admin'),
     status: 'Upcoming',
     organizerId: owner.id,

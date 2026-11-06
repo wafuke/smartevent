@@ -30,6 +30,7 @@ import { useAuth } from '../../context/AuthContext';
 import EventFormModal from '../../components/EventFormModal';
 import AttendeeRosterModal from '../../components/AttendeeRosterModal';
 import SmsComposer from '../../components/SmsComposer';
+import MlSimulatorAndTrainingPanel from '../../components/MlSimulatorAndTrainingPanel';
 import { useToast, useConfirm, DataTable, Badge, Modal, StatCard } from '../../components/ui';
 
 export default function OrganizerDashboardPage() {
@@ -616,7 +617,10 @@ export default function OrganizerDashboardPage() {
 
       {/* TAB 3: ANALYTICS & ML INSIGHTS */}
       {activeTab === 'analytics' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="space-y-6">
+          <MlSimulatorAndTrainingPanel events={myEvents.length > 0 ? myEvents : events} />
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-4 shadow-2xs">
             <div className="flex items-center justify-between">
               <div>
@@ -671,6 +675,7 @@ export default function OrganizerDashboardPage() {
                 </div>
               ))}
             </div>
+          </div>
           </div>
         </div>
       )}

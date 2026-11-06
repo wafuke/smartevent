@@ -27,7 +27,8 @@ export default function SmsComposer({ events = [], role, user, defaultEventId, o
   const isAdmin = role === 'admin' || String(user?.role || '').toLowerCase() === 'admin';
   const [audience, setAudience] = useState('EVENT');
   const [eventId, setEventId] = useState(defaultEventId || '');
-  const [priority, setPriority] = useState('MEDIUM');
+  // The organizer chooses WHAT is being sent; each STUDENT's own SMS priority decides if they get it by SMS.
+  const [kind, setKind] = useState('REMINDER');
   const [numbers, setNumbers] = useState('');
   const [testPhone, setTestPhone] = useState(user?.phone || '+254712345678');
   const [message, setMessage] = useState('');
@@ -71,12 +72,12 @@ export default function SmsComposer({ events = [], role, user, defaultEventId, o
   }, [events, eventId, defaultEventId]);
 
   const payload = useMemo(() => {
-    const base = { priority, message };
+    const base = { kind, message };
     if (audience === 'TEST') return { ...base, testToMe: true, testPhone };
     if (audience === 'ALL_STUDENTS') return { ...base, audience: 'ALL_STUDENTS' };
     if (audience === 'NUMBERS') return { ...base, phoneNumbers: numbers };
     return { ...base, eventId };
-  }, [audience, eventId, priority, message, numbers, testPhone]);
+  }, [audience, eventId, kind, message, numbers, testPhone]);
 
   // Live recipient count / cost preview
   useEffect(() => {
@@ -277,7 +278,7 @@ export default function SmsComposer({ events = [], role, user, defaultEventId, o
 
       <form onSubmit={send} className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-sm">
         <div className="flex items-center gap-2 text-sm font-black text-slate-900">
-          <MessageSquare className="w-4 h-4 text-[#003366]" /> Compose priority SMS
+          <MessageSquare className="w-4 h-4 text-[#003366]" /> Compose SMS
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -323,18 +324,19 @@ export default function SmsComposer({ events = [], role, user, defaultEventId, o
           </Field>
         )}
 
-        <Field label="Priority">
+        <Field label="Message type" hint="SMS priority is set by each student. They receive this by SMS only if their own priority covers this type.">
           <div className="grid grid-cols-3 gap-2">
             {[
-              ['HIGH', 'High - urgent'],
-              ['MEDIUM', 'Medium - standard'],
-              ['LOW', 'Low - info']
-            ].map(([p, label]) => (
+              ['URGENT', 'Urgent change', 'Reaches students on Low, Medium and High'],
+              ['REMINDER', 'Reminder', 'Reaches students on Medium and High'],
+              ['ANNOUNCEMENT', 'Announcement', 'Reaches students on High only']
+            ].map(([k, label, tip]) => (
               <button
                 type="button"
-                key={p}
-                onClick={() => setPriority(p)}
-                className={`py-2 rounded-xl border text-[11px] font-extrabold transition-colors ${priority === p ? 'bg-[#003366] border-[#003366] text-white' : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'}`}
+                key={k}
+                title={tip}
+                onClick={() => setKind(k)}
+                className={`py-2 rounded-xl border text-[11px] font-extrabold transition-colors ${kind === k ? 'bg-[#003366] border-[#003366] text-white' : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'}`}
               >
                 {label}
               </button>
@@ -361,7 +363,7 @@ export default function SmsComposer({ events = [], role, user, defaultEventId, o
         {message && (
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-700">
             <div className="text-[10px] uppercase font-extrabold text-slate-500 mb-1">Preview as received</div>
-            [SmartEvent {priority}] {selectedEvent && audience === 'EVENT' ? selectedEvent.title : 'SmartEvent Campus Alert'}: {message}
+            [SmartEvent {kind}] {selectedEvent && audience === 'EVENT' ? selectedEvent.title : 'SmartEvent Campus Alert'}: {message}
           </div>
         )}
 
@@ -369,6 +371,14 @@ export default function SmsComposer({ events = [], role, user, defaultEventId, o
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs font-bold text-slate-700 bg-blue-50 border border-blue-100 rounded-xl px-3.5 py-2.5">
             <span>{preview.recipientCount} recipient{preview.recipientCount === 1 ? '' : 's'}</span>
             <span>~KES {preview.estimatedCostKES}</span>
+            {preview.byTier && audience === 'EVENT' && (
+              <span className="text-slate-600 font-semibold">
+                by student priority: {preview.byTier.HIGH} high, {preview.byTier.MEDIUM} medium, {preview.byTier.LOW} low
+              </span>
+            )}
+            {preview.skippedByPreference > 0 && (
+              <span className="text-slate-500">{preview.skippedByPreference} get this in-app only (their SMS priority is lower)</span>
+            )}
             {preview.skippedOptOut > 0 && <span className="text-slate-500">{preview.skippedOptOut} opted out</span>}
             {preview.invalidNumbers?.length > 0 && <span className="text-red-600">{preview.invalidNumbers.length} invalid number(s)</span>}
           </div>

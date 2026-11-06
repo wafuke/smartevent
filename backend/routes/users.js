@@ -4,6 +4,7 @@ const router = express.Router();
 const { readLocalData, writeLocalData, logActivity } = require('../db');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const { normalizeKenyanPhone } = require('../utils/phone');
+const { normalizeTier, tierLabel, recomputeEventSms } = require('../utils/smsTier');
 const { passwordPolicyError } = require('./auth');
 
 const ROLES = ['admin', 'organizer', 'student'];
@@ -147,9 +148,23 @@ router.put('/:id', requireAuth, (req, res) => {
   const user = (db.users || []).find((u) => u.id === req.params.id);
   if (!user) return res.status(404).json({ success: false, error: 'User not found.' });
 
-  const { name, email, department, studentId, phone, role, status, password, smsOptOut } = req.body || {};
+  const { name, email, department, studentId, phone, role, status, password, smsOptOut, smsPriority, applyToRegistrations } = req.body || {};
 
   if (smsOptOut !== undefined) user.smsOptOut = Boolean(smsOptOut);
+
+  // The student's default SMS tier (0 none, 1 low, 2 medium, 3 high) - pre-selected on every new registration.
+  if (smsPriority !== undefined) {
+    const tier = normalizeTier(smsPriority, -1);
+    if (tier === -1) return res.status(400).json({ success: false, error: 'SMS priority must be NONE, LOW, MEDIUM or HIGH.' });
+    user.smsPriority = tier;
+    if (applyToRegistrations) {
+      (db.registrations || []).filter((r) => r.userId === user.id).forEach((r) => {
+        r.smsPriority = tier;
+        r.smsPriorityLabel = tierLabel(tier);
+        recomputeEventSms(db, (db.events || []).find((e) => e.id === r.eventId));
+      });
+    }
+  }
 
   if (name !== undefined) {
     if (!String(name).trim()) return res.status(400).json({ success: false, error: 'Name cannot be empty.' });

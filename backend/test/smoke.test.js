@@ -196,12 +196,12 @@ test('SMS: organizer limited to own events; simulation mode is honest; logs are 
 
   assert.equal((await api('POST', '/api/sms/send', { token: orgB, body: { eventId: 'evt-101', message: 'x', priority: 'HIGH' } })).status, 403);
   assert.equal((await api('POST', '/api/sms/send', { token: orgA, body: { eventId: 'evt-101', message: '' } })).status, 400);
-  assert.equal((await api('POST', '/api/sms/send', { token: orgA, body: { eventId: 'evt-101', message: 'x', priority: 'URGENT' } })).status, 400);
+  assert.equal((await api('POST', '/api/sms/send', { token: orgA, body: { eventId: 'evt-101', message: 'x', kind: 'BOGUS' } })).status, 400);
   // organizers cannot target arbitrary numbers
   const arbitrary = await api('POST', '/api/sms/send', { token: orgA, body: { message: 'x', phoneNumbers: ['0711111111'] } });
   assert.equal(arbitrary.status, 400);
 
-  const sent = await api('POST', '/api/sms/send', { token: orgA, body: { eventId: 'evt-101', message: 'Venue unchanged. See you at 2pm.', priority: 'HIGH' } });
+  const sent = await api('POST', '/api/sms/send', { token: orgA, body: { eventId: 'evt-101', message: 'Venue unchanged. See you at 2pm.', kind: 'REMINDER' } });
   assert.equal(sent.status, 200);
   assert.equal(sent.json.mode, 'SIMULATION');
   assert.match(sent.json.message, /NOT sent/i);
@@ -218,7 +218,7 @@ test('SMS: organizer limited to own events; simulation mode is honest; logs are 
 
 test('SMS: admin can send to explicit numbers; invalid numbers reported; opt-out respected', async () => {
   const admin = await login('admin@strathmore.edu');
-  const res = await api('POST', '/api/sms/send', { token: admin, body: { message: 'Test', priority: 'LOW', phoneNumbers: '0712345678, 12345, +254722112233' } });
+  const res = await api('POST', '/api/sms/send', { token: admin, body: { message: 'Test', phoneNumbers: '0712345678, 12345, +254722112233' } });
   assert.equal(res.status, 200);
   assert.deepEqual(res.json.invalidNumbers, ['12345']);
   assert.equal(res.json.dispatchedCount, 2);
@@ -236,6 +236,47 @@ test('SMS delivery callback requires the secret in production and updates status
   assert.equal(res.status, 200);
   const logs = await api('GET', '/api/sms/logs', { token: admin });
   assert.equal(logs.json.data.find((l) => l.messageId === messageId).status, 'DELIVERED');
+});
+
+// ------------------------------------------------------------------ STUDENT-CHOSEN SMS PRIORITY
+test('SMS priority is chosen by the student, not the organizer', async () => {
+  const org = await login('careers@strathmore.edu'); // owns evt-105 / evt-106
+  const stud = await login('student@strathmore.edu');
+
+  // organizer cannot set an event SMS priority any more (field is ignored)
+  const before = (await api('GET', '/api/events/evt-105', { token: org })).json.data;
+  await api('PUT', '/api/events/evt-105', { token: org, body: { smsPriority: 3, title: before.title } });
+  const after = (await api('GET', '/api/events/evt-105', { token: org })).json.data;
+  assert.equal(after.smsPriority, before.smsPriority);
+
+  // student sets a tier at registration; invalid tiers are rejected
+  const bad = await api('POST', '/api/registrations', { token: stud, body: { eventId: 'evt-116', smsPriority: 'EXTREME' } });
+  assert.equal(bad.status, 400);
+  const reg = await api('POST', '/api/registrations', { token: stud, body: { eventId: 'evt-116', smsPriority: 'LOW' } });
+  assert.equal(reg.status, 201);
+  assert.equal(reg.json.data.smsPriority, 1);
+
+  // student can change it afterwards; the event summary is derived from the students
+  const upd = await api('PUT', '/api/registrations/event/evt-116/sms-priority', { token: stud, body: { smsPriority: 'HIGH' } });
+  assert.equal(upd.status, 200);
+  assert.equal(upd.json.data.smsPriority, 3);
+  const ev = (await api('GET', '/api/events/evt-116', { token: stud })).json.data;
+  assert.ok(ev.smsMix.high >= 1);
+
+  // an organizer cannot change a student's tier
+  const orgChange = await api('PUT', '/api/registrations/event/evt-116/sms-priority', { token: org, body: { smsPriority: 0 } });
+  assert.equal(orgChange.status, 403);
+
+  // delivery respects the student's tier: a LOW student does not get a general ANNOUNCEMENT by SMS
+  await api('PUT', '/api/registrations/event/evt-116/sms-priority', { token: stud, body: { smsPriority: 'LOW' } });
+  const orgOwner = await login('community@strathmore.edu'); // owns evt-116
+  const prev = await api('POST', '/api/sms/preview', { token: orgOwner, body: { eventId: 'evt-116', kind: 'ANNOUNCEMENT', message: 'Hello' } });
+  const prevUrgent = await api('POST', '/api/sms/preview', { token: orgOwner, body: { eventId: 'evt-116', kind: 'URGENT', message: 'Hello' } });
+  assert.ok(prev.json.skippedByPreference >= 1);
+  assert.ok(prevUrgent.json.recipientCount > prev.json.recipientCount);
+
+  // cleanup
+  await api('DELETE', '/api/registrations/event/evt-116', { token: stud });
 });
 
 // ------------------------------------------------------------------ ADMIN

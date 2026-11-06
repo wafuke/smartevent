@@ -28,6 +28,7 @@ import {
 } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useToast, useConfirm, Modal, Badge, EmptyState } from '../../components/ui';
+import SmsPriorityPicker, { smsTierLabel } from '../../components/SmsPriorityPicker';
 
 function downloadIcsFile(evt) {
   const dateStr = (evt.date || '2026-11-01').replace(/-/g, '');
@@ -82,8 +83,13 @@ export default function StudentDashboardPage() {
     studentId: user?.studentId || '154210',
     phone: user?.phone || '+254712345678',
     department: user?.department || 'BSc Informatics & Computer Science',
-    smsOptOut: Boolean(user?.smsOptOut)
+    smsOptOut: Boolean(user?.smsOptOut),
+    smsPriority: user?.smsPriority ?? 2,
+    applyToRegistrations: false
   });
+  const [registerTarget, setRegisterTarget] = useState(null);
+  const [registerTier, setRegisterTier] = useState(2);
+  const [registering, setRegistering] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
 
   // Password Change State
@@ -131,7 +137,9 @@ export default function StudentDashboardPage() {
         studentId: user.studentId || '154210',
         phone: user.phone || '+254712345678',
         department: user.department || 'BSc Informatics & Computer Science',
-        smsOptOut: Boolean(user.smsOptOut)
+        smsOptOut: Boolean(user.smsOptOut),
+        smsPriority: user.smsPriority ?? 2,
+        applyToRegistrations: false
       });
     }
   }, [user]);
@@ -145,13 +153,35 @@ export default function StudentDashboardPage() {
     }));
   const mySavedEvents = events.filter((e) => favoriteIds.includes(e.id));
 
-  const handleRegister = async (eventId) => {
+  // The student picks their own SMS priority for every event they register for.
+  const handleRegister = (eventId) => {
+    const evt = events.find((e) => e.id === eventId);
+    setRegisterTier(Number(user?.smsPriority ?? 2));
+    setRegisterTarget(evt || { id: eventId, title: 'this event' });
+  };
+
+  const confirmRegister = async () => {
+    if (!registerTarget) return;
+    setRegistering(true);
     try {
-      await registrationsApi.register(eventId);
+      await registrationsApi.register({ eventId: registerTarget.id, smsPriority: registerTier });
       toast.success('RSVP confirmed! Your Digital Pass is ready in "My RSVPs".');
+      setRegisterTarget(null);
       await loadData();
     } catch (err) {
       toast.error(err.message || 'Registration failed');
+    } finally {
+      setRegistering(false);
+    }
+  };
+
+  const handleChangeSmsPriority = async (eventId, tier) => {
+    try {
+      await registrationsApi.setSmsPriority(eventId, tier);
+      toast.success(`SMS priority for this event set to ${smsTierLabel(tier)}.`);
+      await loadData();
+    } catch (err) {
+      toast.error(err.message || 'Could not update SMS priority');
     }
   };
 
@@ -398,6 +428,17 @@ export default function StudentDashboardPage() {
                           <span>{evt.venue}</span>
                         </div>
                       </div>
+                    </div>
+
+                    <div className="pt-3 border-t border-slate-100 space-y-1.5">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                        My SMS priority for this event
+                      </div>
+                      <SmsPriorityPicker
+                        compact
+                        value={reg?.smsPriority ?? 2}
+                        onChange={(tier) => handleChangeSmsPriority(evt.id, tier)}
+                      />
                     </div>
 
                     <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
@@ -796,6 +837,23 @@ export default function StudentDashboardPage() {
                 </span>
               </label>
 
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                <div className="text-xs font-bold text-slate-800">Default SMS priority for new registrations</div>
+                <SmsPriorityPicker
+                  value={profileForm.smsPriority}
+                  onChange={(tier) => setProfileForm({ ...profileForm, smsPriority: tier })}
+                />
+                <label className="flex items-center space-x-2 text-[11px] text-slate-600 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={profileForm.applyToRegistrations}
+                    onChange={(e) => setProfileForm({ ...profileForm, applyToRegistrations: e.target.checked })}
+                    className="w-3.5 h-3.5 accent-[#003366]"
+                  />
+                  <span>Also apply this to events I have already registered for</span>
+                </label>
+              </div>
+
               <button
                 type="submit"
                 disabled={savingProfile}
@@ -869,6 +927,49 @@ export default function StudentDashboardPage() {
           </div>
         </div>
       )}
+
+      {/* REGISTER: STUDENT CHOOSES SMS PRIORITY */}
+      <Modal
+        open={Boolean(registerTarget)}
+        onClose={() => setRegisterTarget(null)}
+        title="Confirm RSVP and choose your SMS priority"
+        maxWidth="max-w-md"
+      >
+        {registerTarget && (
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-extrabold text-slate-900">{registerTarget.title}</h3>
+              <p className="text-xs text-slate-500">
+                {registerTarget.date} {registerTarget.venue ? `• ${registerTarget.venue}` : ''}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <div className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                How much SMS do you want for this event?
+              </div>
+              <SmsPriorityPicker value={registerTier} onChange={setRegisterTier} />
+              <p className="text-[11px] text-slate-500">
+                You decide this, not the organizer. You can change it any time from My RSVPs.
+              </p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setRegisterTarget(null)}
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmRegister}
+                disabled={registering}
+                className="px-4 py-2 rounded-xl bg-[#003366] hover:bg-[#002244] text-white text-xs font-bold disabled:opacity-60"
+              >
+                {registering ? 'Confirming...' : 'Confirm RSVP'}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {/* DIGITAL PASS MODAL */}
       <Modal

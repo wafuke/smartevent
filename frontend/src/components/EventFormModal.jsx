@@ -79,7 +79,6 @@ export default function EventFormModal({
         ...splitTime(activeEvent.time),
         venue: activeEvent.venue || '',
         venueCapacity: activeEvent.venueCapacity || 100,
-        smsPriority: activeEvent.smsPriority || 2,
         expectedRegistrations: activeEvent.registrationCount || 0,
         organizerId: activeEvent.organizerId || '',
         featured: Boolean(activeEvent.featured),
@@ -108,7 +107,10 @@ export default function EventFormModal({
           venueCapacity: Number(form.venueCapacity),
           registrationCount: editing ? Number(activeEvent.registrationCount || 0) : Number(form.expectedRegistrations || 0),
           pastAttendanceRate: Number(activeEvent?.pastAttendanceRate ?? 0.75),
-          smsPriority: Number(form.smsPriority),
+          // SMS priority is chosen by each student when they RSVP. Use the real split once students
+          // have registered; before that assume the default (medium).
+          smsPriority: Number(activeEvent?.smsPriority ?? 2),
+          ...(editing && activeEvent?.smsMix ? { smsMix: activeEvent.smsMix } : {}),
           leadDays: Math.min(lead, 60)
         });
         setForecast(res);
@@ -119,7 +121,7 @@ export default function EventFormModal({
       }
     }, 600);
     return () => clearTimeout(timer);
-  }, [modalOpen, form.category, form.date, form.startTime, form.venueCapacity, form.smsPriority, form.expectedRegistrations, editing, activeEvent]);
+  }, [modalOpen, form.category, form.date, form.startTime, form.venueCapacity, form.expectedRegistrations, editing, activeEvent]);
 
   const venueNames = useMemo(() => venues.map((v) => v.name), [venues]);
 
@@ -142,8 +144,7 @@ export default function EventFormModal({
       date: form.date,
       time: `${form.startTime} - ${form.endTime}`,
       venue: form.venue.trim(),
-      venueCapacity: Number(form.venueCapacity),
-      smsPriority: Number(form.smsPriority)
+      venueCapacity: Number(form.venueCapacity)
     };
     if (isAdmin) {
       payload.featured = form.featured;
@@ -220,14 +221,11 @@ export default function EventFormModal({
           <Field label="Ends">
             <input required type="time" className={inputCls} value={form.endTime} onChange={(e) => set({ endTime: e.target.value })} />
           </Field>
-          <Field label="SMS priority">
-            <select className={inputCls} value={form.smsPriority} onChange={(e) => set({ smsPriority: Number(e.target.value) })}>
-              <option value={3}>High (urgent)</option>
-              <option value={2}>Medium (standard)</option>
-              <option value={1}>Low (info only)</option>
-            </select>
-          </Field>
         </div>
+        <p className="text-[11px] text-slate-500 -mt-2">
+          SMS priority is chosen by each student when they RSVP, not by the organizer. When you send a message you only
+          choose its type (urgent change, reminder or announcement) and each student receives it according to their own priority.
+        </p>
 
         {!editing && (
           <Field label="Expected registrations" hint="Used only for the forecast below - real registrations start at 0.">
