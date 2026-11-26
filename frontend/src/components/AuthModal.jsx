@@ -91,7 +91,8 @@ export default function AuthModal({ isOpen, initialTab = 'login', onClose }) {
           },
           error_callback: () => {
             // If popup is blocked or fails, fall back to full-page Google OAuth redirect
-            const redirectUri = `${window.location.origin}/`;
+            const basePath = window.location.pathname.startsWith('/smartevent') ? '/smartevent/' : '/';
+            const redirectUri = `${window.location.origin}${basePath}`;
             const authUrl =
               `https://accounts.google.com/o/oauth2/v2/auth` +
               `?client_id=${encodeURIComponent(googleClientId)}` +
@@ -111,7 +112,8 @@ export default function AuthModal({ isOpen, initialTab = 'login', onClose }) {
     }
 
     // Standard Google OAuth 2.0 full-page redirect (works even if GIS script is blocked)
-    const redirectUri = `${window.location.origin}/`;
+    const basePath = window.location.pathname.startsWith('/smartevent') ? '/smartevent/' : '/';
+    const redirectUri = `${window.location.origin}${basePath}`;
     const authUrl =
       `https://accounts.google.com/o/oauth2/v2/auth` +
       `?client_id=${encodeURIComponent(googleClientId)}` +

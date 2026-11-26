@@ -178,7 +178,7 @@ function computePrediction(payload = {}) {
   };
 }
 
-function handleOfflineFallback(endpoint, options = {}) {
+async function handleOfflineFallback(endpoint, options = {}) {
   const store = getOfflineStore();
   const method = (options.method || 'GET').toUpperCase();
   const body = options.body ? JSON.parse(options.body) : {};
@@ -230,7 +230,44 @@ function handleOfflineFallback(endpoint, options = {}) {
   }
 
   if (cleanPath === '/auth/google' && method === 'POST') {
-    const email = String(body.email || '').trim().toLowerCase();
+    let email = String(body.email || '').trim().toLowerCase();
+    let googleName = body.name || '';
+    let googlePicture = body.picture || '';
+
+    if (!email && body.accessToken) {
+      try {
+        const gRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${body.accessToken}` }
+        });
+        if (gRes.ok) {
+          const profile = await gRes.json();
+          if (profile && profile.email) {
+            email = String(profile.email).trim().toLowerCase();
+            googleName = profile.name || googleName;
+            googlePicture = profile.picture || googlePicture;
+          }
+        }
+      } catch (e) {
+        // ignore fetch error
+      }
+    }
+
+    if (!email && body.credential) {
+      try {
+        const parts = String(body.credential).split('.');
+        if (parts.length === 3) {
+          const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+          if (payload && payload.email) {
+            email = String(payload.email).trim().toLowerCase();
+            googleName = payload.name || googleName;
+            googlePicture = payload.picture || googlePicture;
+          }
+        }
+      } catch (e) {
+        // ignore decode error
+      }
+    }
+
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       throw new Error('Enter a valid Google or Strathmore email address.');
     }
@@ -251,7 +288,7 @@ function handleOfflineFallback(endpoint, options = {}) {
         ? 'organizer'
         : 'student';
       const formattedName =
-        body.name ||
+        googleName ||
         email
           .split('@')[0]
           .replace(/[._-]/g, ' ')
@@ -260,6 +297,7 @@ function handleOfflineFallback(endpoint, options = {}) {
         id: `usr-google-${Date.now()}`,
         name: formattedName,
         email,
+        picture: googlePicture || undefined,
         password: body.password || 'password123',
         role,
         studentId: role === 'student' ? String(150000 + Math.floor(Math.random() * 9000)) : undefined,
