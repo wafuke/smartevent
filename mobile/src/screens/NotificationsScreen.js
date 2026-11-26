@@ -1,50 +1,107 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, FlatList, SafeAreaView, ActivityIndicator } from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  View,
+  FlatList,
+  SafeAreaView,
+  ActivityIndicator,
+  RefreshControl,
+  TouchableOpacity
+} from 'react-native';
 import { fetchPriorityNotifications } from '../services/api';
 
-export default function NotificationsScreen() {
-  const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading] = useState(true);
+export default function NotificationsScreen({ logs: propLogs, onRefresh }) {
+  const [localLogs, setLocalLogs] = useState([]);
+  const [loading, setLoading] = useState(!propLogs || propLogs.length === 0);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const notifications = propLogs && propLogs.length > 0 ? propLogs : localLogs;
 
   useEffect(() => {
-    loadNotifications();
-  }, []);
+    if (!propLogs || propLogs.length === 0) {
+      loadNotifications();
+    } else {
+      setLoading(false);
+    }
+  }, [propLogs]);
 
   const loadNotifications = async () => {
     setLoading(true);
     const data = await fetchPriorityNotifications();
-    setNotifications(data);
+    setLocalLogs(data);
     setLoading(false);
+  };
+
+  const handlePull = async () => {
+    setRefreshing(true);
+    const data = await fetchPriorityNotifications();
+    setLocalLogs(data);
+    if (onRefresh) await onRefresh();
+    setRefreshing(false);
+  };
+
+  const formatTime = (val) => {
+    if (!val) return 'Just now';
+    if (String(val).includes('T')) {
+      try {
+        const d = new Date(val);
+        return d.toLocaleString('en-KE', {
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      } catch {
+        return val;
+      }
+    }
+    return val;
   };
 
   const renderNotificationCard = ({ item }) => {
     const priority = (item.priority || 'MEDIUM').toUpperCase();
-    
+
     return (
-      <View style={[
-        styles.card,
-        priority === 'HIGH' && styles.highCard,
-        priority === 'MEDIUM' && styles.mediumCard
-      ]}>
+      <View
+        style={[
+          styles.card,
+          priority === 'HIGH' && styles.highCard,
+          priority === 'MEDIUM' && styles.mediumCard
+        ]}
+      >
         <View style={styles.cardHeader}>
-          <View style={[
-            styles.badge,
-            priority === 'HIGH' && styles.highBadge,
-            priority === 'MEDIUM' && styles.mediumBadge,
-            priority === 'LOW' && styles.lowBadge
-          ]}>
-            <Text style={[
-              styles.badgeText,
-              priority === 'HIGH' && styles.highBadgeText,
-              priority === 'MEDIUM' && styles.mediumBadgeText,
-              priority === 'LOW' && styles.lowBadgeText
-            ]}>{priority} PRIORITY</Text>
+          <View
+            style={[
+              styles.badge,
+              priority === 'HIGH' && styles.highBadge,
+              priority === 'MEDIUM' && styles.mediumBadge,
+              priority === 'LOW' && styles.lowBadge
+            ]}
+          >
+            <Text
+              style={[
+                styles.badgeText,
+                priority === 'HIGH' && styles.highBadgeText,
+                priority === 'MEDIUM' && styles.mediumBadgeText,
+                priority === 'LOW' && styles.lowBadgeText
+              ]}
+            >
+              {priority} PRIORITY
+            </Text>
           </View>
-          <Text style={styles.timeText}>{item.sentAt || 'Recently'}</Text>
+          <Text style={styles.timeText}>{formatTime(item.sentAt)}</Text>
         </View>
 
         <Text style={styles.eventTitle}>{item.eventTitle || 'Campus Alert'}</Text>
         <Text style={styles.message}>{item.message}</Text>
+
+        <View style={styles.metaFooter}>
+          <Text style={styles.metaText}>
+            To: {item.recipient || item.recipientName || 'Event Roster'}
+          </Text>
+          <Text style={styles.statusPill}>{item.status || 'SENT'}</Text>
+        </View>
       </View>
     );
   };
@@ -52,8 +109,15 @@ export default function NotificationsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Priority SMS & Notifications</Text>
-        <Text style={styles.headerSubtitle}>Africa's Talking Gateway Feed</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.headerTitle}>Priority SMS Alerts</Text>
+          <Text style={styles.headerSubtitle}>
+            Africa&apos;s Talking Live Gateway (smartevent)
+          </Text>
+        </View>
+        <TouchableOpacity style={styles.syncBtn} onPress={handlePull}>
+          <Text style={styles.syncBtnText}>Sync</Text>
+        </TouchableOpacity>
       </View>
 
       {loading ? (
@@ -65,6 +129,17 @@ export default function NotificationsScreen() {
           renderItem={renderNotificationCard}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={handlePull} tintColor="#003366" />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyBox}>
+              <Text style={styles.emptyTitle}>No SMS dispatches yet</Text>
+              <Text style={styles.emptySub}>
+                Priority alerts sent via Africa&apos;s Talking will appear here in real time.
+              </Text>
+            </View>
+          }
         />
       )}
     </SafeAreaView>
@@ -74,93 +149,146 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#f8fafc'
   },
   header: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 18,
+    paddingTop: 14,
+    paddingBottom: 12
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#0f172a',
+    fontWeight: '800',
+    color: '#0f172a'
   },
   headerSubtitle: {
     fontSize: 12,
-    color: '#64748b',
-    marginTop: 2,
+    color: '#059669',
+    fontWeight: '700',
+    marginTop: 2
+  },
+  syncBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 10,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e2e8f0'
+  },
+  syncBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#003366'
   },
   listContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingHorizontal: 16,
+    paddingBottom: 24
   },
   card: {
     backgroundColor: '#ffffff',
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: '#e2e8f0'
   },
   highCard: {
-    backgroundColor: '#fef2f2',
-    borderColor: '#fca5a5',
+    backgroundColor: '#fff5f5',
+    borderColor: '#fecaca'
   },
   mediumCard: {
     backgroundColor: '#fffbeb',
-    borderColor: '#fde68a',
+    borderColor: '#fde68a'
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 8
   },
   badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    borderWidth: 1,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 8
   },
   highBadge: {
-    backgroundColor: '#fee2e2',
-    borderColor: '#f87171',
+    backgroundColor: '#fee2e2'
   },
   highBadgeText: {
-    color: '#dc2626',
+    color: '#dc2626'
   },
   mediumBadge: {
-    backgroundColor: '#fef3c7',
-    borderColor: '#fbbf24',
+    backgroundColor: '#fef3c7'
   },
   mediumBadgeText: {
-    color: '#d97706',
+    color: '#b45309'
   },
   lowBadge: {
-    backgroundColor: '#e0f2fe',
-    borderColor: '#38bdf8',
+    backgroundColor: '#e0f2fe'
   },
   lowBadgeText: {
-    color: '#0284c7',
+    color: '#0369a1'
   },
   badgeText: {
-    fontSize: 9,
-    fontWeight: 'bold',
+    fontSize: 10,
+    fontWeight: '800'
   },
   timeText: {
-    fontSize: 10,
+    fontSize: 11,
     color: '#64748b',
+    fontWeight: '600'
   },
   eventTitle: {
-    fontSize: 13,
-    fontWeight: 'bold',
+    fontSize: 14,
+    fontWeight: '800',
     color: '#0f172a',
-    marginBottom: 4,
+    marginBottom: 4
   },
   message: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#334155',
-    lineHeight: 18,
+    lineHeight: 19
+  },
+  metaFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 10,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(15, 23, 42, 0.06)'
+  },
+  metaText: {
+    fontSize: 11,
+    color: '#64748b',
+    fontWeight: '600'
+  },
+  statusPill: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#059669'
+  },
+  emptyBox: {
+    backgroundColor: '#ffffff',
+    padding: 28,
+    borderRadius: 18,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    marginTop: 12
+  },
+  emptyTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0f172a',
+    marginBottom: 4
+  },
+  emptySub: {
+    fontSize: 12,
+    color: '#64748b',
+    textAlign: 'center'
   }
 });

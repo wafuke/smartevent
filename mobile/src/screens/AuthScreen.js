@@ -18,7 +18,8 @@ import {
   getDeviceGoogleAccounts,
   removeDeviceGoogleAccount,
   getBackendUrl,
-  setBackendUrl
+  setBackendUrl,
+  GOOGLE_OAUTH_CLIENT_ID
 } from '../services/api';
 
 export default function AuthScreen({
@@ -81,6 +82,7 @@ export default function AuthScreen({
   // Optional Advanced Server IP Config
   const [showServerConfig, setShowServerConfig] = useState(false);
   const [apiUrl, setApiUrl] = useState(getBackendUrl());
+  const [googleClientId, setGoogleClientId] = useState(GOOGLE_OAUTH_CLIENT_ID);
 
   useEffect(() => {
     setIsLogin(initialMode !== 'signup' && initialMode !== 'register');
@@ -89,8 +91,84 @@ export default function AuthScreen({
     setDeviceAccounts(saved);
   }, [initialMode]);
 
+  useEffect(() => {
+    fetch(`${getBackendUrl()}/auth/google/config`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((cfg) => {
+        if (cfg && cfg.clientId) setGoogleClientId(cfg.clientId);
+      })
+      .catch(() => {});
+
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      if (!document.querySelector('script[src*="accounts.google.com/gsi/client"]')) {
+        const script = document.createElement('script');
+        script.src = 'https://accounts.google.com/gsi/client';
+        script.async = true;
+        script.defer = true;
+        document.head.appendChild(script);
+      }
+    }
+  }, []);
+
   const openGoogleSignIn = () => {
     setErrorMsg('');
+    const activeClientId = googleClientId || GOOGLE_OAUTH_CLIENT_ID;
+    if (
+      Platform.OS === 'web' &&
+      typeof window !== 'undefined' &&
+      activeClientId
+    ) {
+      const redirectToGoogle = () => {
+        const redirectUri = `${window.location.origin}/`;
+        window.location.href =
+          `https://accounts.google.com/o/oauth2/v2/auth` +
+          `?client_id=${encodeURIComponent(activeClientId)}` +
+          `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+          `&response_type=token` +
+          `&scope=${encodeURIComponent('openid email profile')}` +
+          `&prompt=select_account`;
+      };
+
+      if (window.google && window.google.accounts && window.google.accounts.oauth2) {
+        try {
+          const tokenClient = window.google.accounts.oauth2.initTokenClient({
+            client_id: activeClientId,
+            scope: 'openid email profile',
+            prompt: 'select_account',
+            callback: async (tokenResponse) => {
+              if (!tokenResponse) return;
+              if (tokenResponse.error) {
+                setErrorMsg(tokenResponse.error_description || 'Google Sign-In was cancelled or failed.');
+                return;
+              }
+              if (!tokenResponse.access_token) return;
+              setLoading(true);
+              setBackendUrl(apiUrl);
+              const res = await googleSignInMobile({
+                accessToken: tokenResponse.access_token,
+                role: signupRole || 'student'
+              });
+              setLoading(false);
+              if (res && res.success && res.user) {
+                setDeviceAccounts(getDeviceGoogleAccounts());
+                onAuthenticate({ ...res.user, token: res.token || res.user?.token });
+              } else {
+                setErrorMsg(res?.error || 'Google authentication failed.');
+              }
+            },
+            error_callback: () => {
+              redirectToGoogle();
+            }
+          });
+          tokenClient.requestAccessToken();
+          return;
+        } catch (e) {
+          // fall through to redirect
+        }
+      }
+      redirectToGoogle();
+      return;
+    }
     const saved = getDeviceGoogleAccounts();
     setDeviceAccounts(saved);
     setGoogleEmail('');
@@ -118,7 +196,7 @@ export default function AuthScreen({
 
     if (res && res.success && res.user) {
       setDeviceAccounts(getDeviceGoogleAccounts());
-      onAuthenticate(res.user);
+      onAuthenticate({ ...res.user, token: res.token || res.user?.token });
     } else {
       setErrorMsg(res?.error || 'Google authentication failed.');
     }
@@ -194,7 +272,7 @@ export default function AuthScreen({
     setLoading(false);
 
     if (res && res.success && res.user) {
-      onAuthenticate(res.user);
+      onAuthenticate({ ...res.user, token: res.token || res.user?.token });
     } else {
       setErrorMsg(res?.error || 'Invalid email or password credentials.');
     }
@@ -509,7 +587,7 @@ export default function AuthScreen({
                   <Text style={styles.googleGText}>G</Text>
                 </View>
                 <Text style={styles.googleOutlineBtnText}>
-                  Continue with Google (@strathmore.edu)
+                  Continue with Google
                 </Text>
               </TouchableOpacity>
 

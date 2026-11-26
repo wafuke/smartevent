@@ -332,7 +332,7 @@ async function verifyGoogleIdToken(idToken) {
 
 router.post('/google', async (req, res) => {
   try {
-    const { credential, email, password, name, role } = req.body || {};
+    const { credential, accessToken, email, password, name, role, phone } = req.body || {};
     const db = readLocalData();
     db.users = db.users || [];
 
@@ -366,6 +366,29 @@ router.post('/google', async (req, res) => {
           error: `Please sign in with a ${GOOGLE_ALLOWED_DOMAINS.map((d) => '@' + d).join(' / ')} Google account.`
         });
       }
+    } else if (accessToken) {
+      let profile;
+      try {
+        const axios = require('axios');
+        const { data } = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          timeout: 8000
+        });
+        profile = data;
+      } catch (e) {
+        return res
+          .status(401)
+          .json({ success: false, error: 'Google could not verify this access token. Please try again.' });
+      }
+      if (!profile || !profile.email) {
+        return res
+          .status(401)
+          .json({ success: false, error: 'Your Google account did not return a verified email address.' });
+      }
+      verifiedEmail = String(profile.email).toLowerCase();
+      displayName = profile.name || displayName;
+      googleId = profile.sub;
+      picture = profile.picture;
     } else {
       if (credential && !email) {
         return res
@@ -427,6 +450,7 @@ router.post('/google', async (req, res) => {
         } while (db.users.some((u) => u.studentId === id));
         return id;
       })();
+      const validPhone = normalizeKenyanPhone(phone) || '+254712345678';
       user = buildNewUser(db, {
         name:
           displayName ||
@@ -441,9 +465,9 @@ router.post('/google', async (req, res) => {
             : `G!${require('crypto').randomBytes(12).toString('hex')}1a`,
         role: finalRole,
         studentId: generatedStudentId,
-        phone: '',
+        phone: validPhone,
         authProvider: 'google',
-        extra: { googleId, picture, phoneVerified: false }
+        extra: { googleId, picture, phoneVerified: Boolean(normalizeKenyanPhone(phone)) }
       });
       db.users.push(user);
       createRoleProfile(db, user);

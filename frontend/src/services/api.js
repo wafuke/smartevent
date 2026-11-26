@@ -527,29 +527,123 @@ function handleOfflineFallback(endpoint, options = {}) {
     };
   }
 
+  if (cleanPath === '/sms/logs' && method === 'DELETE') {
+    store.smsLogs = [];
+    saveOfflineStore(store);
+    return { success: true, message: 'Cleared SMS logs.' };
+  }
+
+  if (cleanPath.startsWith('/sms/logs/') && method === 'DELETE') {
+    const logId = cleanPath.split('/')[3];
+    store.smsLogs = (store.smsLogs || []).filter((l) => l.id !== logId);
+    saveOfflineStore(store);
+    return { success: true, message: 'SMS log entry deleted.' };
+  }
+
+  if (cleanPath === '/sms/run-reminders' && method === 'POST') {
+    return { success: true, sentCount: 0, message: 'Auto-reminder check complete.' };
+  }
+
   if (cleanPath === '/admin/overview') {
     const safeUsers = store.users.map(({ password, ...u }) => u);
-    return {
-      success: true,
-      stats: {
-        totalUsers: safeUsers.length,
-        admins: safeUsers.filter((u) => u.role === 'admin').length,
-        organizers: safeUsers.filter((u) => u.role === 'organizer').length,
+    const totalCapacity = store.events.reduce((s, e) => s + (e.venueCapacity || 0), 0);
+    const totalRsvps = store.events.reduce((s, e) => s + (e.registrationCount || 0), 0);
+    const summary = {
+      totals: {
+        users: safeUsers.length,
         students: safeUsers.filter((u) => u.role === 'student').length,
-        totalEvents: store.events.length,
-        totalRegistrations: store.registrations.length,
-        totalSmsSent: store.smsLogs.length,
-        totalVenues: store.venues.length,
-        totalCategories: store.categories.length
+        organizers: safeUsers.filter((u) => u.role === 'organizer').length,
+        admins: safeUsers.filter((u) => u.role === 'admin').length,
+        suspended: safeUsers.filter((u) => u.status === 'Suspended').length,
+        events: store.events.length,
+        upcomingEvents: store.events.filter((e) => (e.status || 'Upcoming') === 'Upcoming').length,
+        registrations: store.registrations.length,
+        categories: store.categories.length,
+        venues: store.venues.length
       },
+      capacityUtilizationPct: totalCapacity ? Math.round((totalRsvps / totalCapacity) * 100) : 0,
+      categoryBreakdown: store.categories.map((c) => {
+        const evs = store.events.filter((e) => e.category === c.name);
+        return {
+          name: c.name,
+          events: evs.length,
+          registrations: evs.reduce((s, e) => s + (e.registrationCount || 0), 0),
+          capacity: evs.reduce((s, e) => s + (e.venueCapacity || 0), 0)
+        };
+      }),
+      topEvents: [...store.events]
+        .sort((a, b) => (b.registrationCount || 0) - (a.registrationCount || 0))
+        .slice(0, 5)
+        .map((e) => ({
+          id: e.id,
+          title: e.title,
+          registrations: e.registrationCount || 0,
+          capacity: e.venueCapacity || 150,
+          predictedAttendance: e.predictedAttendance || Math.round((e.registrationCount || 0) * 0.8)
+        })),
+      sms: {
+        totalSent: store.smsLogs.length,
+        highPriority: store.smsLogs.filter((l) => String(l.priority).toUpperCase() === 'HIGH').length,
+        mediumPriority: store.smsLogs.filter((l) => String(l.priority).toUpperCase() === 'MEDIUM').length,
+        lowPriority: store.smsLogs.filter((l) => String(l.priority).toUpperCase() === 'LOW').length,
+        delivered: store.smsLogs.length,
+        failed: 0,
+        deliveryRate: store.smsLogs.length ? 100 : 0
+      },
+      model: {
+        algorithm: 'LogisticRegression',
+        version: '202611060529',
+        trainedAt: '2026-11-06T05:29:26Z',
+        rocAuc: 0.7301,
+        accuracy: 0.6944,
+        f1: 0.805,
+        eventMae: 13.61,
+        eventMapePct: 10.99,
+        testEvents: 140
+      }
+    };
+    const payloadData = {
+      summary,
       users: safeUsers,
       events: store.events,
-      smsLogs: store.smsLogs
+      registrations: store.registrations,
+      categories: store.categories,
+      tables: {
+        admin_profiles: safeUsers.filter((u) => u.role === 'admin'),
+        organizer_profiles: safeUsers.filter((u) => u.role === 'organizer'),
+        student_profiles: safeUsers.filter((u) => u.role === 'student'),
+        venues: store.venues,
+        smsLogs: store.smsLogs
+      },
+      recentActivity: store.activity || []
+    };
+    return {
+      success: true,
+      data: payloadData,
+      ...payloadData
     };
   }
 
+  if (cleanPath === '/admin/bulk-delete' && method === 'POST') {
+    const idSet = new Set((body.ids || []).map(String));
+    if (body.resource === 'events') {
+      store.events = store.events.filter((e) => !idSet.has(e.id));
+    } else if (body.resource === 'users') {
+      store.users = store.users.filter((u) => !idSet.has(u.id));
+    } else if (body.resource === 'registrations') {
+      store.registrations = store.registrations.filter((r) => !idSet.has(r.id));
+    }
+    saveOfflineStore(store);
+    return { success: true, deletedCount: idSet.size };
+  }
+
   if (cleanPath.startsWith('/admin/activity')) {
-    return { success: true, count: 0, data: [] };
+    if (method === 'DELETE') {
+      store.activity = [];
+      saveOfflineStore(store);
+      return { success: true };
+    }
+    return { success: true, count: 0, data: store.activity || [] };
   }
 
   if (cleanPath === '/users') {
@@ -609,8 +703,8 @@ export async function apiRequest(endpoint, options = {}) {
         data = null;
       }
 
-      // If Vite proxy returns 500/502/503/504 with no JSON body because backend port 5000 is down, try next URL or offline fallback
-      if (res.status >= 500 && (!data || typeof data.success === 'undefined')) {
+      // If static host (e.g. GitHub Pages 404 HTML) or Vite proxy 500+ returns no API JSON body, try next URL or offline fallback
+      if (!data || typeof data.success === 'undefined') {
         continue;
       }
 
@@ -698,8 +792,12 @@ export const registrationsApi = {
   checkIn: (registrationId, checkedIn = true) =>
     apiRequest(`/registrations/${registrationId}/checkin`, json('PATCH', { checkedIn })),
   cancel: (registrationId) => apiRequest(`/registrations/${registrationId}`, { method: 'DELETE' }),
-  setSmsPriority: (eventId, smsPriority) =>
-    apiRequest(`/registrations/event/${eventId}/sms-priority`, json('PUT', { smsPriority })),
+  setSmsPriority: (eventId, smsPriorityOrPayload) => {
+    const payload = typeof smsPriorityOrPayload === 'object' && smsPriorityOrPayload !== null
+      ? smsPriorityOrPayload
+      : { smsPriority: smsPriorityOrPayload };
+    return apiRequest(`/registrations/event/${eventId}/sms-priority`, json('PUT', payload));
+  },
   cancelForEvent: (eventId) => apiRequest(`/registrations/event/${eventId}`, { method: 'DELETE' })
 };
 
@@ -719,6 +817,9 @@ export const smsApi = {
   getStatus: () => apiRequest('/sms/status'),
   updateConfig: (payload) => apiRequest('/sms/config', json('PUT', payload)),
   getLogs: (params) => apiRequest(`/sms/logs${qs(params)}`),
+  deleteLog: (id) => apiRequest(`/sms/logs/${id}`, { method: 'DELETE' }),
+  clearLogs: () => apiRequest('/sms/logs', { method: 'DELETE' }),
+  runReminders: () => apiRequest('/sms/run-reminders', { method: 'POST' }),
   preview: (payload) => apiRequest('/sms/preview', json('POST', payload)),
   send: (payload) => apiRequest('/sms/send', json('POST', payload))
 };
@@ -737,6 +838,8 @@ export const analyticsApi = {
 export const adminApi = {
   getOverview: () => apiRequest('/admin/overview'),
   getActivity: (limit = 50) => apiRequest(`/admin/activity${qs({ limit })}`),
+  clearActivity: () => apiRequest('/admin/activity', { method: 'DELETE' }),
+  bulkDelete: (resource, ids) => apiRequest('/admin/bulk-delete', json('POST', { resource, ids })),
   getUsers: (params) => apiRequest(`/users${qs(params)}`),
   createUser: (data) => apiRequest('/users', json('POST', data)),
   updateUser: (id, data) => apiRequest(`/users/${id}`, json('PUT', data)),

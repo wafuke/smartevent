@@ -4,17 +4,17 @@ import { predictApi } from '../services/api';
 import { Badge } from './ui';
 
 const DEFAULT_TRAINING_METADATA = {
-  algorithm: 'Calibrated L2 Logistic Regression (C = 0.1)',
+  algorithm: 'L2 Logistic Regression (C = 0.01)',
   kaggleRows: 20000,
-  leakageDropped: 'absence_reason (99.4% target leakage removed)',
+  leakageDropped: 'absence_reason (target leakage removed)',
   strathmoreEvents: 700,
-  strathmoreStudents: 2500,
+  strathmoreStudents: 4000,
   trainEvents: 560,
   testEvents: 140,
-  rocAuc: 0.8842,
-  f1Score: 0.8315,
-  brierScore: 0.1384,
-  headcountMae: 6.85,
+  rocAuc: 0.7301,
+  f1Score: 0.805,
+  brierScore: 0.1975,
+  headcountMae: 13.61,
   features: [
     { feature: 'past_attendance_rate', coefficient: 0.4974, effect: 'raises turnout', oddsMultiplierPerStdUnit: 1.644 },
     { feature: 'sms_priority_high (student-chosen)', coefficient: 0.2802, effect: 'raises turnout', oddsMultiplierPerStdUnit: 1.323 },
@@ -27,7 +27,7 @@ const DEFAULT_TRAINING_METADATA = {
   ]
 };
 
-export default function MlSimulatorAndTrainingPanel({ events = [] }) {
+export default function MlSimulatorAndTrainingPanel({ events = [], showTrainingSection = false }) {
   const [simForm, setSimForm] = useState({
     eventType: 'Workshop',
     timeSlot: 'Afternoon',
@@ -123,32 +123,7 @@ export default function MlSimulatorAndTrainingPanel({ events = [] }) {
           )}
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 text-xs">
-          <div>
-            <label className="block text-[10px] font-extrabold uppercase text-slate-500 mb-1">Category</label>
-            <select
-              value={simForm.eventType}
-              onChange={(e) => setSimForm({ ...simForm, eventType: e.target.value })}
-              className="w-full px-2.5 py-2 rounded-xl bg-slate-50 border border-slate-200 font-bold"
-            >
-              {['Academic', 'Workshop', 'Seminar', 'Sports', 'Career Fair', 'Cultural'].map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-extrabold uppercase text-slate-500 mb-1">Time Slot</label>
-            <select
-              value={simForm.timeSlot}
-              onChange={(e) => setSimForm({ ...simForm, timeSlot: e.target.value })}
-              className="w-full px-2.5 py-2 rounded-xl bg-slate-50 border border-slate-200 font-bold"
-            >
-              {['Morning', 'Afternoon', 'Evening'].map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-          </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
 
           <div>
             <label className="block text-[10px] font-extrabold uppercase text-slate-500 mb-1">Capacity</label>
@@ -309,7 +284,8 @@ export default function MlSimulatorAndTrainingPanel({ events = [] }) {
         )}
       </div>
 
-      {/* SECTION 2: HOW THE MODEL WAS TRAINED & FEATURE IMPORTANCE */}
+      {/* SECTION 2: HOW THE MODEL WAS TRAINED & FEATURE IMPORTANCE (Admin/Technical view only) */}
+      {showTrainingSection && (
       <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-5 shadow-2xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
           <div>
@@ -339,7 +315,7 @@ export default function MlSimulatorAndTrainingPanel({ events = [] }) {
                   20,000 Kaggle Rows + 700 Strathmore Events
                 </div>
                 <p className="text-slate-600 leading-relaxed">
-                  Audited <code>Attendance_Prediction.csv</code> (20,000 rows), detected and dropped <code>absence_reason</code> (99.4% target leakage), extracted behavioral log-odds, and generated 75,000+ Strathmore event registrations across 2,500 students and 700 campus events.
+                  Audited <code>Attendance_Prediction.csv</code> (20,000 rows), detected and dropped <code>absence_reason</code> (post-event target leakage), extracted behavioral log-odds, and generated 150,645 Strathmore event registrations across 4,000 student profiles and 700 campus events.
                 </p>
               </div>
 
@@ -349,17 +325,17 @@ export default function MlSimulatorAndTrainingPanel({ events = [] }) {
                   Chronological 80/20 Split + 5-Fold GroupKFold
                 </div>
                 <p className="text-slate-600 leading-relaxed">
-                  Trained on 560 past events and tested on 140 untouched future events. Compared Dummy Baseline, Decision Tree, Random Forest, Gradient Boosting, and Logistic Regression (`C=0.1` L2 regularization), selecting calibrated Logistic Regression for interpretability and probability calibration.
+                  Trained on 560 past events and tested on 140 untouched future events. Compared Dummy Baseline, Decision Tree, Random Forest, Gradient Boosting, and Logistic Regression (`C=0.01` L2 regularization), selecting Logistic Regression for interpretability and probability calibration.
                 </p>
               </div>
 
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5">
                 <Badge tone="green">Stage 8: Held-Out Test Performance</Badge>
                 <div className="font-extrabold text-slate-900 pt-1">
-                  ROC-AUC: 0.884 • Event MAE: 6.85 Attendees
+                  ROC-AUC: 0.730 • F1: 0.805 • Event MAE: 13.61 Attendees
                 </div>
                 <p className="text-slate-600 leading-relaxed">
-                  Achieved ROC-AUC of 0.884, F1-score of 0.832, and Brier calibration score of 0.138 on the 140 future test events. Artifacts are saved in <code>ml-service/models/attendance_model.joblib</code> and <code>ml-service/reports/training_report.md</code>.
+                  Achieved ROC-AUC of 0.7301, F1-score of 0.805 (recall 0.959, precision 0.694), and Brier score of 0.1975 on the 140 future test events. Artifacts are saved in <code>ml-service/models/attendance_model.joblib</code> and <code>ml-service/reports/training_report.md</code>.
                 </p>
               </div>
             </div>
@@ -433,6 +409,7 @@ python main.py
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }

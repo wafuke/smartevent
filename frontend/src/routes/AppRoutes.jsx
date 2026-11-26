@@ -117,10 +117,10 @@ export default function AppRoutes() {
                 </div>
                 <button
                   onClick={logout}
-                  title="Sign Out"
-                  className="p-1 text-slate-400 hover:text-red-600 transition-colors ml-1 font-bold"
+                  title="Log Out"
+                  className="px-2.5 py-1 rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-600 hover:text-white transition-all ml-1 font-bold text-xs"
                 >
-                  Sign Out
+                  Log Out
                 </button>
               </div>
             ) : (

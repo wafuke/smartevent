@@ -60,10 +60,11 @@ export default function Navbar({ activeTab, setActiveTab, user, onOpenAuthModal,
               </div>
               <button
                 onClick={onSignOut}
-                title="Sign Out"
-                className="p-1 text-slate-400 hover:text-red-600 transition-colors ml-1"
+                title="Log Out"
+                className="flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-600 hover:text-white transition-all ml-1 text-xs font-bold"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Log Out</span>
               </button>
             </div>
           ) : (

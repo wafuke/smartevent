@@ -13,6 +13,21 @@ import {
 } from 'react-native';
 import { getBackendUrl, updateUserProfileMobile } from '../services/api';
 
+const PRIORITY_TIERS = [
+  { value: 'HIGH', label: 'High', desc: 'All alerts (urgent, reminders & announcements)' },
+  { value: 'MEDIUM', label: 'Medium', desc: 'Urgent changes & event reminders' },
+  { value: 'LOW', label: 'Low', desc: 'Urgent changes only' },
+  { value: 'NONE', label: 'Off', desc: 'In-app alerts only (no SMS)' }
+];
+
+const FREQUENCY_OPTIONS = [
+  { value: null, label: 'Auto' },
+  { value: 30, label: 'Every 30m' },
+  { value: 60, label: 'Every 1h' },
+  { value: 180, label: 'Every 3h' },
+  { value: 1440, label: 'Once/24h' }
+];
+
 export default function ProfileScreen({
   user,
   registeredCount = 0,
@@ -27,9 +42,23 @@ export default function ProfileScreen({
   const [department, setDepartment] = useState(
     user?.department || 'School of Computing & Engineering Sciences (SCES)'
   );
+  const [smsPriority, setSmsPriority] = useState(
+    String(user?.smsPriority || 'MEDIUM').toUpperCase()
+  );
+  const [smsFrequencyMinutes, setSmsFrequencyMinutes] = useState(
+    user?.smsFrequencyMinutes ?? null
+  );
   const [saving, setSaving] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const scrollRef = useRef(null);
+
+  useEffect(() => {
+    setName(user?.name || '');
+    setPhone(user?.phone || '+254712345678');
+    setDepartment(user?.department || 'School of Computing & Engineering Sciences (SCES)');
+    setSmsPriority(String(user?.smsPriority || 'MEDIUM').toUpperCase());
+    setSmsFrequencyMinutes(user?.smsFrequencyMinutes ?? null);
+  }, [user]);
 
   const scrollToInput = (y = 200) => {
     setTimeout(() => {
@@ -58,7 +87,13 @@ export default function ProfileScreen({
     setSaving(true);
     const res = await updateUserProfileMobile(
       user?.id,
-      { name: name.trim(), phone: phone.trim(), department: department.trim() },
+      {
+        name: name.trim(),
+        phone: phone.trim(),
+        department: department.trim(),
+        smsPriority,
+        applyToRegistrations: true
+      },
       user?.token
     );
     setSaving(false);
@@ -69,13 +104,54 @@ export default function ProfileScreen({
           name: name.trim(),
           phone: phone.trim(),
           department: department.trim(),
+          smsPriority,
           ...(res.data || {})
         });
       }
       setEditing(false);
-      Alert.alert('Profile Saved', 'Your profile & SMS alert number have been updated.');
+      Alert.alert('Profile Saved', 'Your profile & SMS alert preferences have been synced.');
     } else {
       Alert.alert('Update Error', res?.error || 'Could not update profile.');
+    }
+  };
+
+  const handleQuickTierChange = async (tierValue) => {
+    setSmsPriority(tierValue);
+    const res = await updateUserProfileMobile(
+      user?.id,
+      { smsPriority: tierValue, applyToRegistrations: true },
+      user?.token
+    );
+    if (res && res.success) {
+      if (onUserUpdated) {
+        onUserUpdated({
+          ...user,
+          smsPriority: tierValue,
+          ...(res.data || {})
+        });
+      }
+    } else {
+      Alert.alert('Update Error', res?.error || 'Could not update SMS priority.');
+    }
+  };
+
+  const handleQuickFrequencyChange = async (freqValue) => {
+    setSmsFrequencyMinutes(freqValue);
+    const res = await updateUserProfileMobile(
+      user?.id,
+      { smsFrequencyMinutes: freqValue, applyToRegistrations: true },
+      user?.token
+    );
+    if (res && res.success) {
+      if (onUserUpdated) {
+        onUserUpdated({
+          ...user,
+          smsFrequencyMinutes: freqValue,
+          ...(res.data || {})
+        });
+      }
+    } else {
+      Alert.alert('Update Error', res?.error || 'Could not update SMS frequency.');
     }
   };
 
@@ -222,6 +298,62 @@ export default function ProfileScreen({
             </>
           )}
         </View>
+
+        {/* Student SMS Priority Tier Card (Synced with Web App) */}
+        {role === 'STUDENT' && (
+          <View style={styles.card}>
+            <Text style={styles.cardHeaderTitle}>SMS Alert Priority Tier</Text>
+            <Text style={styles.tierSubtitle}>
+              Choose which Africa&apos;s Talking SMS alerts you receive. Changes sync with the Web App immediately.
+            </Text>
+            <View style={styles.tierGrid}>
+              {PRIORITY_TIERS.map((tier) => {
+                const selected = smsPriority === tier.value;
+                return (
+                  <TouchableOpacity
+                    key={tier.value}
+                    style={[styles.tierChip, selected && styles.tierChipSelected]}
+                    onPress={() => handleQuickTierChange(tier.value)}
+                  >
+                    <Text style={[styles.tierChipTitle, selected && styles.tierChipTitleSelected]}>
+                      {tier.label}
+                    </Text>
+                    <Text style={[styles.tierChipDesc, selected && styles.tierChipDescSelected]}>
+                      {tier.desc}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <Text style={[styles.cardHeaderTitle, { marginTop: 14, fontSize: 13 }]}>
+              Auto SMS Reminder Frequency
+            </Text>
+            <Text style={styles.tierSubtitle}>
+              Auto sends every 1h for High Priority (within 24h) or every 3h for Medium. Tap to override:
+            </Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {FREQUENCY_OPTIONS.map((opt) => {
+                const selected = (smsFrequencyMinutes ?? null) === opt.value;
+                return (
+                  <TouchableOpacity
+                    key={String(opt.value)}
+                    style={[
+                      styles.tierChip,
+                      { width: 'auto', minWidth: 68, paddingVertical: 8, paddingHorizontal: 12 },
+                      selected && styles.tierChipSelected
+                    ]}
+                    onPress={() => handleQuickFrequencyChange(opt.value)}
+                  >
+                    <Text style={[styles.tierChipTitle, { fontSize: 12, marginBottom: 0 }, selected && styles.tierChipTitleSelected]}>
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
 
         {/* Sign Out Button */}
         <TouchableOpacity style={styles.signOutButton} onPress={onSignOut}>
@@ -392,5 +524,41 @@ const styles = StyleSheet.create({
     color: '#dc2626',
     fontWeight: 'bold',
     fontSize: 12
+  },
+  tierSubtitle: {
+    fontSize: 11,
+    color: '#64748b',
+    marginTop: 4,
+    marginBottom: 10
+  },
+  tierGrid: {
+    gap: 8
+  },
+  tierChip: {
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    backgroundColor: '#f8fafc'
+  },
+  tierChipSelected: {
+    borderColor: '#003366',
+    backgroundColor: '#eff6ff'
+  },
+  tierChipTitle: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#1e293b'
+  },
+  tierChipTitleSelected: {
+    color: '#003366'
+  },
+  tierChipDesc: {
+    fontSize: 11,
+    color: '#64748b',
+    marginTop: 2
+  },
+  tierChipDescSelected: {
+    color: '#1e40af'
   }
 });

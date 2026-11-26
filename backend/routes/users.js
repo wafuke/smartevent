@@ -148,9 +148,26 @@ router.put('/:id', requireAuth, (req, res) => {
   const user = (db.users || []).find((u) => u.id === req.params.id);
   if (!user) return res.status(404).json({ success: false, error: 'User not found.' });
 
-  const { name, email, department, studentId, phone, role, status, password, smsOptOut, smsPriority, applyToRegistrations } = req.body || {};
+  const { name, email, department, studentId, phone, role, status, password, smsOptOut, smsPriority, smsFrequencyMinutes, applyToRegistrations } = req.body || {};
 
   if (smsOptOut !== undefined) user.smsOptOut = Boolean(smsOptOut);
+
+  if (smsFrequencyMinutes !== undefined) {
+    const VALID_FREQUENCIES = [30, 60, 180, 360, 1440];
+    const parsedFreq =
+      smsFrequencyMinutes === null || smsFrequencyMinutes === '' || smsFrequencyMinutes === 'auto'
+        ? null
+        : Number(smsFrequencyMinutes);
+    if (parsedFreq !== null && !VALID_FREQUENCIES.includes(parsedFreq)) {
+      return res.status(400).json({ success: false, error: 'SMS frequency must be Auto, 30, 60, 180, 360, or 1440 minutes.' });
+    }
+    user.smsFrequencyMinutes = parsedFreq;
+    if (applyToRegistrations) {
+      (db.registrations || []).filter((r) => r.userId === user.id).forEach((r) => {
+        r.smsFrequencyMinutes = parsedFreq;
+      });
+    }
+  }
 
   // The student's default SMS tier (0 none, 1 low, 2 medium, 3 high) - pre-selected on every new registration.
   if (smsPriority !== undefined) {

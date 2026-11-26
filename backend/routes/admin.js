@@ -2,7 +2,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const router = express.Router();
-const { readLocalData } = require('../db');
+const { readLocalData, writeLocalData, logActivity } = require('../db');
 const { requireRole } = require('../middleware/auth');
 
 function sanitize(u) {
@@ -129,6 +129,61 @@ router.get('/overview', requireRole(['admin']), (req, res) => {
 router.get('/activity', requireRole(['admin']), (req, res) => {
   const limit = Math.min(parseInt(req.query.limit, 10) || 50, 200);
   res.json({ success: true, data: (readLocalData().activity || []).slice(0, limit) });
+});
+
+// DELETE /api/admin/activity - ADMIN: clear activity feed
+router.delete('/activity', requireRole(['admin']), (req, res) => {
+  const db = readLocalData();
+  const cleared = (db.activity || []).length;
+  db.activity = [];
+  logActivity(db, 'ADMIN_ACTION', `${req.user.name} cleared ${cleared} activity log entries`);
+  writeLocalData(db);
+  res.json({ success: true, message: `Cleared ${cleared} activity log entries.` });
+});
+
+// POST /api/admin/bulk-delete - ADMIN: bulk delete users, events, or registrations safely
+router.post('/bulk-delete', requireRole(['admin']), (req, res) => {
+  const { resource, ids } = req.body || {};
+  if (!['users', 'events', 'registrations'].includes(resource) || !Array.isArray(ids) || !ids.length) {
+    return res.status(400).json({ success: false, error: 'Provide resource (users, events, registrations) and a non-empty ids array.' });
+  }
+  const idSet = new Set(ids.map(String));
+  const db = readLocalData();
+  let deletedCount = 0;
+
+  if (resource === 'events') {
+    const before = (db.events || []).length;
+    db.events = (db.events || []).filter((e) => !idSet.has(e.id));
+    deletedCount = before - db.events.length;
+    db.registrations = (db.registrations || []).filter((r) => !idSet.has(r.eventId));
+    db.favorites = (db.favorites || []).filter((f) => !idSet.has(f.eventId));
+  } else if (resource === 'registrations') {
+    const removed = (db.registrations || []).filter((r) => idSet.has(r.id));
+    db.registrations = (db.registrations || []).filter((r) => !idSet.has(r.id));
+    deletedCount = removed.length;
+    removed.forEach((r) => {
+      const ev = (db.events || []).find((e) => e.id === r.eventId);
+      if (ev && ev.registrationCount > 0) ev.registrationCount -= 1;
+    });
+  } else if (resource === 'users') {
+    const adminCount = (db.users || []).filter((u) => u.role === 'admin').length;
+    let remainingAdmins = adminCount;
+    db.users = (db.users || []).filter((u) => {
+      if (!idSet.has(u.id)) return true;
+      if (u.id === req.user.id) return true; // never delete self
+      if (u.role === 'admin' && remainingAdmins <= 1) return true; // never delete last admin
+      if (u.role === 'admin') remainingAdmins -= 1;
+      deletedCount += 1;
+      return false;
+    });
+    const survivingUserIds = new Set(db.users.map((u) => u.id));
+    db.registrations = (db.registrations || []).filter((r) => survivingUserIds.has(r.userId));
+    db.favorites = (db.favorites || []).filter((f) => survivingUserIds.has(f.userId));
+  }
+
+  logActivity(db, 'ADMIN_BULK_DELETE', `${req.user.name} bulk-deleted ${deletedCount} ${resource}`);
+  writeLocalData(db);
+  res.json({ success: true, deletedCount, message: `Deleted ${deletedCount} ${resource}.` });
 });
 
 module.exports = router;

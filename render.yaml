@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: smartevent-backend
+    env: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: AT_MODE
+        value: LIVE
+      - key: AT_USERNAME
+        value: smartevent
+      - key: AT_API_KEY
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        value: 604862097027-9p6jobl5dv420kotr4u5ob2als6qomvo.apps.googleusercontent.com
+      - key: ML_SERVICE_URL
+        value: http://127.0.0.1:8000

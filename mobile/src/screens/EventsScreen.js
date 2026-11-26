@@ -7,40 +7,68 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
-  ScrollView
+  ScrollView,
+  RefreshControl
 } from 'react-native';
 import { fetchEvents } from '../services/api';
 
 export default function EventsScreen({
   user,
+  events: propEvents,
+  onRefresh,
   onSelectEvent,
   onOpenAuth,
   registeredIds = [],
   savedIds = [],
   onToggleSave
 }) {
-  const [events, setEvents] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [localEvents, setLocalEvents] = useState([]);
+  const [loading, setLoading] = useState(!propEvents || propEvents.length === 0);
+  const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
 
-  const categories = ['All', 'Academic', 'Workshop', 'Seminar', 'Career Fair', 'Sports', 'Cultural'];
+  const categories = [
+    'All',
+    'Academic',
+    'Workshop',
+    'Seminar',
+    'Club Activity',
+    'Sports',
+    'Career Fair'
+  ];
+
+  const events = propEvents && propEvents.length > 0 ? propEvents : localEvents;
 
   useEffect(() => {
-    loadEvents();
-  }, []);
+    if (!propEvents || propEvents.length === 0) {
+      loadEvents();
+    } else {
+      setLoading(false);
+    }
+  }, [propEvents]);
 
   const loadEvents = async () => {
     setLoading(true);
     const data = await fetchEvents();
-    setEvents(data);
+    setLocalEvents(data);
+    if (onRefresh) onRefresh();
     setLoading(false);
+  };
+
+  const handlePullRefresh = async () => {
+    setRefreshing(true);
+    const data = await fetchEvents();
+    setLocalEvents(data);
+    if (onRefresh) await onRefresh();
+    setRefreshing(false);
   };
 
   const filteredEvents = events.filter((e) => {
     const matchesCat = selectedCategory === 'All' || e.category === selectedCategory;
     const q = search.toLowerCase();
     const matchesSearch =
+      !q ||
       (e.title || '').toLowerCase().includes(q) ||
       (e.venue || '').toLowerCase().includes(q) ||
       (e.category || '').toLowerCase().includes(q) ||
@@ -49,90 +77,99 @@ export default function EventsScreen({
   });
 
   const renderHeader = () => (
-    <View>
-      {/* Public Home Hero OR Student Welcome Banner */}
+    <View style={styles.headerWrap}>
+      {/* Compact App Top Bar */}
       {!user ? (
-        <View style={styles.publicHero}>
-          <View style={styles.heroTopRow}>
-            <View style={styles.brandBadge}>
-              <Text style={styles.brandBadgeText}>STRATHMORE SMARTEVENT</Text>
+        <View style={styles.publicBanner}>
+          <View style={styles.publicBannerTop}>
+            <View style={styles.logoRow}>
+              <View style={styles.logoMark}>
+                <Text style={styles.logoMarkText}>SE</Text>
+              </View>
+              <View>
+                <Text style={styles.appBrand}>SmartEvent</Text>
+                <Text style={styles.appSubBrand}>Strathmore University</Text>
+              </View>
             </View>
-            <TouchableOpacity style={styles.syncMiniBtn} onPress={loadEvents}>
-              <Text style={styles.syncMiniText}>↻ Sync</Text>
-            </TouchableOpacity>
+            <View style={styles.publicActions}>
+              <TouchableOpacity
+                style={styles.ghostLoginBtn}
+                onPress={() => onOpenAuth && onOpenAuth('login')}
+              >
+                <Text style={styles.ghostLoginText}>Sign In</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.goldSignupBtn}
+                onPress={() => onOpenAuth && onOpenAuth('register')}
+              >
+                <Text style={styles.goldSignupText}>Join</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-          <Text style={styles.heroTitle}>Discover & RSVP to Campus Events</Text>
-          <Text style={styles.heroSub}>
-            Browse public lectures, workshops, career fairs & sports. Sign in as a Student, Organizer, or Admin to unlock your dashboard.
-          </Text>
-          <View style={styles.heroAuthRow}>
-            <TouchableOpacity
-              style={styles.heroLoginBtn}
-              onPress={() => onOpenAuth && onOpenAuth('login')}
-            >
-              <Text style={styles.heroLoginText}>Log In</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.heroSignupBtn}
-              onPress={() => onOpenAuth && onOpenAuth('register')}
-            >
-              <Text style={styles.heroSignupText}>Sign Up</Text>
-            </TouchableOpacity>
-          </View>
+          <Text style={styles.publicHeadline}>Campus Events & Turnout Forecast</Text>
         </View>
       ) : (
-        <View style={styles.studentBanner}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.welcomeLabel}>STUDENT HOME • {user.studentId || 'SCES'}</Text>
-            <Text style={styles.welcomeName} numberOfLines={1}>
-              Welcome, {user.name}
-            </Text>
-            <Text style={styles.welcomeSub}>
-              {registeredIds.length} Registered • {savedIds.length} Saved • SMS Priority Active
-            </Text>
+        <View style={styles.userBanner}>
+          <View style={styles.userRow}>
+            <View style={styles.userAvatar}>
+              <Text style={styles.userAvatarText}>{(user.name || 'S').charAt(0).toUpperCase()}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.userGreeting} numberOfLines={1}>
+                Hi, {user.name.split(' ')[0]}
+              </Text>
+              <Text style={styles.userStatsText}>
+                {registeredIds.length} Passes • {savedIds.length} Saved
+              </Text>
+            </View>
+            <TouchableOpacity style={styles.syncPill} onPress={handlePullRefresh}>
+              <Text style={styles.syncPillText}>Sync</Text>
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity style={styles.refreshBtn} onPress={loadEvents}>
-            <Text style={styles.refreshText}>↻ Sync</Text>
-          </TouchableOpacity>
         </View>
       )}
 
-      {/* Search Input */}
-      <View style={styles.searchContainer}>
+      {/* Clean Search Bar */}
+      <View style={styles.searchBar}>
         <TextInput
           style={styles.searchInput}
-          placeholder="Search events, venues, organizers..."
+          placeholder="Search events, venues or clubs..."
           value={search}
           onChangeText={setSearch}
           placeholderTextColor="#94a3b8"
         />
+        {search.length > 0 && (
+          <TouchableOpacity onPress={() => setSearch('')} style={styles.clearBtn}>
+            <Text style={styles.clearBtnText}>Clear</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
-      {/* Horizontal Category Pills */}
-      <View style={styles.categoryWrapper}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categoryRow}
-        >
-          {categories.map((cat) => (
+      {/* Category Chips */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.categoryScroll}
+      >
+        {categories.map((cat) => {
+          const active = selectedCategory === cat;
+          return (
             <TouchableOpacity
               key={cat}
-              style={[styles.pill, selectedCategory === cat && styles.activePill]}
+              style={[styles.catChip, active && styles.catChipActive]}
               onPress={() => setSelectedCategory(cat)}
             >
-              <Text style={[styles.pillText, selectedCategory === cat && styles.activePillText]}>
-                {cat}
-              </Text>
+              <Text style={[styles.catChipText, active && styles.catChipTextActive]}>{cat}</Text>
             </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
+          );
+        })}
+      </ScrollView>
 
-      <View style={styles.sectionTitleRow}>
-        <Text style={styles.sectionTitle}>
-          {selectedCategory === 'All' ? 'Upcoming Campus Events' : `${selectedCategory} Events`} ({filteredEvents.length})
+      <View style={styles.listSectionBar}>
+        <Text style={styles.listSectionTitle}>
+          {selectedCategory === 'All' ? 'Upcoming Events' : selectedCategory}
         </Text>
+        <Text style={styles.listCountPill}>{filteredEvents.length} events</Text>
       </View>
     </View>
   );
@@ -145,71 +182,68 @@ export default function EventsScreen({
     const fillPct = Math.min(100, Math.round((reg / cap) * 100));
 
     return (
-      <TouchableOpacity style={styles.card} onPress={() => onSelectEvent(item)} activeOpacity={0.85}>
-        <View style={styles.cardHeader}>
-          <View style={styles.badgeRow}>
-            <View style={styles.categoryBadge}>
-              <Text style={styles.categoryText}>{item.category}</Text>
-            </View>
-            {item.smsPriority === 3 && (
-              <View style={styles.priorityBadge}>
-                <Text style={styles.priorityText}>HIGH SMS</Text>
-              </View>
-            )}
+      <TouchableOpacity
+        style={styles.card}
+        onPress={() => onSelectEvent(item)}
+        activeOpacity={0.85}
+      >
+        {/* Top Row: Category + Status */}
+        <View style={styles.cardTopRow}>
+          <View style={styles.catBadge}>
+            <Text style={styles.catBadgeText}>{item.category}</Text>
           </View>
 
-          <View style={styles.badgeRow}>
+          <View style={styles.rightBadges}>
             {isRegistered && (
-              <View style={styles.registeredBadge}>
-                <Text style={styles.registeredText}>REGISTERED</Text>
+              <View style={styles.regBadge}>
+                <Text style={styles.regBadgeText}>Going</Text>
               </View>
             )}
             {onToggleSave && (
-              <TouchableOpacity style={styles.saveBtn} onPress={() => onToggleSave(item.id)}>
-                <Text style={styles.saveIcon}>{isSaved ? 'SAVED' : 'SAVE'}</Text>
+              <TouchableOpacity
+                style={[styles.bookmarkBtn, isSaved && styles.bookmarkBtnActive]}
+                onPress={() => onToggleSave(item.id)}
+              >
+                <Text style={[styles.bookmarkText, isSaved && styles.bookmarkTextActive]}>
+                  {isSaved ? 'Saved' : 'Save'}
+                </Text>
               </TouchableOpacity>
             )}
           </View>
         </View>
 
-        <Text style={styles.cardTitle}>{item.title}</Text>
-        <Text style={styles.cardDesc} numberOfLines={2}>
-          {item.description}
+        {/* Event Title */}
+        <Text style={styles.cardTitle} numberOfLines={2}>
+          {item.title}
         </Text>
 
-        {/* Capacity Progress Bar */}
-        <View style={styles.progressSection}>
-          <View style={styles.progressLabels}>
-            <Text style={styles.progressText}>
-              {reg} / {cap} Registered
-            </Text>
-            <Text
-              style={[
-                styles.progressPct,
-                fillPct >= 85 ? { color: '#dc2626' } : { color: '#0284c7' }
-              ]}
-            >
-              {fillPct}% Full
-            </Text>
-          </View>
-          <View style={styles.progressBarBg}>
+        {/* Clean Date & Venue Meta */}
+        <View style={styles.metaBlock}>
+          <Text style={styles.metaPrimary} numberOfLines={1}>
+            {item.date} • {item.time || item.timeSlot || '14:00'}
+          </Text>
+          <Text style={styles.metaSecondary} numberOfLines={1}>
+            {item.venue}
+          </Text>
+        </View>
+
+        {/* Compact Capacity Footer */}
+        <View style={styles.cardFooter}>
+          <View style={styles.barTrack}>
             <View
               style={[
-                styles.progressBarFill,
+                styles.barFill,
                 { width: `${fillPct}%` },
                 fillPct >= 85 ? { backgroundColor: '#ef4444' } : { backgroundColor: '#003366' }
               ]}
             />
           </View>
-        </View>
-
-        <View style={styles.cardMeta}>
-          <Text style={styles.metaText} numberOfLines={1}>
-            {item.date} • {item.time || item.timeSlot}
-          </Text>
-          <Text style={styles.metaText} numberOfLines={1}>
-            {item.venue} {item.organizerName ? `• ${item.organizerName}` : ''}
-          </Text>
+          <View style={styles.footerRow}>
+            <Text style={styles.seatsText}>
+              {reg} / {cap} seats
+            </Text>
+            <Text style={styles.tapPrompt}>Details →</Text>
+          </View>
         </View>
       </TouchableOpacity>
     );
@@ -220,7 +254,7 @@ export default function EventsScreen({
       {loading ? (
         <View style={{ flex: 1 }}>
           {renderHeader()}
-          <ActivityIndicator size="large" color="#003366" style={{ marginTop: 32 }} />
+          <ActivityIndicator size="large" color="#003366" style={{ marginTop: 40 }} />
         </View>
       ) : (
         <FlatList
@@ -230,11 +264,18 @@ export default function EventsScreen({
           ListHeaderComponent={renderHeader}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handlePullRefresh}
+              tintColor="#003366"
+            />
+          }
           ListEmptyComponent={
             <View style={styles.emptyBox}>
-              <Text style={styles.emptyTitle}>No matching campus events</Text>
+              <Text style={styles.emptyTitle}>No events match your filter</Text>
               <Text style={styles.emptySubtitle}>
-                Try clearing your search or selecting 'All' categories.
+                Try selecting &apos;All&apos; categories or clearing your search query.
               </Text>
             </View>
           }
@@ -249,313 +290,333 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8fafc'
   },
-  publicHero: {
+  headerWrap: {
+    paddingBottom: 6
+  },
+  publicBanner: {
     backgroundColor: '#003366',
-    marginHorizontal: 14,
-    marginTop: 10,
-    marginBottom: 8,
-    borderRadius: 18,
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 20,
     padding: 16
   },
-  heroTopRow: {
+  publicBannerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  logoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10
+  },
+  logoMark: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#f59e0b',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  logoMarkText: {
+    color: '#0f172a',
+    fontWeight: '900',
+    fontSize: 13
+  },
+  appBrand: {
+    color: '#ffffff',
+    fontWeight: '800',
+    fontSize: 15
+  },
+  appSubBrand: {
+    color: '#93c5fd',
+    fontSize: 11,
+    fontWeight: '600'
+  },
+  publicActions: {
+    flexDirection: 'row',
+    gap: 8
+  },
+  ghostLoginBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.14)'
+  },
+  ghostLoginText: {
+    color: '#ffffff',
+    fontWeight: '700',
+    fontSize: 12
+  },
+  goldSignupBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 10,
+    backgroundColor: '#f59e0b'
+  },
+  goldSignupText: {
+    color: '#0f172a',
+    fontWeight: '800',
+    fontSize: 12
+  },
+  publicHeadline: {
+    color: '#e2e8f0',
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 12
+  },
+  userBanner: {
+    backgroundColor: '#ffffff',
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#e2e8f0'
+  },
+  userRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12
+  },
+  userAvatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#003366',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  userAvatarText: {
+    color: '#fbbf24',
+    fontSize: 16,
+    fontWeight: '800'
+  },
+  userGreeting: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0f172a'
+  },
+  userStatsText: {
+    fontSize: 12,
+    color: '#64748b',
+    marginTop: 2,
+    fontWeight: '600'
+  },
+  syncPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: '#f1f5f9'
+  },
+  syncPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#003366'
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: '#e2e8f0'
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 11,
+    fontSize: 13,
+    color: '#0f172a',
+    fontWeight: '500'
+  },
+  clearBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4
+  },
+  clearBtnText: {
+    fontSize: 11,
+    color: '#64748b',
+    fontWeight: '700'
+  },
+  categoryScroll: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 8
+  },
+  catChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    marginRight: 8
+  },
+  catChipActive: {
+    backgroundColor: '#003366',
+    borderColor: '#003366'
+  },
+  catChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#475569'
+  },
+  catChipTextActive: {
+    color: '#ffffff'
+  },
+  listSectionBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 18,
+    marginBottom: 4
+  },
+  listSectionTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0f172a'
+  },
+  listCountPill: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#64748b'
+  },
+  listContent: {
+    paddingBottom: 28
+  },
+  card: {
+    backgroundColor: '#ffffff',
+    marginHorizontal: 16,
+    marginTop: 10,
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0'
+  },
+  cardTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8
   },
-  brandBadge: {
-    backgroundColor: 'rgba(245, 158, 11, 0.2)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#f59e0b'
-  },
-  brandBadgeText: {
-    color: '#fbbf24',
-    fontSize: 10,
-    fontWeight: 'bold'
-  },
-  syncMiniBtn: {
-    backgroundColor: 'rgba(255,255,255,0.14)',
+  catBadge: {
+    backgroundColor: '#eff6ff',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8
   },
-  syncMiniText: {
-    color: '#ffffff',
-    fontSize: 10,
-    fontWeight: 'bold'
-  },
-  heroTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#ffffff',
-    marginBottom: 4
-  },
-  heroSub: {
+  catBadgeText: {
+    color: '#003366',
     fontSize: 11,
-    color: '#cbd5e1',
-    lineHeight: 16,
-    marginBottom: 12
+    fontWeight: '800'
   },
-  heroAuthRow: {
-    flexDirection: 'row',
-    gap: 10
-  },
-  heroLoginBtn: {
-    flex: 1,
-    backgroundColor: '#f59e0b',
-    paddingVertical: 10,
-    borderRadius: 10,
-    alignItems: 'center'
-  },
-  heroLoginText: {
-    color: '#0f172a',
-    fontWeight: 'bold',
-    fontSize: 12
-  },
-  heroSignupBtn: {
-    flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.35)',
-    paddingVertical: 10,
-    borderRadius: 10,
-    alignItems: 'center'
-  },
-  heroSignupText: {
-    color: '#ffffff',
-    fontWeight: 'bold',
-    fontSize: 12
-  },
-  studentBanner: {
-    backgroundColor: '#003366',
-    marginHorizontal: 14,
-    marginTop: 10,
-    marginBottom: 8,
-    borderRadius: 16,
-    padding: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between'
-  },
-  welcomeLabel: {
-    fontSize: 9,
-    fontWeight: 'bold',
-    color: '#fbbf24',
-    letterSpacing: 0.6
-  },
-  welcomeName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#ffffff',
-    marginTop: 2
-  },
-  welcomeSub: {
-    fontSize: 11,
-    color: '#cbd5e1',
-    marginTop: 2
-  },
-  refreshBtn: {
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    marginLeft: 8
-  },
-  refreshText: {
-    fontSize: 11,
-    fontWeight: 'bold',
-    color: '#ffffff'
-  },
-  searchContainer: {
-    paddingHorizontal: 14,
-    marginVertical: 6
-  },
-  searchInput: {
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#cbd5e1',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    fontSize: 12,
-    color: '#0f172a'
-  },
-  categoryWrapper: {
-    marginBottom: 8
-  },
-  categoryRow: {
-    paddingHorizontal: 14,
-    flexDirection: 'row',
-    alignItems: 'center'
-  },
-  pill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10,
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    marginRight: 6
-  },
-  activePill: {
-    backgroundColor: '#003366',
-    borderColor: '#003366'
-  },
-  pillText: {
-    fontSize: 11,
-    fontWeight: 'bold',
-    color: '#64748b'
-  },
-  activePillText: {
-    color: '#ffffff'
-  },
-  sectionTitleRow: {
-    paddingHorizontal: 14,
-    marginBottom: 6
-  },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: 'bold',
-    color: '#334155'
-  },
-  listContent: {
-    paddingBottom: 20
-  },
-  card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 14,
-    padding: 14,
-    marginHorizontal: 14,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#e2e8f0'
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6
-  },
-  badgeRow: {
+  rightBadges: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6
   },
-  categoryBadge: {
-    backgroundColor: '#f0f9ff',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#bae6fd'
+  regBadge: {
+    backgroundColor: '#dcfce7',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 8
   },
-  categoryText: {
+  regBadgeText: {
+    color: '#15803d',
     fontSize: 10,
-    fontWeight: 'bold',
-    color: '#0284c7'
+    fontWeight: '800'
   },
-  priorityBadge: {
-    backgroundColor: '#fef2f2',
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#fecaca'
+  bookmarkBtn: {
+    backgroundColor: '#f1f5f9',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8
   },
-  priorityText: {
-    fontSize: 9,
-    fontWeight: 'bold',
-    color: '#dc2626'
+  bookmarkBtnActive: {
+    backgroundColor: '#fef3c7'
   },
-  registeredBadge: {
-    backgroundColor: '#ecfdf5',
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#a7f3d0'
+  bookmarkText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#475569'
   },
-  registeredText: {
-    fontSize: 9,
-    fontWeight: 'bold',
-    color: '#059669'
-  },
-  saveBtn: {
-    paddingHorizontal: 4,
-    paddingVertical: 2
-  },
-  saveIcon: {
-    fontSize: 17,
-    color: '#f59e0b'
+  bookmarkTextActive: {
+    color: '#b45309'
   },
   cardTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
+    fontSize: 15,
+    fontWeight: '800',
     color: '#0f172a',
-    marginBottom: 3
-  },
-  cardDesc: {
-    fontSize: 11,
-    color: '#475569',
-    marginBottom: 10,
-    lineHeight: 16
-  },
-  progressSection: {
+    lineHeight: 21,
     marginBottom: 8
   },
-  progressLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 3
+  metaBlock: {
+    gap: 3,
+    marginBottom: 12
   },
-  progressText: {
-    fontSize: 10,
-    color: '#475569',
-    fontWeight: '600'
+  metaPrimary: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#334155'
   },
-  progressPct: {
-    fontSize: 10,
-    fontWeight: 'bold'
+  metaSecondary: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#64748b'
   },
-  progressBarBg: {
+  cardFooter: {
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+    paddingTop: 10
+  },
+  barTrack: {
     height: 5,
     backgroundColor: '#e2e8f0',
     borderRadius: 3,
-    overflow: 'hidden'
+    overflow: 'hidden',
+    marginBottom: 6
   },
-  progressBarFill: {
+  barFill: {
     height: 5,
     borderRadius: 3
   },
-  cardMeta: {
-    flexDirection: 'column',
-    gap: 2,
-    paddingTop: 6,
-    borderTopWidth: 1,
-    borderTopColor: '#f1f5f9'
+  footerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center'
   },
-  metaText: {
-    fontSize: 10,
-    fontWeight: '600',
+  seatsText: {
+    fontSize: 11,
+    fontWeight: '700',
     color: '#64748b'
   },
+  tapPrompt: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#003366'
+  },
   emptyBox: {
+    backgroundColor: '#ffffff',
+    marginHorizontal: 16,
+    marginTop: 16,
+    padding: 28,
+    borderRadius: 18,
     alignItems: 'center',
-    paddingVertical: 32,
-    paddingHorizontal: 20
+    borderWidth: 1,
+    borderColor: '#e2e8f0'
   },
   emptyTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#334155'
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0f172a',
+    marginBottom: 4
   },
   emptySubtitle: {
-    fontSize: 11,
-    color: '#94a3b8',
-    marginTop: 4,
+    fontSize: 12,
+    color: '#64748b',
     textAlign: 'center'
   }
 });

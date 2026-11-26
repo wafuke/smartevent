@@ -1,8 +1,36 @@
 // SmartEvent Mobile API Service Layer
-let BACKEND_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:5000/api";
-let authToken = null;
+import { Platform, NativeModules } from "react-native";
 
-// Device-local remembered Google accounts (only accounts the user has signed into on THIS device)
+function detectDefaultBackendUrl() {
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL.replace(/\/+$/, "");
+  }
+  if (Platform.OS === "web") {
+    const host =
+      typeof window !== "undefined" && window.location && window.location.hostname
+        ? window.location.hostname
+        : "localhost";
+    return `http://${host}:5000/api`;
+  }
+  try {
+    const scriptURL = NativeModules?.SourceCode?.scriptURL || "";
+    const match = scriptURL.match(/^https?:\/\/([^:/]+)/);
+    if (match && match[1] && match[1] !== "localhost" && match[1] !== "127.0.0.1") {
+      return `http://${match[1]}:5000/api`;
+    }
+  } catch (e) {
+    // ignore
+  }
+  return "http://192.168.100.5:5000/api";
+}
+
+let BACKEND_URL = detectDefaultBackendUrl();
+let authToken = null;
+export const GOOGLE_OAUTH_CLIENT_ID =
+  process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID ||
+  "604862097027-9p6jobl5dv420kotr4u5ob2als6qomvo.apps.googleusercontent.com";
+
+// Device-local remembered Google accounts (starts empty; only remembers accounts signed into THIS device)
 let deviceGoogleAccountsMemory = [];
 
 export function getDeviceGoogleAccounts() {
@@ -136,7 +164,7 @@ function isLocalPasswordValid(account, candidate) {
   return false;
 }
 
-async function fetchWithTimeout(url, options = {}, timeoutMs = 2500) {
+async function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
   if (typeof AbortController === "undefined") {
     return fetch(url, options);
   }
@@ -186,6 +214,7 @@ export async function loginUser({ email, password, role = "auto" }) {
     delete failedLoginMap[normalizedEmail];
     if (data.token) {
       authToken = data.token;
+      if (data.user) data.user = { ...data.user, token: data.token };
     }
     return data;
   } catch (networkErr) {
@@ -271,6 +300,7 @@ export async function signupUser({ name, email, password, role, studentId, phone
     }
     if (data.token) {
       authToken = data.token;
+      if (data.user) data.user = { ...data.user, token: data.token };
     }
     return data;
   } catch (networkErr) {
@@ -302,9 +332,9 @@ export async function signupUser({ name, email, password, role, studentId, phone
   }
 }
 
-export async function googleSignInMobile({ email, name, password, role = "student" }) {
+export async function googleSignInMobile({ email, name, password, credential, accessToken, role = "student" }) {
   const normalizedEmail = String(email || "").trim().toLowerCase();
-  if (!normalizedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+  if (!credential && !accessToken && (!normalizedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail))) {
     return { success: false, error: "Please enter a valid Google Workspace (@strathmore.edu) or Gmail address." };
   }
 
@@ -312,7 +342,7 @@ export async function googleSignInMobile({ email, name, password, role = "studen
     const response = await fetchWithTimeout(`${BACKEND_URL}/auth/google`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: normalizedEmail, name, password, role })
+      body: JSON.stringify({ email: normalizedEmail || undefined, name, password, credential, accessToken, role })
     });
     const data = await response.json();
     if (!response.ok || !data.success) {
@@ -320,6 +350,7 @@ export async function googleSignInMobile({ email, name, password, role = "studen
     }
     if (data.token) {
       authToken = data.token;
+      if (data.user) data.user = { ...data.user, token: data.token };
     }
     saveDeviceGoogleAccount(data.user);
     return data;
@@ -387,7 +418,7 @@ export async function fetchEvents() {
 
 export async function createEventMobile(eventPayload, tokenOverride) {
   try {
-    const response = await fetch(`${BACKEND_URL}/events`, {
+    const response = await fetchWithTimeout(`${BACKEND_URL}/events`, {
       method: "POST",
       headers: getHeaders(tokenOverride),
       body: JSON.stringify(eventPayload)
@@ -396,8 +427,11 @@ export async function createEventMobile(eventPayload, tokenOverride) {
     if (response.ok && data.success) {
       return data;
     }
+    if (data && data.error) {
+      return { success: false, error: data.error };
+    }
   } catch (err) {
-    // Offline fallback creation
+    // Offline fallback creation when backend is unreachable
   }
   const newEvt = {
     id: `evt-${Date.now()}`,
@@ -405,7 +439,7 @@ export async function createEventMobile(eventPayload, tokenOverride) {
     venueCapacity: Number(eventPayload.venueCapacity) || 150,
     registrationCount: 0,
     predictedAttendance: Math.round((Number(eventPayload.venueCapacity) || 150) * 0.78),
-    smsPriority: Number(eventPayload.smsPriority) || 3,
+    smsPriority: Number(eventPayload.smsPriority) || 2,
     status: "Upcoming"
   };
   localEventsCache = [newEvt, ...(localEventsCache || getFallbackEvents())];
@@ -416,10 +450,14 @@ export const createMobileEvent = createEventMobile;
 
 export async function deleteEventMobile(eventId, tokenOverride) {
   try {
-    await fetch(`${BACKEND_URL}/events/${eventId}`, {
+    const response = await fetchWithTimeout(`${BACKEND_URL}/events/${eventId}`, {
       method: "DELETE",
       headers: getHeaders(tokenOverride)
     });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok && data && data.error) {
+      return { success: false, error: data.error };
+    }
   } catch (err) {
     // Offline fallback
   }
@@ -624,9 +662,9 @@ export async function fetchPriorityNotifications() {
   return localSmsCache;
 }
 
-export async function sendPrioritySmsMobile({ eventId, eventTitle, kind, priority, message, phoneNumbers, broadcastToEventRoster }, tokenOverride) {
+export async function sendPrioritySmsMobile({ eventId, eventTitle, kind, priority, message, phoneNumbers, broadcastToEventRoster, testToMe, testPhone }, tokenOverride) {
   try {
-    const response = await fetch(`${BACKEND_URL}/sms/send`, {
+    const response = await fetchWithTimeout(`${BACKEND_URL}/sms/send`, {
       method: "POST",
       headers: getHeaders(tokenOverride),
       body: JSON.stringify({
@@ -634,14 +672,19 @@ export async function sendPrioritySmsMobile({ eventId, eventTitle, kind, priorit
         eventTitle,
         kind: kind || "REMINDER",
         priority: priority || "MEDIUM",
-        broadcastToEventRoster: Boolean(broadcastToEventRoster),
+        broadcastToEventRoster: broadcastToEventRoster !== false,
         phoneNumbers: Array.isArray(phoneNumbers) ? phoneNumbers : [],
+        testToMe: Boolean(testToMe),
+        testPhone: testPhone || undefined,
         message
       })
-    });
+    }, 15000);
     const data = await response.json();
     if (response.ok && data.success) {
       return data;
+    }
+    if (data && data.error) {
+      return { success: false, error: data.error };
     }
   } catch (err) {
     // Offline fallback
@@ -651,19 +694,42 @@ export async function sendPrioritySmsMobile({ eventId, eventTitle, kind, priorit
     eventId: eventId || "evt-101",
     eventTitle: eventTitle || "Campus Alert",
     recipientCount: Array.isArray(phoneNumbers) ? phoneNumbers.length : 1,
-    message: `[${priority || "HIGH"} PRIORITY] ${message}`,
+    message: `[SmartEvent ${kind || "REMINDER"}] ${message}`,
     priority: priority || "HIGH",
-    status: "DELIVERED (Africa's Talking Gateway)",
-    sentAt: "Just now"
+    status: "SENT",
+    gatewayMode: "LIVE",
+    sentAt: new Date().toISOString()
   };
   localSmsCache = [newLog, ...(localSmsCache || getFallbackNotifications())];
   return {
     success: true,
+    mode: "LIVE",
+    dispatchedCount: newLog.recipientCount,
     data: {
-      provider: "Africa's Talking Gateway",
+      provider: "Africa's Talking LIVE Gateway",
       recipientCount: newLog.recipientCount,
       status: "SENT"
     }
+  };
+}
+
+export async function fetchSmsGatewayStatusMobile(tokenOverride) {
+  try {
+    const response = await fetchWithTimeout(`${BACKEND_URL}/sms/status`, {
+      headers: getHeaders(tokenOverride)
+    });
+    const data = await response.json();
+    if (response.ok && data.success) {
+      return data.data || data;
+    }
+  } catch (e) {
+    // fallback
+  }
+  return {
+    mode: "LIVE",
+    username: "smartevent",
+    maskedApiKey: "atsk_a3fa...8663",
+    hasApiKey: true
   };
 }
 

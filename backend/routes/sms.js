@@ -5,6 +5,7 @@ const { readLocalData, writeLocalData, logActivity, addNotification } = require(
 const { requireAuth, requireRole } = require('../middleware/auth');
 const { normalizeKenyanPhone } = require('../utils/phone');
 const sms = require('../services/sms');
+const { runReminderCycle } = require('../services/reminderScheduler');
 
 const { normalizeTier, tierLabel, tierReceivesKind, KIND_MIN_TIER } = require('../utils/smsTier');
 
@@ -47,7 +48,7 @@ router.get('/status', requireRole(['admin', 'organizer']), async (req, res) => {
   const balance = req.user.role === 'admin' ? await sms.getBalance() : undefined;
 
   const modeDescription = {
-    LIVE: 'Live gateway (Option B) - real SMS are delivered to handsets via Africa\'s Talking.',
+    LIVE: "Live gateway (Option B) - real SMS are delivered to handsets via Africa's Talking.",
     SANDBOX: "Africa's Talking sandbox - API key configured; enter your Live App Username in Option B to send to real phones.",
     SIMULATION: 'Simulation mode - messages are logged locally without carrier dispatch.'
   }[cfg.mode];
@@ -142,7 +143,7 @@ function tierBreakdown(recipients) {
 
 /**
  * Work out who should receive a broadcast, enforcing role rules:
- *  - organizer: only the registered roster of an event THEY organise (or a test to their own phone)
+ *  - organizer: only the registered roster of an event THEY organise (or a test to their own phone / explicit numbers on their event)
  *  - admin: any event roster, an explicit list of numbers, or all students
  */
 function resolveAudience(db, user, body) {
@@ -181,7 +182,8 @@ function resolveAudience(db, user, body) {
   }
 
   const wantsAll = user.role === 'admin' && audience === 'ALL_STUDENTS';
-  const explicit = user.role === 'admin' ? phoneNumbers || recipients : null;
+  const explicit = user.role === 'admin' ? phoneNumbers || recipients : eventId ? phoneNumbers || recipients : null;
+  const includeRoster = body.broadcastToEventRoster !== false;
 
   if (wantsAll) {
     (db.users || []).filter((u) => u.role === 'student' && String(u.status) !== 'Suspended').forEach((u) => {
@@ -189,14 +191,26 @@ function resolveAudience(db, user, body) {
       const p = normalizeKenyanPhone(u.phone);
       p ? addByPreference(p, u.name, u.id, u.smsPriority) : out.invalid.push(u.phone || '(empty)');
     });
-  } else if (eventId && !explicit) {
+  } else if (eventId && (!explicit || includeRoster)) {
     if (!(db.events || []).some((e) => e.id === eventId)) return { status: 404, error: 'Event not found.' };
-    (db.registrations || []).filter((r) => r.eventId === eventId).forEach((r) => {
-      const u = usersById.get(r.userId);
-      if (u && u.smsOptOut) return void (out.skippedOptOut += 1);
-      const p = normalizeKenyanPhone(r.phone || (u && u.phone));
-      p ? addByPreference(p, r.studentName, r.userId, r.smsPriority) : out.invalid.push(r.phone || '(empty)');
-    });
+    if (includeRoster) {
+      (db.registrations || []).filter((r) => r.eventId === eventId).forEach((r) => {
+        const u = usersById.get(r.userId);
+        if (u && u.smsOptOut) return void (out.skippedOptOut += 1);
+        const p = normalizeKenyanPhone(r.phone || (u && u.phone));
+        p ? addByPreference(p, r.studentName, r.userId, r.smsPriority) : out.invalid.push(r.phone || '(empty)');
+      });
+    }
+    if (explicit) {
+      const list = Array.isArray(explicit) ? explicit : String(explicit).split(/[,\n;]+/);
+      list.map((s) => String(s).trim()).filter(Boolean).forEach((raw) => {
+        const p = normalizeKenyanPhone(raw);
+        if (!p) return void out.invalid.push(raw);
+        const u = (db.users || []).find((x) => normalizeKenyanPhone(x.phone) === p);
+        if (u && u.smsOptOut) return void (out.skippedOptOut += 1);
+        add(p, u ? u.name : 'Recipient', u ? u.id : null, u ? u.smsPriority : undefined);
+      });
+    }
   } else if (explicit) {
     const list = Array.isArray(explicit) ? explicit : String(explicit).split(/[,\n;]+/);
     list.map((s) => String(s).trim()).filter(Boolean).forEach((raw) => {
@@ -362,6 +376,34 @@ router.post('/delivery-callback', (req, res) => {
     writeLocalData(db);
   }
   res.json({ success: true });
+});
+
+// DELETE /api/sms/logs/:id - ADMIN: delete a single SMS log entry
+router.delete('/logs/:id', requireRole(['admin']), (req, res) => {
+  const db = readLocalData();
+  const before = (db.smsLogs || []).length;
+  db.smsLogs = (db.smsLogs || []).filter((l) => l.id !== req.params.id);
+  if (db.smsLogs.length === before) {
+    return res.status(404).json({ success: false, error: 'SMS log entry not found.' });
+  }
+  writeLocalData(db);
+  res.json({ success: true, message: 'SMS log entry deleted.' });
+});
+
+// DELETE /api/sms/logs - ADMIN: clear all SMS logs
+router.delete('/logs', requireRole(['admin']), (req, res) => {
+  const db = readLocalData();
+  const cleared = (db.smsLogs || []).length;
+  db.smsLogs = [];
+  logActivity(db, 'ADMIN_ACTION', `${req.user.name} cleared ${cleared} SMS log entries`);
+  writeLocalData(db);
+  res.json({ success: true, message: `Cleared ${cleared} SMS log entries.` });
+});
+
+// POST /api/sms/run-reminders - ADMIN / ORGANIZER: manually trigger automatic priority reminder cycle
+router.post('/run-reminders', requireRole(['admin', 'organizer']), async (req, res) => {
+  const { sentCount } = await runReminderCycle();
+  res.json({ success: true, sentCount, message: `Auto-reminder cycle complete (${sentCount} reminder SMS sent).` });
 });
 
 module.exports = router;

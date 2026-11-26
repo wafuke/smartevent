@@ -3,6 +3,21 @@ import { authApi } from '../services/api';
 
 const AuthContext = createContext(null);
 
+const BASE_PREFIX = window.location.pathname.startsWith('/smartevent') ? '/smartevent' : '';
+
+function stripBase(pathname) {
+  if (!pathname) return '/';
+  const stripped = BASE_PREFIX && pathname.startsWith(BASE_PREFIX)
+    ? pathname.slice(BASE_PREFIX.length)
+    : pathname;
+  return stripped.startsWith('/') ? stripped : `/${stripped || ''}`;
+}
+
+function withBase(path) {
+  const clean = path && path.startsWith('/') ? path : `/${path || ''}`;
+  return `${BASE_PREFIX}${clean}`;
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     try {
@@ -17,14 +32,52 @@ export function AuthProvider({ children }) {
     return localStorage.getItem('smartevent_token') || null;
   });
 
-  const [currentPath, setCurrentPath] = useState(window.location.pathname || '/');
+  const [currentPath, setCurrentPath] = useState(() => stripBase(window.location.pathname));
 
   useEffect(() => {
     const handlePopState = () => {
-      setCurrentPath(window.location.pathname);
+      setCurrentPath(stripBase(window.location.pathname));
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Handle Google OAuth 2.0 implicit redirect callback (#access_token=...)
+  useEffect(() => {
+    const hash = window.location.hash || '';
+    if (!hash.includes('access_token=')) return;
+    const params = new URLSearchParams(hash.replace(/^#/, ''));
+    const accessToken = params.get('access_token');
+    const stateRole = params.get('state') || 'student';
+    if (!accessToken) return;
+
+    // Clean the URL immediately
+    window.history.replaceState({}, '', window.location.pathname || '/');
+
+    authApi
+      .googleLogin({ accessToken, role: stateRole })
+      .then((res) => {
+        if (res && res.user && res.token) {
+          setUser(res.user);
+          setToken(res.token);
+          localStorage.setItem('smartevent_user', JSON.stringify(res.user));
+          localStorage.setItem('smartevent_token', res.token);
+          if (res.user.role === 'admin') {
+            navigate('/admin/dashboard');
+          } else if (res.user.role === 'organizer') {
+            navigate('/organizer/dashboard');
+          } else {
+            navigate('/student/dashboard');
+          }
+        }
+      })
+      .catch((err) => {
+        window.dispatchEvent(
+          new CustomEvent('smartevent:toast', {
+            detail: { type: 'error', message: err.message || 'Google sign-in failed.' }
+          })
+        );
+      });
   }, []);
 
   // Verify stored JWT token against backend on initial mount
@@ -53,8 +106,9 @@ export function AuthProvider({ children }) {
   }, []);
 
   const navigate = (path) => {
-    window.history.pushState({}, '', path);
-    setCurrentPath(path);
+    const normalized = stripBase(path);
+    window.history.pushState({}, '', withBase(normalized));
+    setCurrentPath(normalized);
     window.scrollTo(0, 0);
   };
 

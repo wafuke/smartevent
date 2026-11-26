@@ -100,34 +100,43 @@ export default function StudentDashboardPage() {
   });
   const [savingPw, setSavingPw] = useState(false);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
+  const loadData = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const [eventsRes, catsRes, regsRes, favsRes, smsRes, notifRes] = await Promise.all([
-        eventsApi.getAll().catch(() => ({ data: [] })),
-        categoriesApi.getAll().catch(() => ({ data: [] })),
-        registrationsApi.getAll().catch(() => ({ data: [] })),
-        favoritesApi.getAll().catch(() => ({ data: [], favoriteIds: [] })),
-        smsApi.getLogs().catch(() => ({ data: [] })),
-        notificationsApi.getAll().catch(() => ({ data: [], unreadCount: 0 }))
+        eventsApi.getAll().catch(() => null),
+        categoriesApi.getAll().catch(() => null),
+        registrationsApi.getAll().catch(() => null),
+        favoritesApi.getAll().catch(() => null),
+        smsApi.getLogs().catch(() => null),
+        notificationsApi.getAll().catch(() => null)
       ]);
 
-      setEvents(eventsRes.data || []);
-      setCategories(catsRes.data || []);
-      setMyRegistrations(regsRes.data || []);
-      setFavoriteIds(favsRes.favoriteIds || []);
-      setSmsAlerts(smsRes.data || []);
-      setNotifications(notifRes.data || []);
-      setUnreadCount(notifRes.unreadCount || 0);
+      if (eventsRes && Array.isArray(eventsRes.data)) setEvents(eventsRes.data);
+      if (catsRes && Array.isArray(catsRes.data)) setCategories(catsRes.data);
+      if (regsRes && Array.isArray(regsRes.data)) setMyRegistrations(regsRes.data);
+      if (favsRes && Array.isArray(favsRes.favoriteIds)) setFavoriteIds(favsRes.favoriteIds);
+      if (smsRes && Array.isArray(smsRes.data)) setSmsAlerts(smsRes.data);
+      if (notifRes && Array.isArray(notifRes.data)) {
+        setNotifications(notifRes.data);
+        setUnreadCount(notifRes.unreadCount || 0);
+      }
     } catch (err) {
-      toast.error(err.message || 'Failed loading student dashboard');
+      if (!silent) toast.error(err.message || 'Failed loading student dashboard');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [toast]);
 
   useEffect(() => {
     loadData();
+    const interval = setInterval(() => loadData(true), 6000);
+    const onFocus = () => loadData(true);
+    window.addEventListener('focus', onFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
   }, [loadData]);
 
   useEffect(() => {
@@ -182,6 +191,26 @@ export default function StudentDashboardPage() {
       await loadData();
     } catch (err) {
       toast.error(err.message || 'Could not update SMS priority');
+    }
+  };
+
+  const handleChangeSmsFrequency = async (eventId, smsFrequencyMinutes) => {
+    try {
+      await registrationsApi.setSmsPriority(eventId, { smsFrequencyMinutes });
+      const label =
+        smsFrequencyMinutes === null
+          ? 'Auto (based on priority)'
+          : smsFrequencyMinutes === 30
+          ? 'Every 30 mins'
+          : smsFrequencyMinutes === 60
+          ? 'Every 1 hr'
+          : smsFrequencyMinutes === 180
+          ? 'Every 3 hrs'
+          : 'Once per 24 hrs';
+      toast.success(`SMS reminder frequency set to ${label}.`);
+      await loadData();
+    } catch (err) {
+      toast.error(err.message || 'Could not update SMS frequency');
     }
   };
 
@@ -430,7 +459,7 @@ export default function StudentDashboardPage() {
                       </div>
                     </div>
 
-                    <div className="pt-3 border-t border-slate-100 space-y-1.5">
+                    <div className="pt-3 border-t border-slate-100 space-y-2">
                       <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
                         My SMS priority for this event
                       </div>
@@ -439,6 +468,36 @@ export default function StudentDashboardPage() {
                         value={reg?.smsPriority ?? 2}
                         onChange={(tier) => handleChangeSmsPriority(evt.id, tier)}
                       />
+                      <div className="pt-1">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                          Auto SMS Reminder Frequency
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {[
+                            { value: null, label: 'Auto' },
+                            { value: 30, label: '30m' },
+                            { value: 60, label: '1h' },
+                            { value: 180, label: '3h' },
+                            { value: 1440, label: 'Once' }
+                          ].map((opt) => {
+                            const active = (reg?.smsFrequencyMinutes ?? null) === opt.value;
+                            return (
+                              <button
+                                key={String(opt.value)}
+                                type="button"
+                                onClick={() => handleChangeSmsFrequency(evt.id, opt.value)}
+                                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all ${
+                                  active
+                                    ? 'bg-[#003366] text-white border-[#003366]'
+                                    : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                                }`}
+                              >
+                                {opt.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
                     </div>
 
                     <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">

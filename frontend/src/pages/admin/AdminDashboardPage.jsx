@@ -8,6 +8,7 @@ import { adminApi, eventsApi, categoriesApi, registrationsApi, venuesApi, smsApi
 import { useAuth } from '../../context/AuthContext';
 import EventFormModal from '../../components/EventFormModal';
 import SmsComposer from '../../components/SmsComposer';
+import MlSimulatorAndTrainingPanel from '../../components/MlSimulatorAndTrainingPanel';
 import {
   Badge, StatCard, DataTable, Modal, Field, inputCls, PrimaryButton, Spinner, EmptyState, useToast, useConfirm,
   fmtDate, fmtDateTime, timeAgo
@@ -21,6 +22,7 @@ const NAV = [
   { id: 'categories', label: 'Categories', icon: Tag },
   { id: 'venues', label: 'Venues', icon: MapPin },
   { id: 'sms', label: 'SMS Gateway', icon: MessageSquare },
+  { id: 'ml', label: 'ML Model & Health', icon: Brain },
   { id: 'profiles', label: 'Role Profiles', icon: Award }
 ];
 
@@ -55,6 +57,13 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     load();
+    const interval = setInterval(() => load(true), 6000);
+    const onFocus = () => load(true);
+    window.addEventListener('focus', onFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
   }, [load]);
 
   const run = async (fn, okMessage) => {
@@ -131,6 +140,7 @@ export default function AdminDashboardPage() {
           {tab === 'categories' && <CategoriesTab {...ctx} />}
           {tab === 'venues' && <VenuesTab {...ctx} />}
           {tab === 'sms' && <SmsTab {...ctx} />}
+          {tab === 'ml' && <MlSimulatorAndTrainingPanel events={data.events} showTrainingSection={true} />}
           {tab === 'profiles' && <ProfilesTab {...ctx} />}
         </section>
       </div>
@@ -139,7 +149,7 @@ export default function AdminDashboardPage() {
 }
 
 /* ================================================================ OVERVIEW */
-function Overview({ data }) {
+function Overview({ data, run, confirm }) {
   const { totals, categoryBreakdown, topEvents, sms, model, capacityUtilizationPct } = data.summary;
   const smsPie = [
     { name: 'High', value: sms.highPriority },
@@ -241,7 +251,22 @@ function Overview({ data }) {
       </div>
 
       <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
-        <h3 className="text-sm font-black text-slate-900 mb-3 flex items-center gap-2"><Activity className="w-4 h-4 text-emerald-600" /> Recent activity</h3>
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <h3 className="text-sm font-black text-slate-900 flex items-center gap-2"><Activity className="w-4 h-4 text-emerald-600" /> Recent activity</h3>
+          {data.recentActivity.length > 0 && (
+            <button
+              type="button"
+              onClick={async () => {
+                if (await confirm({ title: 'Clear activity log?', message: 'This removes all recorded audit entries from the activity feed.', confirmLabel: 'Clear log' })) {
+                  run(() => adminApi.clearActivity(), 'Activity log cleared.');
+                }
+              }}
+              className="px-2.5 py-1 rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-600 hover:text-white text-xs font-bold flex items-center gap-1 transition-all"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Clear Activity Log
+            </button>
+          )}
+        </div>
         {data.recentActivity.length === 0 ? (
           <EmptyState title="No activity yet" />
         ) : (
@@ -267,6 +292,7 @@ function UsersTab({ data, run, confirm, user: me }) {
   const [editing, setEditing] = useState(null); // null | 'new' | user
   const [form, setForm] = useState(BLANK_USER);
   const [saving, setSaving] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
 
   const rows = useMemo(
     () =>
@@ -306,17 +332,52 @@ function UsersTab({ data, run, confirm, user: me }) {
     run(() => adminApi.deleteUser(u.id), 'User deleted.');
   };
 
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  const bulkDeleteUsers = async () => {
+    const deletable = selectedIds.filter((id) => id !== me.id);
+    if (!deletable.length) return;
+    if (!(await confirm({ title: `Delete ${deletable.length} selected user(s)?`, message: 'This permanently removes the selected accounts and their registrations.', confirmLabel: 'Bulk Delete' }))) return;
+    const ok = await run(() => adminApi.bulkDelete('users', deletable), `Deleted ${deletable.length} user(s).`);
+    if (ok) setSelectedIds([]);
+  };
+
+  const toggleVerifyOrganizer = (u) => {
+    const next = !u.verified;
+    run(() => adminApi.updateUser(u.id, { verified: next }), next ? 'Organizer verified.' : 'Organizer verification removed.');
+  };
+
   const columns = [
+    {
+      key: 'select',
+      label: '',
+      sortable: false,
+      render: (u) =>
+        u.id !== me.id ? (
+          <input
+            type="checkbox"
+            checked={selectedIds.includes(u.id)}
+            onChange={() => toggleSelect(u.id)}
+            aria-label={`Select ${u.name}`}
+            className="rounded border-slate-300"
+          />
+        ) : null
+    },
     {
       key: 'name', label: 'User',
       render: (u) => (
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-full bg-[#003366] text-amber-300 flex items-center justify-center font-black text-xs shrink-0">{u.name.charAt(0)}</div>
-          <div className="min-w-0"><div className="font-extrabold text-slate-900 truncate">{u.name}</div><div className="text-[11px] text-slate-500 truncate">{u.email}</div></div>
+          <div className="min-w-0">
+            <div className="font-extrabold text-slate-900 truncate">{u.name}</div>
+            <div className="text-[11px] text-slate-500 truncate">{u.email}</div>
+          </div>
         </div>
       )
     },
-    { key: 'role', label: 'Role', render: (u) => <Badge kind={u.role}>{u.role}</Badge> },
+    { key: 'role', label: 'Role', render: (u) => <div className="flex items-center gap-1"><Badge kind={u.role}>{u.role}</Badge>{u.role === 'organizer' && <Badge kind={u.verified ? 'active' : 'medium'}>{u.verified ? 'Verified' : 'Unverified'}</Badge>}</div> },
     { key: 'code', label: 'ID / code', sortValue: (u) => u.studentId || u.organizerCode || u.staffId || '', render: (u) => u.studentId || u.organizerCode || u.staffId || '-' },
     { key: 'phone', label: 'Phone' },
     { key: 'status', label: 'Status', render: (u) => <Badge>{u.status || 'Active'}</Badge> },
@@ -326,12 +387,23 @@ function UsersTab({ data, run, confirm, user: me }) {
       render: (u) => (
         <div className="flex items-center gap-1">
           <button title="Edit" onClick={() => open(u)} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-[#003366]"><Edit3 className="w-4 h-4" /></button>
+          {u.role === 'organizer' && (
+            <button
+              title={u.verified ? 'Unverify Organizer' : 'Verify Organizer'}
+              onClick={() => toggleVerifyOrganizer(u)}
+              className="px-2 py-1 rounded-lg text-[11px] font-bold bg-blue-50 text-blue-700 hover:bg-blue-100"
+            >
+              {u.verified ? 'Verified' : 'Verify'}
+            </button>
+          )}
           {u.id !== me.id && (
             <>
               <button title={(u.status || 'Active') === 'Active' ? 'Suspend' : 'Reactivate'} onClick={() => toggleStatus(u)} className="p-1.5 rounded-lg text-slate-500 hover:bg-amber-50 hover:text-amber-600">
                 {(u.status || 'Active') === 'Active' ? <Ban className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
               </button>
-              <button title="Delete" onClick={() => remove(u)} className="p-1.5 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+              <button title="Delete User" onClick={() => remove(u)} className="px-2 py-1 rounded-lg bg-red-50 text-red-600 hover:bg-red-600 hover:text-white text-[11px] font-bold flex items-center gap-1 transition-all">
+                <Trash2 className="w-3.5 h-3.5" /> Delete
+              </button>
             </>
           )}
         </div>
@@ -341,7 +413,24 @@ function UsersTab({ data, run, confirm, user: me }) {
 
   return (
     <div className="space-y-4">
-      <Header title="User management" subtitle={`${rows.length} of ${data.users.length} accounts`} action={<PrimaryButton onClick={() => open(null)}><Plus className="w-4 h-4" /> Add user</PrimaryButton>} />
+      <Header
+        title="User management"
+        subtitle={`${rows.length} of ${data.users.length} accounts`}
+        action={
+          <div className="flex items-center gap-2">
+            {selectedIds.length > 0 && (
+              <button
+                type="button"
+                onClick={bulkDeleteUsers}
+                className="px-3 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-extrabold flex items-center gap-1.5"
+              >
+                <Trash2 className="w-4 h-4" /> Delete Selected ({selectedIds.length})
+              </button>
+            )}
+            <PrimaryButton onClick={() => open(null)}><Plus className="w-4 h-4" /> Add user</PrimaryButton>
+          </div>
+        }
+      />
       <DataTable
         columns={columns}
         rows={rows}
@@ -400,6 +489,7 @@ function EventsTab({ data, run, confirm }) {
   const [formFor, setFormFor] = useState(null); // null | 'new' | event
   const [catFilter, setCatFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [selectedIds, setSelectedIds] = useState([]);
   const organizers = useMemo(() => data.users.filter((u) => u.role === 'organizer'), [data.users]);
 
   const rows = data.events.filter((e) => (catFilter === 'all' || e.category === catFilter) && (statusFilter === 'all' || e.status === statusFilter));
@@ -410,7 +500,32 @@ function EventsTab({ data, run, confirm }) {
     run(() => eventsApi.delete(e.id), 'Event deleted.');
   };
 
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  const bulkDeleteEvents = async () => {
+    if (!selectedIds.length) return;
+    if (!(await confirm({ title: `Delete ${selectedIds.length} selected event(s)?`, message: 'This permanently deletes the selected events and their registrations.', confirmLabel: 'Bulk Delete' }))) return;
+    const ok = await run(() => adminApi.bulkDelete('events', selectedIds), `Deleted ${selectedIds.length} event(s).`);
+    if (ok) setSelectedIds([]);
+  };
+
   const columns = [
+    {
+      key: 'select',
+      label: '',
+      sortable: false,
+      render: (e) => (
+        <input
+          type="checkbox"
+          checked={selectedIds.includes(e.id)}
+          onChange={() => toggleSelect(e.id)}
+          aria-label={`Select ${e.title}`}
+          className="rounded border-slate-300"
+        />
+      )
+    },
     { key: 'title', label: 'Event', render: (e) => (<div><div className="font-extrabold text-slate-900">{e.title}</div><div className="text-[11px] text-slate-500">{e.venue}</div></div>) },
     { key: 'organizer', label: 'Organizer', sortValue: orgName, render: orgName },
     { key: 'category', label: 'Category' },
@@ -420,9 +535,11 @@ function EventsTab({ data, run, confirm }) {
     {
       key: 'actions', label: 'Actions',
       render: (e) => (
-        <div className="flex gap-1">
+        <div className="flex items-center gap-1">
           <button title="Edit" onClick={() => setFormFor(e)} className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-[#003366]"><Edit3 className="w-4 h-4" /></button>
-          <button title="Delete" onClick={() => remove(e)} className="p-1.5 rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+          <button title="Delete Event" onClick={() => remove(e)} className="px-2 py-1 rounded-lg bg-red-50 text-red-600 hover:bg-red-600 hover:text-white text-[11px] font-bold flex items-center gap-1 transition-all">
+            <Trash2 className="w-3.5 h-3.5" /> Delete
+          </button>
         </div>
       )
     }
@@ -430,7 +547,24 @@ function EventsTab({ data, run, confirm }) {
 
   return (
     <div className="space-y-4">
-      <Header title="Event management" subtitle={`${rows.length} of ${data.events.length} events`} action={<PrimaryButton onClick={() => setFormFor('new')}><Plus className="w-4 h-4" /> New event</PrimaryButton>} />
+      <Header
+        title="Event management"
+        subtitle={`${rows.length} of ${data.events.length} events`}
+        action={
+          <div className="flex items-center gap-2">
+            {selectedIds.length > 0 && (
+              <button
+                type="button"
+                onClick={bulkDeleteEvents}
+                className="px-3 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-extrabold flex items-center gap-1.5"
+              >
+                <Trash2 className="w-4 h-4" /> Delete Selected ({selectedIds.length})
+              </button>
+            )}
+            <PrimaryButton onClick={() => setFormFor('new')}><Plus className="w-4 h-4" /> New event</PrimaryButton>
+          </div>
+        }
+      />
       <DataTable
         columns={columns}
         rows={rows}
@@ -620,7 +754,7 @@ function VenuesTab({ venues, data, run, confirm }) {
 }
 
 /* ===================================================================== SMS */
-function SmsTab({ data, reload }) {
+function SmsTab({ data, reload, run, confirm }) {
   const [logs, setLogs] = useState(data.tables.smsLogs || []);
   const [priority, setPriority] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -632,18 +766,67 @@ function SmsTab({ data, reload }) {
     (l) => (priority === 'ALL' || String(l.priority).toUpperCase() === priority) && (statusFilter === 'ALL' || String(l.status).toUpperCase().startsWith(statusFilter))
   );
 
+  const deleteOneLog = async (l) => {
+    if (!(await confirm({ title: 'Delete SMS log entry?', message: 'Remove this SMS dispatch record from the log?', confirmLabel: 'Delete' }))) return;
+    await run(() => smsApi.deleteLog(l.id), 'SMS log entry deleted.');
+    refreshLogs();
+  };
+
+  const clearAllLogs = async () => {
+    if (!(await confirm({ title: 'Clear all SMS logs?', message: 'This permanently deletes all SMS dispatch logs from the database.', confirmLabel: 'Clear Logs' }))) return;
+    await run(() => smsApi.clearLogs(), 'All SMS logs cleared.');
+    refreshLogs();
+  };
+
+  const triggerAutoReminders = async () => {
+    await run(() => smsApi.runReminders(), 'Automatic priority reminder check completed.');
+    refreshLogs();
+  };
+
   const columns = [
     { key: 'priority', label: 'Priority', render: (l) => <Badge>{l.priority}</Badge> },
     { key: 'eventTitle', label: 'Event', render: (l) => <span className="font-bold text-slate-800">{l.eventTitle}</span> },
     { key: 'recipient', label: 'Recipient', render: (l) => l.recipientName ? (<div><div className="font-bold text-slate-800">{l.recipientName}</div><div className="text-[11px] text-slate-500">{l.recipient}</div></div>) : (l.recipient || `${l.recipientCount || 0} recipients`) },
     { key: 'message', label: 'Message', sortable: false, className: 'max-w-xs', render: (l) => <span className="line-clamp-2 text-slate-600">{l.message}</span> },
     { key: 'status', label: 'Status', render: (l) => (<div><Badge kind={String(l.status).split(' ')[0]}>{String(l.status).split(' ')[0]}</Badge>{l.failureReason && <div className="text-[10px] text-red-600 mt-1 max-w-[180px]">{l.failureReason}</div>}</div>) },
-    { key: 'sentAt', label: 'Sent', render: (l) => fmtDateTime(l.sentAt) }
+    { key: 'sentAt', label: 'Sent', render: (l) => fmtDateTime(l.sentAt) },
+    {
+      key: 'actions',
+      label: 'Actions',
+      render: (l) => (
+        <button title="Delete SMS Log" onClick={() => deleteOneLog(l)} className="px-2 py-1 rounded-lg bg-red-50 text-red-600 hover:bg-red-600 hover:text-white text-[11px] font-bold flex items-center gap-1 transition-all">
+          <Trash2 className="w-3.5 h-3.5" /> Delete
+        </button>
+      )
+    }
   ];
 
   return (
     <div className="space-y-6">
-      <Header title="Africa's Talking SMS gateway" subtitle="Broadcast priority alerts and review delivery history" />
+      <Header
+        title="Africa's Talking SMS gateway"
+        subtitle="Broadcast priority alerts, run auto-reminders, and manage delivery history"
+        action={
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={triggerAutoReminders}
+              className="px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-extrabold flex items-center gap-1.5"
+            >
+              <RefreshCw className="w-4 h-4" /> Run Auto-Reminders Now
+            </button>
+            {logs.length > 0 && (
+              <button
+                type="button"
+                onClick={clearAllLogs}
+                className="px-3 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-extrabold flex items-center gap-1.5"
+              >
+                <Trash2 className="w-4 h-4" /> Clear All Logs
+              </button>
+            )}
+          </div>
+        }
+      />
       <SmsComposer events={data.events} role="admin" onSent={() => { refreshLogs(); reload(); }} />
       <div className="space-y-3">
         <h3 className="text-sm font-black text-slate-900">Delivery log ({rows.length})</h3>

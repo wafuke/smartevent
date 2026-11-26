@@ -4,6 +4,7 @@ const { readLocalData, writeLocalData, logActivity, addNotification } = require(
 const { requireAuth, requireRole } = require('../middleware/auth');
 const { normalizeKenyanPhone } = require('../utils/phone');
 const { normalizeTier, tierLabel, recomputeEventSms } = require('../utils/smsTier');
+const { VALID_FREQUENCIES, runReminderCycle } = require('../services/reminderScheduler');
 
 function ownsEvent(db, user, eventId) {
   const ev = (db.events || []).find((e) => e.id === eventId);
@@ -80,6 +81,9 @@ router.post('/', requireRole(['student']), (req, res) => {
     return res.status(400).json({ success: false, error: 'SMS priority must be NONE, LOW, MEDIUM or HIGH.' });
   }
   const smsPriority = normalizeTier(rawTier, normalizeTier(me.smsPriority));
+  const rawFreq = (req.body || {}).smsFrequencyMinutes;
+  const parsedFreq = rawFreq === null || rawFreq === undefined || rawFreq === '' ? null : Number(rawFreq);
+  const smsFrequencyMinutes = parsedFreq && VALID_FREQUENCIES.includes(parsedFreq) ? parsedFreq : (me.smsFrequencyMinutes || null);
 
   const registration = {
     id: `reg-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
@@ -92,6 +96,7 @@ router.post('/', requireRole(['student']), (req, res) => {
     phone,
     smsPriority,
     smsPriorityLabel: tierLabel(smsPriority),
+    smsFrequencyMinutes,
     status: 'Confirmed',
     registeredAt: new Date().toISOString()
   };
@@ -110,6 +115,10 @@ router.post('/', requireRole(['student']), (req, res) => {
   });
   logActivity(db, 'STUDENT_RSVP', `${req.user.name} (${req.user.studentId}) registered for "${event.title}"`);
   writeLocalData(db);
+
+  if (process.env.NODE_ENV !== 'test') {
+    runReminderCycle().catch(() => {});
+  }
 
   res.status(201).json({ success: true, message: 'Registration successful!', data: registration });
 });
@@ -135,20 +144,47 @@ function cancelRegistration(db, index, actor) {
   return removed;
 }
 
-// PUT /api/registrations/event/:eventId/sms-priority - the student changes their own SMS tier for an event
+// PUT /api/registrations/event/:eventId/sms-priority - the student changes their own SMS tier or frequency for an event
 router.put('/event/:eventId/sms-priority', requireRole(['student']), (req, res) => {
-  const tier = normalizeTier((req.body || {}).smsPriority, -1);
-  if (tier === -1) return res.status(400).json({ success: false, error: 'SMS priority must be NONE, LOW, MEDIUM or HIGH.' });
+  const body = req.body || {};
+  const hasTier = body.smsPriority !== undefined;
+  const hasFreq = body.smsFrequencyMinutes !== undefined;
+  if (!hasTier && !hasFreq) {
+    return res.status(400).json({ success: false, error: 'Provide smsPriority or smsFrequencyMinutes.' });
+  }
+
+  const tier = hasTier ? normalizeTier(body.smsPriority, -1) : null;
+  if (hasTier && tier === -1) {
+    return res.status(400).json({ success: false, error: 'SMS priority must be NONE, LOW, MEDIUM or HIGH.' });
+  }
+
+  let freq = undefined;
+  if (hasFreq) {
+    if (body.smsFrequencyMinutes === null || body.smsFrequencyMinutes === '' || body.smsFrequencyMinutes === 'auto') {
+      freq = null;
+    } else {
+      const n = Number(body.smsFrequencyMinutes);
+      if (!VALID_FREQUENCIES.includes(n)) {
+        return res.status(400).json({ success: false, error: 'SMS frequency must be Auto, 30, 60, 180, 360, or 1440 minutes.' });
+      }
+      freq = n;
+    }
+  }
 
   const db = readLocalData();
   const reg = (db.registrations || []).find((r) => r.eventId === req.params.eventId && r.userId === req.user.id);
   if (!reg) return res.status(404).json({ success: false, error: 'You are not registered for this event.' });
 
-  reg.smsPriority = tier;
-  reg.smsPriorityLabel = tierLabel(tier);
-  recomputeEventSms(db, (db.events || []).find((e) => e.id === reg.eventId));
+  if (hasTier) {
+    reg.smsPriority = tier;
+    reg.smsPriorityLabel = tierLabel(tier);
+    recomputeEventSms(db, (db.events || []).find((e) => e.id === reg.eventId));
+  }
+  if (hasFreq) {
+    reg.smsFrequencyMinutes = freq;
+  }
   writeLocalData(db);
-  res.json({ success: true, message: `SMS priority for this event set to ${tierLabel(tier)}.`, data: reg });
+  res.json({ success: true, message: 'SMS reminder preference updated.', data: reg });
 });
 
 // DELETE /api/registrations/event/:eventId - the student cancels their own RSVP for an event

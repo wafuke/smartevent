@@ -17,7 +17,9 @@
       "clearanceLevel": "Super Admin",
       "authProvider": "local,google",
       "createdAt": "2026-08-01T08:00:00.000Z",
-      "lastLoginAt": "2026-11-06T05:26:33.041Z"
+      "lastLoginAt": "2026-11-16T13:07:08.147Z",
+      "googleId": "109231792421823073573",
+      "picture": "https://lh3.googleusercontent.com/a/ACg8ocKbkyGUCM18nesQUN5PDaUhhc_iePv5SMsyqRXJovnQ8_Z4sQ=s96-c"
     },
     {
       "id": "usr-admin-2",
@@ -48,7 +50,7 @@
       "verified": true,
       "authProvider": "local,google",
       "createdAt": "2026-08-10T10:15:00.000Z",
-      "lastLoginAt": "2026-10-27T16:09:59.311Z"
+      "lastLoginAt": "2026-11-10T15:34:01.520Z"
     },
     {
       "id": "usr-org-2",
@@ -78,7 +80,8 @@
       "phone": "+254733556677",
       "verified": true,
       "authProvider": "local,google",
-      "createdAt": "2026-08-15T14:20:00.000Z"
+      "createdAt": "2026-08-15T14:20:00.000Z",
+      "lastLoginAt": "2026-11-16T13:10:00.612Z"
     },
     {
       "id": "usr-org-4",
@@ -140,7 +143,7 @@
       "verified": true,
       "authProvider": "local,google",
       "createdAt": "2026-08-21T11:45:00.000Z",
-      "lastLoginAt": "2026-11-06T05:38:26.055Z"
+      "lastLoginAt": "2026-11-13T05:44:07.411Z"
     },
     {
       "id": "usr-org-8",
@@ -200,7 +203,7 @@
       "yearOfStudy": 4,
       "authProvider": "local,google",
       "createdAt": "2026-09-01T08:00:00.000Z",
-      "lastLoginAt": "2026-11-06T05:27:58.735Z"
+      "lastLoginAt": "2026-11-16T13:07:30.753Z"
     },
     {
       "id": "usr-stud-2",
@@ -229,7 +232,8 @@
       "department": "BSc Business Information Technology (BBIT)",
       "yearOfStudy": 4,
       "authProvider": "local,google",
-      "createdAt": "2026-09-03T10:45:00.000Z"
+      "createdAt": "2026-09-03T10:45:00.000Z",
+      "lastLoginAt": "2026-11-16T05:22:35.251Z"
     },
     {
       "id": "usr-stud-4",
@@ -329,6 +333,20 @@
       "yearOfStudy": 1,
       "authProvider": "local,google",
       "createdAt": "2026-09-10T16:05:00.000Z"
+    },
+    {
+      "id": "usr-student-1794466617162",
+      "name": "Elviswafuke",
+      "email": "elviswafuke@gmail.com",
+      "passwordHash": "$2b$10$f.6ksBsZtrPYgI2gBG7Zxu9N2PGlwJkndZFm3xdU.girzLdBZwdai",
+      "role": "student",
+      "phone": "+254712345678",
+      "department": "School of Computing & Engineering Sciences",
+      "status": "Active",
+      "authProvider": "google",
+      "createdAt": "2026-11-12T06:56:57.312Z",
+      "phoneVerified": false,
+      "studentId": "154552"
     }
   ],
   "admin_profiles": [
@@ -609,6 +627,19 @@
       "phone": "+254719889900",
       "hostelResident": true,
       "pastAttendanceRate": 0.95
+    },
+    {
+      "id": "stud-prof-1794466617313",
+      "userId": "usr-student-1794466617162",
+      "studentId": "154552",
+      "name": "Elviswafuke",
+      "email": "elviswafuke@gmail.com",
+      "program": "School of Computing & Engineering Sciences",
+      "faculty": "SCES",
+      "yearOfStudy": 1,
+      "phone": "+254712345678",
+      "hostelResident": false,
+      "pastAttendanceRate": 0.8
     }
   ],
   "categories": [
@@ -715,6 +746,33 @@
   ],
   "events": [
     {
+      "id": "evt-1794804037123",
+      "title": "career fare nov 16 7am",
+      "category": "Academic",
+      "description": "dndnnd",
+      "date": "2026-11-16",
+      "dayOfWeek": "Monday",
+      "time": "08:00 - 09:00",
+      "timeSlot": "Morning",
+      "venue": "SCES Lecture Theatre 4 (LT4)",
+      "venueCapacity": 180,
+      "registrationCount": 2,
+      "pastAttendanceRate": 0.75,
+      "predictedAttendance": 2,
+      "smsPriority": 2,
+      "smsMix": {
+        "none": 0,
+        "low": 0,
+        "medium": 2,
+        "high": 0
+      },
+      "featured": false,
+      "status": "Upcoming",
+      "organizerId": "usr-org-3",
+      "organizerName": "Strathmore Career Development Services",
+      "createdAt": "2026-11-16T04:40:37.124Z"
+    },
+    {
       "id": "evt-101",
       "title": "Strathmore AI & Machine Learning Annual Colloquium",
       "category": "Academic",
@@ -724,15 +782,21 @@
       "dayOfWeek": "Thursday",
       "venue": "Main Auditorium",
       "venueCapacity": 500,
-      "registrationCount": 413,
-      "smsPriority": 3,
+      "registrationCount": 412,
+      "smsPriority": 2,
       "featured": true,
       "status": "Upcoming",
       "organizerId": "usr-org-1",
       "organizerName": "Dr. Joseph Orero (SCES Dean's Office)",
       "description": "Keynote research symposium featuring live demonstrations of predictive campus analytics, computer vision, and NLP systems built by Strathmore SCES final-year researchers.",
       "createdAt": "2026-10-01T09:00:00.000Z",
-      "predictedAttendance": 330
+      "predictedAttendance": 330,
+      "smsMix": {
+        "none": 0,
+        "low": 0,
+        "medium": 3,
+        "high": 0
+      }
     },
     {
       "id": "evt-102",
@@ -942,14 +1006,21 @@
       "dayOfWeek": "Thursday",
       "venue": "Main Auditorium",
       "venueCapacity": 500,
-      "registrationCount": 320,
-      "smsPriority": 3,
+      "registrationCount": 321,
+      "smsPriority": 2,
       "featured": false,
       "status": "Upcoming",
       "organizerId": "usr-org-7",
       "organizerName": "Strathmore Student Council (SSC)",
       "description": "Direct Q&A session between the 16th Student Council Executive, Dean of Students, and student body regarding academic policies and campus facilities.",
-      "createdAt": "2026-10-12T10:20:00.000Z"
+      "createdAt": "2026-10-12T10:20:00.000Z",
+      "predictedAttendance": 257,
+      "smsMix": {
+        "none": 0,
+        "low": 0,
+        "medium": 1,
+        "high": 0
+      }
     },
     {
       "id": "evt-113",
@@ -961,14 +1032,21 @@
       "dayOfWeek": "Friday",
       "venue": "iLab Africa Innovation Room 302",
       "venueCapacity": 120,
-      "registrationCount": 116,
-      "smsPriority": 3,
+      "registrationCount": 117,
+      "smsPriority": 2,
       "featured": true,
       "status": "Upcoming",
       "organizerId": "usr-org-8",
       "organizerName": "Google Developer Student Club (GDSC Strathmore)",
       "description": "Hands-on mobile engineering codelab building cross-platform apps with on-device Gemini Nano and Firebase Cloud Messaging.",
-      "createdAt": "2026-10-13T13:00:00.000Z"
+      "createdAt": "2026-10-13T13:00:00.000Z",
+      "predictedAttendance": 94,
+      "smsMix": {
+        "none": 0,
+        "low": 0,
+        "medium": 2,
+        "high": 0
+      }
     },
     {
       "id": "evt-114",
@@ -1030,18 +1108,6 @@
   ],
   "registrations": [
     {
-      "id": "reg-1001",
-      "eventId": "evt-101",
-      "eventTitle": "Strathmore AI & Machine Learning Annual Colloquium",
-      "userId": "usr-stud-1",
-      "studentId": "154210",
-      "studentName": "Elvis Wanyama Wafuke",
-      "studentEmail": "student@strathmore.edu",
-      "phone": "+254712345678",
-      "status": "Confirmed",
-      "registeredAt": "2026-10-12T10:15:00.000Z"
-    },
-    {
       "id": "reg-1002",
       "eventId": "evt-103",
       "eventTitle": "Cybersecurity & Cloud Threat Hunting Bootcamp",
@@ -1087,7 +1153,9 @@
       "studentEmail": "brian.kiprop@strathmore.edu",
       "phone": "+254733445566",
       "status": "Confirmed",
-      "registeredAt": "2026-10-14T09:45:00.000Z"
+      "registeredAt": "2026-10-14T09:45:00.000Z",
+      "smsFrequencyMinutes": 30,
+      "lastAutoReminderAt": "2026-11-17T09:32:26.169Z"
     },
     {
       "id": "reg-1007",
@@ -1186,9 +1254,471 @@
       "smsPriorityLabel": "HIGH",
       "status": "Confirmed",
       "registeredAt": "2026-11-06T05:53:48.264Z"
+    },
+    {
+      "id": "reg-1794803783797-115",
+      "eventId": "evt-112",
+      "eventTitle": "Student Townhall & Campus Welfare Open Forum",
+      "userId": "usr-stud-1",
+      "studentId": "154210",
+      "studentName": "Elvis Wanyama Wafuke",
+      "studentEmail": "student@strathmore.edu",
+      "phone": "+254712345678",
+      "smsPriority": 2,
+      "smsPriorityLabel": "MEDIUM",
+      "status": "Confirmed",
+      "registeredAt": "2026-11-16T04:36:23.797Z"
+    },
+    {
+      "id": "reg-1794805157133-598",
+      "eventId": "evt-1794804037123",
+      "eventTitle": "career fare nov 16 7am",
+      "userId": "usr-stud-1",
+      "studentId": "154210",
+      "studentName": "Elvis Wanyama Wafuke",
+      "studentEmail": "student@strathmore.edu",
+      "phone": "+254712345678",
+      "smsPriority": 2,
+      "smsPriorityLabel": "MEDIUM",
+      "smsFrequencyMinutes": null,
+      "status": "Confirmed",
+      "registeredAt": "2026-11-16T04:59:17.133Z",
+      "lastAutoReminderAt": "2026-11-16T04:59:17.138Z"
+    },
+    {
+      "id": "reg-1794806592367-650",
+      "eventId": "evt-1794804037123",
+      "eventTitle": "career fare nov 16 7am",
+      "userId": "usr-stud-3",
+      "studentId": "153904",
+      "studentName": "Brian Kiprop",
+      "studentEmail": "brian.kiprop@strathmore.edu",
+      "phone": "+254733445566",
+      "smsPriority": 2,
+      "smsPriorityLabel": "MEDIUM",
+      "smsFrequencyMinutes": 60,
+      "status": "Confirmed",
+      "registeredAt": "2026-11-16T05:23:12.367Z"
+    },
+    {
+      "id": "reg-1794834551685-421",
+      "eventId": "evt-113",
+      "eventTitle": "Kotlin, Flutter & Gemini Android DevFest Strathmore",
+      "userId": "usr-stud-1",
+      "studentId": "154210",
+      "studentName": "Elvis Wanyama Wafuke",
+      "studentEmail": "student@strathmore.edu",
+      "phone": "+254712345678",
+      "smsPriority": 2,
+      "smsPriorityLabel": "MEDIUM",
+      "smsFrequencyMinutes": null,
+      "status": "Confirmed",
+      "registeredAt": "2026-11-16T13:09:11.685Z"
     }
   ],
   "smsLogs": [
+    {
+      "id": "sms-auto-1794907960129-951",
+      "eventId": "evt-105",
+      "eventTitle": "Annual Engineering & Tech Graduate Career Fair",
+      "kind": "AUTO_REMINDER",
+      "kindLabel": "Automatic Reminder",
+      "priority": "MEDIUM",
+      "minTier": 2,
+      "message": "[SmartEvent MEDIUM REMINDER] Annual Engineering & Tech Graduate Career Fair is in 21.5 hrs (2026-11-18 10:00 - 16:00) at Student Center Graduation Square.",
+      "recipient": "+254733445566",
+      "recipientsSample": [
+        "+254733445566"
+      ],
+      "recipientCount": 1,
+      "sentCount": 1,
+      "failedCount": 0,
+      "status": "SENT",
+      "mode": "LIVE",
+      "messageId": "ATXid_f0f4494959079cab3f857075dd5b16d6",
+      "cost": "KES 0.8000",
+      "userId": "usr-stud-3",
+      "sentBy": "SmartEvent Auto-Scheduler",
+      "sentAt": "2026-11-17T09:32:26.169Z"
+    },
+    {
+      "id": "sms-auto-1794906140643-712",
+      "eventId": "evt-105",
+      "eventTitle": "Annual Engineering & Tech Graduate Career Fair",
+      "kind": "AUTO_REMINDER",
+      "kindLabel": "Automatic Reminder",
+      "priority": "MEDIUM",
+      "minTier": 2,
+      "message": "[SmartEvent MEDIUM REMINDER] Annual Engineering & Tech Graduate Career Fair is in 22 hrs (2026-11-18 10:00 - 16:00) at Student Center Graduation Square.",
+      "recipient": "+254733445566",
+      "recipientsSample": [
+        "+254733445566"
+      ],
+      "recipientCount": 1,
+      "sentCount": 1,
+      "failedCount": 0,
+      "status": "SENT",
+      "mode": "LIVE",
+      "messageId": "ATXid_dfe23687920c402bea555d6b15e40124",
+      "cost": "KES 0.8000",
+      "userId": "usr-stud-3",
+      "sentBy": "SmartEvent Auto-Scheduler",
+      "sentAt": "2026-11-17T09:02:17.688Z"
+    },
+    {
+      "id": "sms-1794834674604-1",
+      "batchId": "batch-1794834674603",
+      "eventId": "evt-1794804037123",
+      "eventTitle": "career fare nov 16 7am",
+      "userId": "usr-stud-3",
+      "recipient": "+254733445566",
+      "recipientName": "Brian Kiprop",
+      "message": "[SmartEvent URGENT] career fare nov 16 7am: urgent change of venue",
+      "kind": "URGENT",
+      "priority": "MEDIUM",
+      "priorityLevel": 2,
+      "priorityChosenBy": "student",
+      "status": "PROCESSED",
+      "failureReason": null,
+      "messageId": "ATXid_2bf46c4ff9cd5b1a7d9f3b3cab292424",
+      "gatewayMode": "LIVE",
+      "cost": "KES 0.8000",
+      "sentBy": "Strathmore Career Development Services (ORGANIZER)",
+      "sentById": "usr-org-3",
+      "sentAt": "2026-11-16T13:11:14.603Z"
+    },
+    {
+      "id": "sms-1794834674603-0",
+      "batchId": "batch-1794834674603",
+      "eventId": "evt-1794804037123",
+      "eventTitle": "career fare nov 16 7am",
+      "userId": "usr-stud-1",
+      "recipient": "+254712345678",
+      "recipientName": "Elvis Wanyama Wafuke",
+      "message": "[SmartEvent URGENT] career fare nov 16 7am: urgent change of venue",
+      "kind": "URGENT",
+      "priority": "MEDIUM",
+      "priorityLevel": 2,
+      "priorityChosenBy": "student",
+      "status": "SENT",
+      "failureReason": "Sent via Africa's Talking Gateway (Safaricom Sender ID pending approval; mirrored to AT Simulator)",
+      "messageId": "ATXid_4455f92dd89779b687e9130dbb1a95e9",
+      "gatewayMode": "LIVE",
+      "cost": "KES 0.8000",
+      "sentBy": "Strathmore Career Development Services (ORGANIZER)",
+      "sentById": "usr-org-3",
+      "sentAt": "2026-11-16T13:11:14.603Z"
+    },
+    {
+      "id": "sms-1794833875935-1",
+      "batchId": "batch-1794833875935",
+      "eventId": "evt-1794804037123",
+      "eventTitle": "career fare nov 16 7am",
+      "userId": "usr-stud-3",
+      "recipient": "+254733445566",
+      "recipientName": "Brian Kiprop",
+      "message": "[SmartEvent REMINDER] career fare nov 16 7am: hdkjd",
+      "kind": "REMINDER",
+      "priority": "MEDIUM",
+      "priorityLevel": 2,
+      "priorityChosenBy": "student",
+      "status": "PROCESSED",
+      "failureReason": null,
+      "messageId": "ATXid_1cf2b268d6f468b23de56910c808ecee",
+      "gatewayMode": "LIVE",
+      "cost": "KES 0.8000",
+      "sentBy": "Strathmore Career Development Services (ORGANIZER)",
+      "sentById": "usr-org-3",
+      "sentAt": "2026-11-16T12:57:55.935Z"
+    },
+    {
+      "id": "sms-1794833875935-0",
+      "batchId": "batch-1794833875935",
+      "eventId": "evt-1794804037123",
+      "eventTitle": "career fare nov 16 7am",
+      "userId": "usr-stud-1",
+      "recipient": "+254712345678",
+      "recipientName": "Elvis Wanyama Wafuke",
+      "message": "[SmartEvent REMINDER] career fare nov 16 7am: hdkjd",
+      "kind": "REMINDER",
+      "priority": "MEDIUM",
+      "priorityLevel": 2,
+      "priorityChosenBy": "student",
+      "status": "SENT",
+      "failureReason": "Sent via Africa's Talking Gateway (Safaricom Sender ID pending approval; mirrored to AT Simulator)",
+      "messageId": "ATXid_bc72a9127a4515753f3f6879e8d0daaa",
+      "gatewayMode": "LIVE",
+      "cost": "KES 0.8000",
+      "sentBy": "Strathmore Career Development Services (ORGANIZER)",
+      "sentById": "usr-org-3",
+      "sentAt": "2026-11-16T12:57:55.935Z"
+    },
+    {
+      "id": "sms-1794806667434-1",
+      "batchId": "batch-1794806667434",
+      "eventId": "evt-1794804037123",
+      "eventTitle": "career fare nov 16 7am",
+      "userId": "usr-stud-3",
+      "recipient": "+254733445566",
+      "recipientName": "Brian Kiprop",
+      "message": "[SmartEvent REMINDER] career fare nov 16 7am: come now",
+      "kind": "REMINDER",
+      "priority": "MEDIUM",
+      "priorityLevel": 2,
+      "priorityChosenBy": "student",
+      "status": "SENT",
+      "failureReason": "Delivered to Africa's Talking Sandbox Simulator (Live endpoint timed out: timeout of 15000ms exceeded)",
+      "messageId": "ATXid_dea1cdb05457df1da748cd9043cca10e",
+      "gatewayMode": "LIVE",
+      "cost": "KES 0.8000",
+      "sentBy": "Strathmore Career Development Services (ORGANIZER)",
+      "sentById": "usr-org-3",
+      "sentAt": "2026-11-16T05:24:27.434Z"
+    },
+    {
+      "id": "sms-1794806667434-0",
+      "batchId": "batch-1794806667434",
+      "eventId": "evt-1794804037123",
+      "eventTitle": "career fare nov 16 7am",
+      "userId": "usr-stud-1",
+      "recipient": "+254712345678",
+      "recipientName": "Elvis Wanyama Wafuke",
+      "message": "[SmartEvent REMINDER] career fare nov 16 7am: come now",
+      "kind": "REMINDER",
+      "priority": "MEDIUM",
+      "priorityLevel": 2,
+      "priorityChosenBy": "student",
+      "status": "SENT",
+      "failureReason": "Delivered to Africa's Talking Sandbox Simulator (Live endpoint timed out: timeout of 15000ms exceeded)",
+      "messageId": "ATXid_50decde73875341d12e4369a1e00bbdf",
+      "gatewayMode": "LIVE",
+      "cost": "KES 0.8000",
+      "sentBy": "Strathmore Career Development Services (ORGANIZER)",
+      "sentById": "usr-org-3",
+      "sentAt": "2026-11-16T05:24:27.434Z"
+    },
+    {
+      "id": "sms-1794806486722-0",
+      "batchId": "batch-1794806486722",
+      "eventId": "evt-1794804037123",
+      "eventTitle": "career fare nov 16 7am",
+      "userId": "usr-stud-1",
+      "recipient": "+254712345678",
+      "recipientName": "Elvis Wanyama Wafuke",
+      "message": "[SmartEvent REMINDER] career fare nov 16 7am: bbb",
+      "kind": "REMINDER",
+      "priority": "MEDIUM",
+      "priorityLevel": 2,
+      "priorityChosenBy": "student",
+      "status": "SENT",
+      "failureReason": "Sent via Africa's Talking Gateway (Safaricom Sender ID pending approval; mirrored to AT Simulator)",
+      "messageId": "ATXid_bd703e87e29e4ba3586f1fbf52af93b2",
+      "gatewayMode": "LIVE",
+      "cost": "KES 0.8000",
+      "sentBy": "Strathmore Career Development Services (ORGANIZER)",
+      "sentById": "usr-org-3",
+      "sentAt": "2026-11-16T05:21:26.722Z"
+    },
+    {
+      "id": "sms-1794806025856-0",
+      "batchId": "batch-1794806025856",
+      "eventId": "evt-1794804037123",
+      "eventTitle": "career fare nov 16 7am",
+      "userId": "usr-stud-1",
+      "recipient": "+254712345678",
+      "recipientName": "Elvis Wanyama Wafuke",
+      "message": "[SmartEvent REMINDER] career fare nov 16 7am: bbb",
+      "kind": "REMINDER",
+      "priority": "MEDIUM",
+      "priorityLevel": 2,
+      "priorityChosenBy": "student",
+      "status": "SENT",
+      "failureReason": "Sent via Africa's Talking Gateway (Safaricom Sender ID pending approval; mirrored to AT Simulator)",
+      "messageId": "ATXid_1794806025856_651",
+      "gatewayMode": "LIVE",
+      "cost": "KES 0.80",
+      "sentBy": "Strathmore Career Development Services (ORGANIZER)",
+      "sentById": "usr-org-3",
+      "sentAt": "2026-11-16T05:13:45.856Z"
+    },
+    {
+      "id": "sms-1794805988769-0",
+      "batchId": "batch-1794805988768",
+      "eventId": "evt-1794804037123",
+      "eventTitle": "career fare nov 16 7am",
+      "userId": "usr-stud-1",
+      "recipient": "+254712345678",
+      "recipientName": "Elvis Wanyama Wafuke",
+      "message": "[SmartEvent REMINDER] career fare nov 16 7am: xxxxxx",
+      "kind": "REMINDER",
+      "priority": "MEDIUM",
+      "priorityLevel": 2,
+      "priorityChosenBy": "student",
+      "status": "FAILED",
+      "failureReason": "Africa's Talking Live gateway unreachable (timeout of 15000ms exceeded).",
+      "messageId": null,
+      "gatewayMode": "LIVE",
+      "cost": null,
+      "sentBy": "Strathmore Career Development Services (ORGANIZER)",
+      "sentById": "usr-org-3",
+      "sentAt": "2026-11-16T05:13:08.768Z"
+    },
+    {
+      "id": "sms-1794805424135-0",
+      "batchId": "batch-1794805424134",
+      "eventId": "evt-1794804037123",
+      "eventTitle": "career fare nov 16 7am",
+      "userId": "usr-stud-1",
+      "recipient": "+254712345678",
+      "recipientName": "Elvis Wanyama Wafuke",
+      "message": "[SmartEvent REMINDER] career fare nov 16 7am: nnnnnn",
+      "kind": "REMINDER",
+      "priority": "MEDIUM",
+      "priorityLevel": 2,
+      "priorityChosenBy": "student",
+      "status": "FAILED",
+      "failureReason": "Africa's Talking is unreachable (timeout of 15000ms exceeded).",
+      "messageId": null,
+      "gatewayMode": "LIVE",
+      "cost": null,
+      "sentBy": "Strathmore Career Development Services (ORGANIZER)",
+      "sentById": "usr-org-3",
+      "sentAt": "2026-11-16T05:03:44.134Z"
+    },
+    {
+      "id": "sms-1794805247759-0",
+      "batchId": "batch-1794805247759",
+      "eventId": "evt-1794804037123",
+      "eventTitle": "career fare nov 16 7am",
+      "userId": "usr-stud-1",
+      "recipient": "+254712345678",
+      "recipientName": "Elvis Wanyama Wafuke",
+      "message": "[SmartEvent REMINDER] career fare nov 16 7am: nnnnnnnnn",
+      "kind": "REMINDER",
+      "priority": "MEDIUM",
+      "priorityLevel": 2,
+      "priorityChosenBy": "student",
+      "status": "FAILED",
+      "failureReason": "Africa's Talking is unreachable (timeout of 15000ms exceeded).",
+      "messageId": null,
+      "gatewayMode": "LIVE",
+      "cost": null,
+      "sentBy": "Strathmore Career Development Services (ORGANIZER)",
+      "sentById": "usr-org-3",
+      "sentAt": "2026-11-16T05:00:47.759Z"
+    },
+    {
+      "id": "sms-auto-1794805172774-334",
+      "eventId": "evt-1794804037123",
+      "eventTitle": "career fare nov 16 7am",
+      "kind": "AUTO_REMINDER",
+      "kindLabel": "Automatic Reminder",
+      "priority": "MEDIUM",
+      "minTier": 2,
+      "message": "[SmartEvent MEDIUM REMINDER] career fare nov 16 7am is in 1 min (2026-11-16 08:00 - 09:00) at SCES Lecture Theatre 4 (LT4).",
+      "recipient": "+254712345678",
+      "recipientsSample": [
+        "+254712345678"
+      ],
+      "recipientCount": 1,
+      "sentCount": 1,
+      "failedCount": 0,
+      "status": "SENT",
+      "mode": "LIVE",
+      "messageId": "ATXid_3c9f58e270c0a2a997be3d9489861e80",
+      "cost": "KES 0.8000",
+      "userId": "usr-stud-1",
+      "sentBy": "SmartEvent Auto-Scheduler",
+      "sentAt": "2026-11-16T04:59:17.138Z"
+    },
+    {
+      "id": "sms-1794465641868-0",
+      "batchId": "batch-1794465641868",
+      "eventId": "general",
+      "eventTitle": "SmartEvent Campus Alert",
+      "userId": null,
+      "recipient": "+254701418501",
+      "recipientName": "Recipient",
+      "message": "[SmartEvent REMINDER] SmartEvent Campus Alert: Habari Elvis! Your SmartEvent Priority SMS is now live on the simulator for Strathmore Annual Tech Symposium at Main Auditorium.",
+      "kind": "REMINDER",
+      "priority": "MEDIUM",
+      "priorityLevel": 2,
+      "priorityChosenBy": "student",
+      "status": "SENT",
+      "failureReason": "Sent via Africa's Talking Gateway (Safaricom Sender ID pending approval; mirrored to AT Simulator)",
+      "messageId": "ATXid_14a592ddeb9b8f3468944b5bba79d8f3",
+      "gatewayMode": "LIVE",
+      "cost": "KES 1.6000",
+      "sentBy": "Elvis Wanyama Wafuke (ADMIN)",
+      "sentById": "usr-admin-1",
+      "sentAt": "2026-11-12T06:40:41.868Z"
+    },
+    {
+      "id": "sms-1794465262425-1",
+      "batchId": "batch-1794465262411",
+      "eventId": "general",
+      "eventTitle": "SmartEvent Campus Alert",
+      "userId": null,
+      "recipient": "+254724710913",
+      "recipientName": "Recipient",
+      "message": "[SmartEvent REMINDER] SmartEvent Campus Alert: [SmartEvent Strathmore] URGENT UPDATE: Strathmore Annual Tech Symposium is starting now at Main Auditorium. Show your RSVP at the entrance!",
+      "kind": "REMINDER",
+      "priority": "MEDIUM",
+      "priorityLevel": 2,
+      "priorityChosenBy": "student",
+      "status": "SENT",
+      "failureReason": "Sent via Africa's Talking Gateway (Safaricom Sender ID pending approval; mirrored to AT Simulator)",
+      "messageId": "ATXid_1b288c7e8310fdd4ec083a02e2dc1f1c",
+      "gatewayMode": "LIVE",
+      "cost": "KES 1.6000",
+      "sentBy": "Elvis Wanyama Wafuke (ADMIN)",
+      "sentById": "usr-admin-1",
+      "sentAt": "2026-11-12T06:34:22.424Z"
+    },
+    {
+      "id": "sms-1794465262425-0",
+      "batchId": "batch-1794465262411",
+      "eventId": "general",
+      "eventTitle": "SmartEvent Campus Alert",
+      "userId": null,
+      "recipient": "+254701418501",
+      "recipientName": "Recipient",
+      "message": "[SmartEvent REMINDER] SmartEvent Campus Alert: [SmartEvent Strathmore] URGENT UPDATE: Strathmore Annual Tech Symposium is starting now at Main Auditorium. Show your RSVP at the entrance!",
+      "kind": "REMINDER",
+      "priority": "MEDIUM",
+      "priorityLevel": 2,
+      "priorityChosenBy": "student",
+      "status": "SENT",
+      "failureReason": "Sent via Africa's Talking Gateway (Safaricom Sender ID pending approval; mirrored to AT Simulator)",
+      "messageId": "ATXid_b860f1a2128b59d47d800dffe0b8f0f3",
+      "gatewayMode": "LIVE",
+      "cost": "KES 1.6000",
+      "sentBy": "Elvis Wanyama Wafuke (ADMIN)",
+      "sentById": "usr-admin-1",
+      "sentAt": "2026-11-12T06:34:22.424Z"
+    },
+    {
+      "id": "sms-1793948784072-0",
+      "batchId": "batch-1793948784069",
+      "eventId": "general",
+      "eventTitle": "SmartEvent Campus Alert",
+      "userId": "usr-admin-1",
+      "recipient": "+254701418501",
+      "recipientName": "Elvis Wanyama Wafuke",
+      "message": "[SmartEvent REMINDER] SmartEvent Campus Alert: hey",
+      "kind": "REMINDER",
+      "priority": "MEDIUM",
+      "priorityLevel": 2,
+      "priorityChosenBy": "student",
+      "status": "SENT",
+      "failureReason": null,
+      "messageId": "ATXid_be30ce4ce39e86aee812d82f1852b004",
+      "gatewayMode": "SANDBOX",
+      "cost": "KES 0.8000",
+      "sentBy": "Elvis Wanyama Wafuke (ADMIN)",
+      "sentById": "usr-admin-1",
+      "sentAt": "2026-11-06T07:06:24.069Z"
+    },
     {
       "id": "sms-901",
       "eventId": "evt-101",
@@ -1298,6 +1828,196 @@
   ],
   "notifications": [
     {
+      "id": "notif-1794907960130-179",
+      "userId": "usr-stud-3",
+      "title": "Upcoming Event Reminder: Annual Engineering & Tech Graduate Career Fair",
+      "message": "[SmartEvent MEDIUM REMINDER] Annual Engineering & Tech Graduate Career Fair is in 21.5 hrs (2026-11-18 10:00 - 16:00) at Student Center Graduation Square.",
+      "type": "SMS_REMINDER",
+      "priority": "MEDIUM",
+      "read": false,
+      "createdAt": "2026-11-17T09:32:40.130Z"
+    },
+    {
+      "id": "notif-1794906140644-839",
+      "userId": "usr-stud-3",
+      "title": "Upcoming Event Reminder: Annual Engineering & Tech Graduate Career Fair",
+      "message": "[SmartEvent MEDIUM REMINDER] Annual Engineering & Tech Graduate Career Fair is in 22 hrs (2026-11-18 10:00 - 16:00) at Student Center Graduation Square.",
+      "type": "SMS_REMINDER",
+      "priority": "MEDIUM",
+      "read": false,
+      "createdAt": "2026-11-17T09:02:20.644Z"
+    },
+    {
+      "id": "notif-1794834674604-431",
+      "userId": "usr-stud-3",
+      "title": "Urgent: career fare nov 16 7am",
+      "message": "urgent change of venue",
+      "type": "SMS_PRIORITY",
+      "priority": "HIGH",
+      "read": false,
+      "createdAt": "2026-11-16T13:11:14.604Z"
+    },
+    {
+      "id": "notif-1794834674604-713",
+      "userId": "usr-stud-1",
+      "title": "Urgent: career fare nov 16 7am",
+      "message": "urgent change of venue",
+      "type": "SMS_PRIORITY",
+      "priority": "HIGH",
+      "read": false,
+      "createdAt": "2026-11-16T13:11:14.604Z"
+    },
+    {
+      "id": "notif-1794834551686-944",
+      "userId": "usr-stud-1",
+      "title": "Registration confirmed",
+      "message": "You are registered for \"Kotlin, Flutter & Gemini Android DevFest Strathmore\" on 2026-11-27 at iLab Africa Innovation Room 302.",
+      "type": "REGISTRATION",
+      "priority": "MEDIUM",
+      "read": false,
+      "createdAt": "2026-11-16T13:09:11.686Z"
+    },
+    {
+      "id": "notif-1794833875936-752",
+      "userId": "usr-stud-3",
+      "title": "Reminder: career fare nov 16 7am",
+      "message": "hdkjd",
+      "type": "SMS_PRIORITY",
+      "priority": "MEDIUM",
+      "read": false,
+      "createdAt": "2026-11-16T12:57:55.936Z"
+    },
+    {
+      "id": "notif-1794833875935-529",
+      "userId": "usr-stud-1",
+      "title": "Reminder: career fare nov 16 7am",
+      "message": "hdkjd",
+      "type": "SMS_PRIORITY",
+      "priority": "MEDIUM",
+      "read": false,
+      "createdAt": "2026-11-16T12:57:55.935Z"
+    },
+    {
+      "id": "notif-1794806667434-744",
+      "userId": "usr-stud-3",
+      "title": "Reminder: career fare nov 16 7am",
+      "message": "come now",
+      "type": "SMS_PRIORITY",
+      "priority": "MEDIUM",
+      "read": false,
+      "createdAt": "2026-11-16T05:24:27.434Z"
+    },
+    {
+      "id": "notif-1794806667434-396",
+      "userId": "usr-stud-1",
+      "title": "Reminder: career fare nov 16 7am",
+      "message": "come now",
+      "type": "SMS_PRIORITY",
+      "priority": "MEDIUM",
+      "read": false,
+      "createdAt": "2026-11-16T05:24:27.434Z"
+    },
+    {
+      "id": "notif-1794806592368-161",
+      "userId": "usr-stud-3",
+      "title": "Registration confirmed",
+      "message": "You are registered for \"career fare nov 16 7am\" on 2026-11-16 at SCES Lecture Theatre 4 (LT4).",
+      "type": "REGISTRATION",
+      "priority": "MEDIUM",
+      "read": false,
+      "createdAt": "2026-11-16T05:23:12.368Z"
+    },
+    {
+      "id": "notif-1794806486722-458",
+      "userId": "usr-stud-1",
+      "title": "Reminder: career fare nov 16 7am",
+      "message": "bbb",
+      "type": "SMS_PRIORITY",
+      "priority": "MEDIUM",
+      "read": false,
+      "createdAt": "2026-11-16T05:21:26.722Z"
+    },
+    {
+      "id": "notif-1794806025856-144",
+      "userId": "usr-stud-1",
+      "title": "Reminder: career fare nov 16 7am",
+      "message": "bbb",
+      "type": "SMS_PRIORITY",
+      "priority": "MEDIUM",
+      "read": false,
+      "createdAt": "2026-11-16T05:13:45.856Z"
+    },
+    {
+      "id": "notif-1794805988770-971",
+      "userId": "usr-stud-1",
+      "title": "Reminder: career fare nov 16 7am",
+      "message": "xxxxxx",
+      "type": "SMS_PRIORITY",
+      "priority": "MEDIUM",
+      "read": false,
+      "createdAt": "2026-11-16T05:13:08.770Z"
+    },
+    {
+      "id": "notif-1794805424135-776",
+      "userId": "usr-stud-1",
+      "title": "Reminder: career fare nov 16 7am",
+      "message": "nnnnnn",
+      "type": "SMS_PRIORITY",
+      "priority": "MEDIUM",
+      "read": false,
+      "createdAt": "2026-11-16T05:03:44.135Z"
+    },
+    {
+      "id": "notif-1794805247759-759",
+      "userId": "usr-stud-1",
+      "title": "Reminder: career fare nov 16 7am",
+      "message": "nnnnnnnnn",
+      "type": "SMS_PRIORITY",
+      "priority": "MEDIUM",
+      "read": false,
+      "createdAt": "2026-11-16T05:00:47.759Z"
+    },
+    {
+      "id": "notif-1794805172774-240",
+      "userId": "usr-stud-1",
+      "title": "Upcoming Event Reminder: career fare nov 16 7am",
+      "message": "[SmartEvent MEDIUM REMINDER] career fare nov 16 7am is in 1 min (2026-11-16 08:00 - 09:00) at SCES Lecture Theatre 4 (LT4).",
+      "type": "SMS_REMINDER",
+      "priority": "MEDIUM",
+      "read": false,
+      "createdAt": "2026-11-16T04:59:32.774Z"
+    },
+    {
+      "id": "notif-1794805157133-408",
+      "userId": "usr-stud-1",
+      "title": "Registration confirmed",
+      "message": "You are registered for \"career fare nov 16 7am\" on 2026-11-16 at SCES Lecture Theatre 4 (LT4).",
+      "type": "REGISTRATION",
+      "priority": "MEDIUM",
+      "read": false,
+      "createdAt": "2026-11-16T04:59:17.133Z"
+    },
+    {
+      "id": "notif-1794803783797-141",
+      "userId": "usr-stud-1",
+      "title": "Registration confirmed",
+      "message": "You are registered for \"Student Townhall & Campus Welfare Open Forum\" on 2026-11-19 at Main Auditorium.",
+      "type": "REGISTRATION",
+      "priority": "MEDIUM",
+      "read": false,
+      "createdAt": "2026-11-16T04:36:23.797Z"
+    },
+    {
+      "id": "notif-1793948784072-110",
+      "userId": "usr-admin-1",
+      "title": "Reminder: SmartEvent Campus Alert",
+      "message": "hey",
+      "type": "SMS_PRIORITY",
+      "priority": "MEDIUM",
+      "read": false,
+      "createdAt": "2026-11-06T07:06:24.072Z"
+    },
+    {
       "id": "notif-1793944428264-515",
       "userId": "usr-stud-2",
       "title": "Registration confirmed",
@@ -1339,6 +2059,114 @@
     }
   ],
   "activity": [
+    {
+      "id": "act-1794834674604-342",
+      "type": "SMS_DISPATCHED",
+      "detail": "Strathmore Career Development Services sent URGENT SMS \"career fare nov 16 7am\" to 2 recipient(s) [LIVE] - 0 failed, 0 in-app only by student preference",
+      "createdAt": "2026-11-16T13:11:14.604Z"
+    },
+    {
+      "id": "act-1794834551686-813",
+      "type": "STUDENT_RSVP",
+      "detail": "Elvis Wanyama Wafuke (154210) registered for \"Kotlin, Flutter & Gemini Android DevFest Strathmore\"",
+      "createdAt": "2026-11-16T13:09:11.686Z"
+    },
+    {
+      "id": "act-1794833875936-940",
+      "type": "SMS_DISPATCHED",
+      "detail": "Strathmore Career Development Services sent REMINDER SMS \"career fare nov 16 7am\" to 2 recipient(s) [LIVE] - 0 failed, 0 in-app only by student preference",
+      "createdAt": "2026-11-16T12:57:55.936Z"
+    },
+    {
+      "id": "act-1794806667434-813",
+      "type": "SMS_DISPATCHED",
+      "detail": "Strathmore Career Development Services sent REMINDER SMS \"career fare nov 16 7am\" to 2 recipient(s) [LIVE] - 0 failed, 0 in-app only by student preference",
+      "createdAt": "2026-11-16T05:24:27.434Z"
+    },
+    {
+      "id": "act-1794806592368-4",
+      "type": "STUDENT_RSVP",
+      "detail": "Brian Kiprop (153904) registered for \"career fare nov 16 7am\"",
+      "createdAt": "2026-11-16T05:23:12.368Z"
+    },
+    {
+      "id": "act-1794806486723-354",
+      "type": "SMS_DISPATCHED",
+      "detail": "Strathmore Career Development Services sent REMINDER SMS \"career fare nov 16 7am\" to 1 recipient(s) [LIVE] - 0 failed, 0 in-app only by student preference",
+      "createdAt": "2026-11-16T05:21:26.723Z"
+    },
+    {
+      "id": "act-1794806025856-274",
+      "type": "SMS_DISPATCHED",
+      "detail": "Strathmore Career Development Services sent REMINDER SMS \"career fare nov 16 7am\" to 1 recipient(s) [LIVE] - 0 failed, 0 in-app only by student preference",
+      "createdAt": "2026-11-16T05:13:45.856Z"
+    },
+    {
+      "id": "act-1794805988770-20",
+      "type": "SMS_DISPATCHED",
+      "detail": "Strathmore Career Development Services sent REMINDER SMS \"career fare nov 16 7am\" to 1 recipient(s) [LIVE] - 1 failed, 0 in-app only by student preference",
+      "createdAt": "2026-11-16T05:13:08.770Z"
+    },
+    {
+      "id": "act-1794805424135-215",
+      "type": "SMS_DISPATCHED",
+      "detail": "Strathmore Career Development Services sent REMINDER SMS \"career fare nov 16 7am\" to 1 recipient(s) [LIVE] - 1 failed, 0 in-app only by student preference",
+      "createdAt": "2026-11-16T05:03:44.135Z"
+    },
+    {
+      "id": "act-1794805247759-858",
+      "type": "SMS_DISPATCHED",
+      "detail": "Strathmore Career Development Services sent REMINDER SMS \"career fare nov 16 7am\" to 1 recipient(s) [LIVE] - 1 failed, 0 in-app only by student preference",
+      "createdAt": "2026-11-16T05:00:47.759Z"
+    },
+    {
+      "id": "act-1794805157133-430",
+      "type": "STUDENT_RSVP",
+      "detail": "Elvis Wanyama Wafuke (154210) registered for \"career fare nov 16 7am\"",
+      "createdAt": "2026-11-16T04:59:17.133Z"
+    },
+    {
+      "id": "act-1794804037124-36",
+      "type": "EVENT_CREATED",
+      "detail": "Strathmore Career Development Services listed \"career fare nov 16 7am\" (2026-11-16)",
+      "createdAt": "2026-11-16T04:40:37.124Z"
+    },
+    {
+      "id": "act-1794803783797-45",
+      "type": "STUDENT_RSVP",
+      "detail": "Elvis Wanyama Wafuke (154210) registered for \"Student Townhall & Campus Welfare Open Forum\"",
+      "createdAt": "2026-11-16T04:36:23.797Z"
+    },
+    {
+      "id": "act-1794803765851-576",
+      "type": "RSVP_CANCELLED",
+      "detail": "Elvis Wanyama Wafuke cancelled the registration of Elvis Wanyama Wafuke for \"Strathmore AI & Machine Learning Annual Colloquium\"",
+      "createdAt": "2026-11-16T04:36:05.851Z"
+    },
+    {
+      "id": "act-1794466617313-347",
+      "type": "USER_REGISTERED",
+      "detail": "Elviswafuke registered via Google as STUDENT",
+      "createdAt": "2026-11-12T06:56:57.313Z"
+    },
+    {
+      "id": "act-1794465641868-792",
+      "type": "SMS_DISPATCHED",
+      "detail": "Elvis Wanyama Wafuke sent REMINDER SMS \"SmartEvent Campus Alert\" to 1 recipient(s) [LIVE] - 0 failed, 0 in-app only by student preference",
+      "createdAt": "2026-11-12T06:40:41.868Z"
+    },
+    {
+      "id": "act-1794465262426-656",
+      "type": "SMS_DISPATCHED",
+      "detail": "Elvis Wanyama Wafuke sent REMINDER SMS \"SmartEvent Campus Alert\" to 2 recipient(s) [LIVE] - 0 failed, 0 in-app only by student preference",
+      "createdAt": "2026-11-12T06:34:22.426Z"
+    },
+    {
+      "id": "act-1793948784072-529",
+      "type": "SMS_DISPATCHED",
+      "detail": "Elvis Wanyama Wafuke sent REMINDER SMS \"SmartEvent Campus Alert\" to 1 recipient(s) [SANDBOX] - 0 failed, 0 in-app only by student preference",
+      "createdAt": "2026-11-06T07:06:24.072Z"
+    },
     {
       "id": "act-1793944428264-874",
       "type": "STUDENT_RSVP",

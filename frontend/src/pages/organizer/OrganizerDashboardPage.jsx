@@ -75,19 +75,19 @@ export default function OrganizerDashboardPage() {
   const loadOrganizerData = useCallback(async () => {
     try {
       const [evRes, catRes, venRes, smsRes, statusRes, anaRes] = await Promise.all([
-        eventsApi.getAll().catch(() => ({ data: [] })),
-        categoriesApi.getAll().catch(() => ({ data: [] })),
-        venuesApi.getAll().catch(() => ({ data: [] })),
-        smsApi.getLogs().catch(() => ({ data: [] })),
-        smsApi.getStatus().catch(() => ({ data: null })),
-        analyticsApi.get().catch(() => ({ data: null }))
+        eventsApi.getAll().catch(() => null),
+        categoriesApi.getAll().catch(() => null),
+        venuesApi.getAll().catch(() => null),
+        smsApi.getLogs().catch(() => null),
+        smsApi.getStatus().catch(() => null),
+        analyticsApi.get().catch(() => null)
       ]);
-      setEvents(evRes.data || []);
-      setCategories(catRes.data || []);
-      setVenues(venRes.data || []);
-      setSmsLogs(smsRes.data || []);
-      setSmsStatus(statusRes.data || null);
-      setAnalytics(anaRes.data || null);
+      if (evRes && Array.isArray(evRes.data)) setEvents(evRes.data);
+      if (catRes && Array.isArray(catRes.data)) setCategories(catRes.data);
+      if (venRes && Array.isArray(venRes.data)) setVenues(venRes.data);
+      if (smsRes && Array.isArray(smsRes.data)) setSmsLogs(smsRes.data);
+      if (statusRes && statusRes.data !== undefined) setSmsStatus(statusRes.data || null);
+      if (anaRes && anaRes.data !== undefined) setAnalytics(anaRes.data || null);
     } catch (err) {
       toast.error(err.message || 'Failed loading organizer portal');
     }
@@ -95,6 +95,13 @@ export default function OrganizerDashboardPage() {
 
   useEffect(() => {
     loadOrganizerData();
+    const interval = setInterval(loadOrganizerData, 6000);
+    const onFocus = () => loadOrganizerData();
+    window.addEventListener('focus', onFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
   }, [loadOrganizerData]);
 
   const myEvents = events.filter(

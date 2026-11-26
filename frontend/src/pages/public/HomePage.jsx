@@ -41,6 +41,13 @@ export default function HomePage({ onOpenAuthModal }) {
 
   useEffect(() => {
     loadPublicData();
+    const interval = setInterval(loadPublicData, 6000);
+    const onFocus = () => loadPublicData();
+    window.addEventListener('focus', onFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
   }, []);
 
   const filteredEvents = events

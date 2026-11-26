@@ -81,7 +81,11 @@ export default function EventDetailScreen({
     setSmsTier(tier);
     if (isRegistered && user) {
       const res = await setRegistrationSmsPriority(event.id, tier, user?.token);
-      if (!res.success) Alert.alert('SMS priority', res.error || 'Could not update your SMS priority.');
+      if (!res.success) {
+        Alert.alert('SMS priority', res.error || 'Could not update your SMS priority.');
+      } else if (onRegisterSuccess) {
+        onRegisterSuccess(event.id);
+      }
     }
   };
 

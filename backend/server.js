@@ -36,7 +36,7 @@ app.use(express.json({ limit: '100kb' }));
 // Africa's Talking delivery reports are form-encoded
 app.use('/api/sms/delivery-callback', express.urlencoded({ extended: false, limit: '20kb' }));
 
-const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 600, standardHeaders: true, legacyHeaders: false, message: { success: false, error: 'Too many requests. Please slow down.' } });
+const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 5000, standardHeaders: true, legacyHeaders: false, message: { success: false, error: 'Too many requests. Please slow down.' } });
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 60, standardHeaders: true, legacyHeaders: false, message: { success: false, error: 'Too many authentication attempts from this network. Try again later.' } });
 app.use('/api', apiLimiter);
 app.use(['/api/auth/login', '/api/auth/signup', '/api/auth/google'], authLimiter);
@@ -121,9 +121,14 @@ app.use((err, req, res, next) => {
   res.status(500).json({ success: false, error: 'Internal server error.' });
 });
 
+const { startReminderScheduler } = require('./services/reminderScheduler');
+
 const PORT = process.env.PORT || 5000;
 if (require.main === module) {
-  app.listen(PORT, () => console.log(`[SmartEvent Backend] Running on http://localhost:${PORT}`));
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`[SmartEvent Backend] Running on http://localhost:${PORT} (LAN: http://192.168.100.5:${PORT})`);
+    startReminderScheduler();
+  });
 }
 
 module.exports = app;

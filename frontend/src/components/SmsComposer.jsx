@@ -41,8 +41,8 @@ export default function SmsComposer({ events = [], role, user, defaultEventId, o
   const [showConfig, setShowConfig] = useState(false);
   const [savingConfig, setSavingConfig] = useState(false);
   const [cfgForm, setCfgForm] = useState({
-    mode: 'SANDBOX',
-    username: 'sandbox',
+    mode: 'LIVE',
+    username: 'smartevent',
     apiKey: '',
     senderId: ''
   });
@@ -55,8 +55,8 @@ export default function SmsComposer({ events = [], role, user, defaultEventId, o
         setStatus(st);
         setCfgForm((prev) => ({
           ...prev,
-          mode: st.mode || 'SANDBOX',
-          username: st.username || 'sandbox',
+          mode: st.mode || 'LIVE',
+          username: st.username || 'smartevent',
           senderId: st.senderId || ''
         }));
       })
@@ -72,12 +72,12 @@ export default function SmsComposer({ events = [], role, user, defaultEventId, o
   }, [events, eventId, defaultEventId]);
 
   const payload = useMemo(() => {
-    const base = { kind, message };
+    const base = { kind, message, audience };
     if (audience === 'TEST') return { ...base, testToMe: true, testPhone };
     if (audience === 'ALL_STUDENTS') return { ...base, audience: 'ALL_STUDENTS' };
-    if (audience === 'NUMBERS') return { ...base, phoneNumbers: numbers };
+    if (audience === 'NUMBERS') return { ...base, eventId: eventId || (events[0] && events[0].id), broadcastToEventRoster: false, phoneNumbers: numbers };
     return { ...base, eventId };
-  }, [audience, eventId, kind, message, numbers, testPhone]);
+  }, [audience, eventId, events, kind, message, numbers, testPhone]);
 
   // Live recipient count / cost preview
   useEffect(() => {
@@ -286,8 +286,8 @@ export default function SmsComposer({ events = [], role, user, defaultEventId, o
             <select className={inputCls} value={audience} onChange={(e) => setAudience(e.target.value)}>
               <option value="EVENT">Registered students of an event</option>
               <option value="TEST">Test - send to my phone / custom test number</option>
+              <option value="NUMBERS">Specific phone numbers (+2547... / 07...)</option>
               {isAdmin && <option value="ALL_STUDENTS">All active students</option>}
-              {isAdmin && <option value="NUMBERS">Specific phone numbers</option>}
             </select>
           </Field>
 
