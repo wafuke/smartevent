@@ -106,7 +106,7 @@ export default function EventsScreen({
               </TouchableOpacity>
             </View>
           </View>
-          <Text style={styles.publicHeadline}>Campus Events & Turnout Forecast</Text>
+          <Text style={styles.publicHeadline}>Discover Strathmore Campus Events</Text>
         </View>
       ) : (
         <View style={styles.userBanner}>

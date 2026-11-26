@@ -34,14 +34,19 @@ export default function EventDetailScreen({
   onRequireAuth,
   onBack
 }) {
+  const role = String(user?.role || 'PUBLIC').toUpperCase();
+  const canSeeMlForecast = role === 'ORGANIZER' || role === 'ADMIN';
+  const canStudentRsvp = !user || role === 'STUDENT';
+
   const [submitting, setSubmitting] = useState(false);
   const [prediction, setPrediction] = useState(null);
   const [loadingPred, setLoadingPred] = useState(true);
-  const [smsTier, setSmsTier] = useState(Number(user?.smsPriority ?? 2));
+  const [smsTier, setSmsTier] = useState(Number(user?.smsPriority ?? 3));
+  const [smsFreq, setSmsFreq] = useState(user?.smsFrequencyMinutes ?? null);
 
   useEffect(() => {
     let mounted = true;
-    if (event) {
+    if (event && canSeeMlForecast) {
       setLoadingPred(true);
       fetchEventPrediction(event).then((res) => {
         if (mounted) {
@@ -49,11 +54,13 @@ export default function EventDetailScreen({
           setLoadingPred(false);
         }
       });
+    } else {
+      setLoadingPred(false);
     }
     return () => {
       mounted = false;
     };
-  }, [event]);
+  }, [event, canSeeMlForecast]);
 
   if (!event) return null;
 
@@ -85,6 +92,20 @@ export default function EventDetailScreen({
         Alert.alert('SMS priority', res.error || 'Could not update your SMS priority.');
       } else if (onRegisterSuccess) {
         onRegisterSuccess(event.id);
+      }
+    }
+  };
+
+  const handleFrequencyChange = async (freqValue) => {
+    setSmsFreq(freqValue);
+    if (isRegistered && user) {
+      const res = await setRegistrationSmsPriority(
+        event.id,
+        { smsFrequencyMinutes: freqValue },
+        user?.token
+      );
+      if (!res.success) {
+        Alert.alert('SMS frequency', res.error || 'Could not update your SMS frequency.');
       }
     }
   };
@@ -146,82 +167,114 @@ export default function EventDetailScreen({
           </View>
         </View>
 
-        {/* ML Attendance Prediction Card */}
-        <View style={styles.mlCard}>
-          <View style={styles.mlHeaderRow}>
-            <Text style={styles.mlTitle}>ML Turnout & Crowd Forecast</Text>
-            <View style={styles.mlAlgoBadge}>
-              <Text style={styles.mlAlgoText}>{prediction?.algorithm || 'LogisticRegression'}</Text>
-            </View>
-          </View>
-
-          {loadingPred ? (
-            <ActivityIndicator size="small" color="#003366" style={{ marginVertical: 10 }} />
-          ) : prediction ? (
-            <>
-              <View style={styles.mlMetricsRow}>
-                <View style={styles.mlMetricBox}>
-                  <Text style={styles.mlMetricVal}>{prediction.predictedAttendance}</Text>
-                  <Text style={styles.mlMetricLabel}>Expected Turnout</Text>
-                </View>
-                <View style={styles.mlMetricBox}>
-                  <Text style={styles.mlMetricVal}>{Math.round((prediction.predictedTurnoutRate || 0.78) * 100)}%</Text>
-                  <Text style={styles.mlMetricLabel}>Show-Up Prob</Text>
-                </View>
-                <View style={styles.mlMetricBox}>
-                  <Text style={styles.mlMetricVal}>{prediction.capacityUtilization}%</Text>
-                  <Text style={styles.mlMetricLabel}>Room Fill</Text>
-                </View>
+        {/* ML Attendance Prediction Card (Organizer & Admin ONLY) */}
+        {canSeeMlForecast && (
+          <View style={styles.mlCard}>
+            <View style={styles.mlHeaderRow}>
+              <Text style={styles.mlTitle}>ML Turnout & Crowd Forecast</Text>
+              <View style={styles.mlAlgoBadge}>
+                <Text style={styles.mlAlgoText}>{prediction?.algorithm || 'LogisticRegression'}</Text>
               </View>
-              <Text style={styles.mlFootnote}>
-                {prediction.capacityUtilization >= 85
-                  ? 'High crowd density expected. Arrive 15 minutes early to secure seating.'
-                  : 'Comfortable seating capacity forecasted by SmartEvent ML model.'}
-              </Text>
-            </>
-          ) : null}
-        </View>
+            </View>
 
-        {/* Student-chosen SMS priority */}
-        <View style={styles.smsNotice}>
-          <Text style={styles.smsNoticeTitle}>Your SMS priority for this event</Text>
-          <Text style={styles.smsNoticeText}>
-            You decide how much SMS you get, not the organizer. {SMS_TIERS[smsTier].description}
-          </Text>
-          <View style={styles.tierRow}>
-            {SMS_TIERS.map((t) => (
-              <TouchableOpacity
-                key={t.value}
-                style={[styles.tierBtn, smsTier === t.value && styles.tierBtnActive]}
-                onPress={() => handleTierChange(t.value)}
-              >
-                <Text style={[styles.tierBtnText, smsTier === t.value && styles.tierBtnTextActive]}>{t.label}</Text>
-              </TouchableOpacity>
-            ))}
+            {loadingPred ? (
+              <ActivityIndicator size="small" color="#003366" style={{ marginVertical: 10 }} />
+            ) : prediction ? (
+              <>
+                <View style={styles.mlMetricsRow}>
+                  <View style={styles.mlMetricBox}>
+                    <Text style={styles.mlMetricVal}>{prediction.predictedAttendance}</Text>
+                    <Text style={styles.mlMetricLabel}>Expected Turnout</Text>
+                  </View>
+                  <View style={styles.mlMetricBox}>
+                    <Text style={styles.mlMetricVal}>{Math.round((prediction.predictedTurnoutRate || 0.78) * 100)}%</Text>
+                    <Text style={styles.mlMetricLabel}>Show-Up Prob</Text>
+                  </View>
+                  <View style={styles.mlMetricBox}>
+                    <Text style={styles.mlMetricVal}>{prediction.capacityUtilization}%</Text>
+                    <Text style={styles.mlMetricLabel}>Room Fill</Text>
+                  </View>
+                </View>
+                <Text style={styles.mlFootnote}>
+                  {prediction.capacityUtilization >= 85
+                    ? 'High crowd density expected. Prepare additional seating.'
+                    : 'Comfortable seating capacity forecasted by SmartEvent ML model.'}
+                </Text>
+              </>
+            ) : null}
           </View>
-        </View>
+        )}
 
-        {/* RSVP Action Buttons */}
-        <TouchableOpacity
-          style={[styles.rsvpButton, isRegistered && styles.rsvpSuccessButton]}
-          onPress={handleRSVP}
-          disabled={isRegistered || submitting}
-        >
-          <Text style={[styles.rsvpButtonText, isRegistered && styles.rsvpSuccessText]}>
-            {!user
-              ? "Log In / Sign Up to Register"
-              : isRegistered
-              ? "Registered / Digital Pass Active"
-              : submitting
-              ? "Confirming RSVP..."
-              : "Register / Confirm RSVP"}
-          </Text>
-        </TouchableOpacity>
+        {/* Student-chosen SMS priority & frequency + RSVP Actions */}
+        {canStudentRsvp && (
+          <>
+            <View style={styles.smsNotice}>
+              <Text style={styles.smsNoticeTitle}>Your SMS priority for this event</Text>
+              <Text style={styles.smsNoticeText}>
+                You decide how much SMS you get, not the organizer. {SMS_TIERS[smsTier]?.description}
+              </Text>
+              <View style={styles.tierRow}>
+                {SMS_TIERS.map((t) => (
+                  <TouchableOpacity
+                    key={t.value}
+                    style={[styles.tierBtn, smsTier === t.value && styles.tierBtnActive]}
+                    onPress={() => handleTierChange(t.value)}
+                  >
+                    <Text style={[styles.tierBtnText, smsTier === t.value && styles.tierBtnTextActive]}>{t.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
 
-        {user && isRegistered && onCancelRegistration && (
-          <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
-            <Text style={styles.cancelButtonText}>Cancel My RSVP</Text>
-          </TouchableOpacity>
+              <Text style={[styles.smsNoticeTitle, { marginTop: 12 }]}>
+                Auto SMS Reminder Frequency
+              </Text>
+              <View style={styles.tierRow}>
+                {[
+                  { value: null, label: 'Auto' },
+                  { value: 30, label: '30m' },
+                  { value: 60, label: '1h' },
+                  { value: 180, label: '3h' },
+                  { value: 1440, label: 'Once' }
+                ].map((opt) => {
+                  const active = (smsFreq ?? null) === opt.value;
+                  return (
+                    <TouchableOpacity
+                      key={String(opt.value)}
+                      style={[styles.tierBtn, active && styles.tierBtnActive]}
+                      onPress={() => handleFrequencyChange(opt.value)}
+                    >
+                      <Text style={[styles.tierBtnText, active && styles.tierBtnTextActive]}>
+                        {opt.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* RSVP Action Buttons */}
+            <TouchableOpacity
+              style={[styles.rsvpButton, isRegistered && styles.rsvpSuccessButton]}
+              onPress={handleRSVP}
+              disabled={isRegistered || submitting}
+            >
+              <Text style={[styles.rsvpButtonText, isRegistered && styles.rsvpSuccessText]}>
+                {!user
+                  ? "Log In / Sign Up to Register"
+                  : isRegistered
+                  ? "Registered / Digital Pass Active"
+                  : submitting
+                  ? "Confirming RSVP..."
+                  : "Register / Confirm RSVP"}
+              </Text>
+            </TouchableOpacity>
+
+            {user && isRegistered && onCancelRegistration && (
+              <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
+                <Text style={styles.cancelButtonText}>Cancel My RSVP</Text>
+              </TouchableOpacity>
+            )}
+          </>
         )}
       </ScrollView>
     </View>

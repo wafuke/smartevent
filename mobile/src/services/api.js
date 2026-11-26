@@ -534,7 +534,7 @@ export async function registerStudentForEvent(eventId, studentInfo, smsPriority)
     const response = await fetch(`${BACKEND_URL}/registrations`, {
       method: "POST",
       headers: getHeaders(studentInfo?.token),
-      body: JSON.stringify({ eventId, smsPriority: smsPriority ?? studentInfo?.smsPriority ?? 2 })
+      body: JSON.stringify({ eventId, smsPriority: smsPriority ?? studentInfo?.smsPriority ?? 3 })
     });
     const data = await response.json();
     if (response.ok && data.success) {
@@ -549,12 +549,31 @@ export async function registerStudentForEvent(eventId, studentInfo, smsPriority)
   return { success: true, offline: true, message: "RSVP confirmed!" };
 }
 
-export async function setRegistrationSmsPriority(eventId, smsPriority, tokenOverride) {
+export async function setRegistrationSmsPriority(eventId, smsPriorityOrPayload, tokenOverride) {
+  const payload =
+    typeof smsPriorityOrPayload === "object" && smsPriorityOrPayload !== null
+      ? smsPriorityOrPayload
+      : { smsPriority: smsPriorityOrPayload };
   try {
     const response = await fetch(`${BACKEND_URL}/registrations/event/${eventId}/sms-priority`, {
       method: "PUT",
       headers: getHeaders(tokenOverride),
-      body: JSON.stringify({ smsPriority })
+      body: JSON.stringify(payload)
+    });
+    const data = await response.json();
+    if (response.ok && data.success) return data;
+    if (data && data.error) return { success: false, error: data.error };
+  } catch (error) {
+    // Offline fallback
+  }
+  return { success: true, offline: true };
+}
+
+export async function deleteUserMobile(userId, tokenOverride) {
+  try {
+    const response = await fetch(`${BACKEND_URL}/users/${userId}`, {
+      method: "DELETE",
+      headers: getHeaders(tokenOverride)
     });
     const data = await response.json();
     if (response.ok && data.success) return data;
@@ -726,15 +745,30 @@ export async function fetchSmsGatewayStatusMobile(tokenOverride) {
     // fallback
   }
   return {
-    mode: "LIVE",
-    username: "smartevent",
-    maskedApiKey: "atsk_a3fa...8663",
+    mode: "SANDBOX",
+    username: "sandbox",
+    maskedApiKey: null,
     hasApiKey: true
   };
 }
 
 function getFallbackEvents() {
   return [
+    {
+      id: "evt-ilab-demo",
+      title: "@iLabAfrica AI & Cybersecurity Innovation Workshop",
+      category: "Workshop",
+      date: "2026-11-27",
+      time: "10:00 - 12:00",
+      timeSlot: "Morning",
+      venue: "iLab Africa Innovation Room 302",
+      venueCapacity: 100,
+      registrationCount: 10,
+      smsPriority: 3,
+      organizerId: "usr-org-2",
+      organizerName: "@iLabAfrica Innovation Centre",
+      description: "Hands-on @iLabAfrica technical workshop on applied AI security, cloud defense, and campus innovation prototyping."
+    },
     {
       id: "evt-101",
       title: "Strathmore AI & Machine Learning Annual Colloquium",

@@ -29,7 +29,9 @@ import {
   fetchMyRegistrations,
   fetchFavoriteIds,
   toggleFavoriteEvent,
-  googleSignInMobile
+  googleSignInMobile,
+  deleteUserMobile,
+  updateUserProfileMobile
 } from './src/services/api';
 
 const VALID_CATEGORIES = [
@@ -176,10 +178,12 @@ export default function App() {
           (user.name && (e.organizerName === user.name || e.organizer === user.name))
       );
       if (mine.length && (!smsForm.eventId || !mine.some((m) => m.id === smsForm.eventId))) {
-        setSmsForm((prev) => ({ ...prev, eventId: mine[0].id }));
+        const preferred = mine.find((m) => m.id === 'evt-ilab-demo') || mine[0];
+        setSmsForm((prev) => ({ ...prev, eventId: preferred.id }));
       }
     } else if (!smsForm.eventId) {
-      setSmsForm((prev) => ({ ...prev, eventId: allEvents[0].id }));
+      const preferred = allEvents.find((e) => e.id === 'evt-ilab-demo') || allEvents[0];
+      setSmsForm((prev) => ({ ...prev, eventId: preferred.id }));
     }
   }, [user, allEvents, smsForm.eventId]);
 
@@ -278,13 +282,42 @@ export default function App() {
     await loadData();
   };
 
+  const handleDeleteUser = async (targetUser) => {
+    const res = await deleteUserMobile(targetUser.id, user?.token);
+    if (res && res.success === false) {
+      Alert.alert('Cannot Delete User', res.error || 'Could not delete account.');
+      return;
+    }
+    await loadData();
+  };
+
+  const handleToggleSuspendUser = async (targetUser) => {
+    const nextStatus = (targetUser.status || 'Active') === 'Active' ? 'Suspended' : 'Active';
+    const res = await updateUserProfileMobile(targetUser.id, { status: nextStatus }, user?.token);
+    if (res && res.success === false) {
+      Alert.alert('Update Failed', res.error || 'Could not update user status.');
+      return;
+    }
+    await loadData();
+  };
+
+  const handleToggleVerifyOrganizer = async (targetUser) => {
+    const nextVerified = !targetUser.verified;
+    const res = await updateUserProfileMobile(targetUser.id, { verified: nextVerified }, user?.token);
+    if (res && res.success === false) {
+      Alert.alert('Update Failed', res.error || 'Could not update organizer verification.');
+      return;
+    }
+    await loadData();
+  };
+
   const handleSendSms = async () => {
     if (!smsForm.message.trim()) {
       Alert.alert('Missing Message', 'Please enter an SMS message.');
       return;
     }
     setSendingSms(true);
-    setSmsStatusMsg("Dispatching via Africa's Talking LIVE Gateway (smartevent)...");
+    setSmsStatusMsg("Dispatching via Africa's Talking Priority SMS Gateway...");
     const targetEvt = allEvents.find((e) => e.id === smsForm.eventId) || allEvents[0];
     const phones = smsForm.phoneNumbers
       .split(',')
@@ -362,19 +395,6 @@ export default function App() {
           automaticallyAdjustKeyboardInsets={true}
           showsVerticalScrollIndicator={false}
         >
-          {/* Live Gateway Status Pill */}
-          <View style={styles.liveGatewayBanner}>
-            <View style={styles.liveDot} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.liveGatewayTitle}>
-                Africa&apos;s Talking LIVE Gateway Active
-              </Text>
-              <Text style={styles.liveGatewaySub}>
-                App: smartevent • Key: atsk_a3fa...8663 • Real Priority SMS
-              </Text>
-            </View>
-          </View>
-
           <View style={styles.formCard}>
             <Text style={styles.inputLabel}>1. Select Target Event</Text>
             <ScrollView
@@ -1020,15 +1040,50 @@ export default function App() {
             {filteredUsers.map((u) => (
               <View key={u.id} style={styles.mobileListCard}>
                 <View style={styles.mobileCardTop}>
-                  <View style={styles.miniBadge}>
-                    <Text style={styles.miniBadgeText}>
-                      {String(u.role || 'student').toUpperCase()}
-                    </Text>
+                  <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                    <View style={styles.miniBadge}>
+                      <Text style={styles.miniBadgeText}>
+                        {String(u.role || 'student').toUpperCase()}
+                      </Text>
+                    </View>
+                    {String(u.status || 'Active') === 'Suspended' && (
+                      <View style={[styles.miniBadge, { backgroundColor: '#fee2e2' }]}>
+                        <Text style={[styles.miniBadgeText, { color: '#b91c1c' }]}>SUSPENDED</Text>
+                      </View>
+                    )}
                   </View>
                   <Text style={styles.seatsPillText}>{u.phone || '+2547...'}</Text>
                 </View>
                 <Text style={styles.mobileCardTitle}>{u.name}</Text>
                 <Text style={styles.mobileCardSub}>{u.email}</Text>
+                {u.id !== user.id && (
+                  <View style={styles.cardActionRow}>
+                    {String(u.role || '').toLowerCase() === 'organizer' && (
+                      <TouchableOpacity
+                        style={styles.cardSecondaryBtn}
+                        onPress={() => handleToggleVerifyOrganizer(u)}
+                      >
+                        <Text style={styles.cardSecondaryBtnText}>
+                          {u.verified ? 'Verified' : 'Verify'}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                    <TouchableOpacity
+                      style={styles.cardSecondaryBtn}
+                      onPress={() => handleToggleSuspendUser(u)}
+                    >
+                      <Text style={styles.cardSecondaryBtnText}>
+                        {(u.status || 'Active') === 'Active' ? 'Suspend' : 'Activate'}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.cardDangerBtn}
+                      onPress={() => handleDeleteUser(u)}
+                    >
+                      <Text style={styles.cardDangerBtnText}>Delete</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
             ))}
           </ScrollView>
