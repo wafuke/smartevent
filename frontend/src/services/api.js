@@ -162,7 +162,7 @@ function findOfflineUserByEmail(users, email) {
 
 function getCurrentOfflineUser(store) {
   try {
-    const saved = localStorage.getItem('smartevent_user');
+    const saved = sessionStorage.getItem('smartevent_user');
     if (saved) {
       const parsed = JSON.parse(saved);
       if (parsed && parsed.email) {
@@ -783,7 +783,7 @@ async function handleOfflineFallback(endpoint, options = {}) {
 }
 
 function getAuthHeaders() {
-  const token = localStorage.getItem('smartevent_token');
+  const token = sessionStorage.getItem('smartevent_token');
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers.Authorization = `Bearer ${token}`;
   return headers;
@@ -826,7 +826,7 @@ export async function apiRequest(endpoint, options = {}) {
     return handleOfflineFallback(endpoint, options);
   }
 
-  if (lastResponse.status === 401 && localStorage.getItem('smartevent_token') && !endpoint.startsWith('/auth/login')) {
+  if (lastResponse.status === 401 && sessionStorage.getItem('smartevent_token') && !endpoint.startsWith('/auth/login')) {
     window.dispatchEvent(new CustomEvent('smartevent:unauthorized'));
   }
 

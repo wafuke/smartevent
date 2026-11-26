@@ -19,9 +19,10 @@ function withBase(path) {
 }
 
 export function AuthProvider({ children }) {
+  // Use sessionStorage so each Chrome tab in the SAME window holds its own independent role session
   const [user, setUser] = useState(() => {
     try {
-      const saved = localStorage.getItem('smartevent_user');
+      const saved = sessionStorage.getItem('smartevent_user');
       return saved ? JSON.parse(saved) : null;
     } catch (e) {
       return null;
@@ -29,7 +30,7 @@ export function AuthProvider({ children }) {
   });
 
   const [token, setToken] = useState(() => {
-    return localStorage.getItem('smartevent_token') || null;
+    return sessionStorage.getItem('smartevent_token') || null;
   });
 
   const [currentPath, setCurrentPath] = useState(() => stripBase(window.location.pathname));
@@ -52,7 +53,7 @@ export function AuthProvider({ children }) {
     if (!accessToken) return;
 
     // Clean the URL immediately
-    window.history.replaceState({}, '', window.location.pathname || '/');
+    window.history.replaceState({}, '', window.location.pathname || withBase('/'));
 
     authApi
       .googleLogin({ accessToken, role: stateRole })
@@ -60,8 +61,8 @@ export function AuthProvider({ children }) {
         if (res && res.user && res.token) {
           setUser(res.user);
           setToken(res.token);
-          localStorage.setItem('smartevent_user', JSON.stringify(res.user));
-          localStorage.setItem('smartevent_token', res.token);
+          sessionStorage.setItem('smartevent_user', JSON.stringify(res.user));
+          sessionStorage.setItem('smartevent_token', res.token);
           if (res.user.role === 'admin') {
             navigate('/admin/dashboard');
           } else if (res.user.role === 'organizer') {
@@ -88,17 +89,17 @@ export function AuthProvider({ children }) {
         .then((res) => {
           if (res?.user) {
             setUser(res.user);
-            localStorage.setItem('smartevent_user', JSON.stringify(res.user));
+            sessionStorage.setItem('smartevent_user', JSON.stringify(res.user));
           }
         })
         .catch(() => {
           // Clear invalid or forged token and return to public home screen
           setUser(null);
           setToken(null);
-          localStorage.removeItem('smartevent_user');
-          localStorage.removeItem('smartevent_token');
-          if (window.location.pathname !== '/') {
-            window.history.pushState({}, '', '/');
+          sessionStorage.removeItem('smartevent_user');
+          sessionStorage.removeItem('smartevent_token');
+          if (stripBase(window.location.pathname) !== '/') {
+            window.history.pushState({}, '', withBase('/'));
             setCurrentPath('/');
           }
         });
@@ -117,9 +118,9 @@ export function AuthProvider({ children }) {
     const onUnauthorized = () => {
       setUser(null);
       setToken(null);
-      localStorage.removeItem('smartevent_user');
-      localStorage.removeItem('smartevent_token');
-      window.history.pushState({}, '', '/');
+      sessionStorage.removeItem('smartevent_user');
+      sessionStorage.removeItem('smartevent_token');
+      window.history.pushState({}, '', withBase('/'));
       setCurrentPath('/');
       window.dispatchEvent(new CustomEvent('smartevent:toast', { detail: { type: 'info', message: 'Your session expired. Please sign in again.' } }));
     };
@@ -130,8 +131,10 @@ export function AuthProvider({ children }) {
   const login = (authenticatedUser, authToken) => {
     setUser(authenticatedUser);
     setToken(authToken);
-    localStorage.setItem('smartevent_user', JSON.stringify(authenticatedUser));
-    localStorage.setItem('smartevent_token', authToken);
+    sessionStorage.setItem('smartevent_user', JSON.stringify(authenticatedUser));
+    sessionStorage.setItem('smartevent_token', authToken);
+    localStorage.removeItem('smartevent_user');
+    localStorage.removeItem('smartevent_token');
 
     // Redirect to respective role dashboard after login/signup
     if (authenticatedUser.role === 'admin') {
@@ -145,12 +148,14 @@ export function AuthProvider({ children }) {
 
   const updateCurrentUser = (updatedUser) => {
     setUser(updatedUser);
-    localStorage.setItem('smartevent_user', JSON.stringify(updatedUser));
+    sessionStorage.setItem('smartevent_user', JSON.stringify(updatedUser));
   };
 
   const logout = () => {
     setUser(null);
     setToken(null);
+    sessionStorage.removeItem('smartevent_user');
+    sessionStorage.removeItem('smartevent_token');
     localStorage.removeItem('smartevent_user');
     localStorage.removeItem('smartevent_token');
     navigate('/');
