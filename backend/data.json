@@ -17,7 +17,7 @@
       "clearanceLevel": "Super Admin",
       "authProvider": "local,google",
       "createdAt": "2026-08-01T08:00:00.000Z",
-      "lastLoginAt": "2026-11-16T13:07:08.147Z",
+      "lastLoginAt": "2026-11-26T17:39:57.971Z",
       "googleId": "109231792421823073573",
       "picture": "https://lh3.googleusercontent.com/a/ACg8ocKbkyGUCM18nesQUN5PDaUhhc_iePv5SMsyqRXJovnQ8_Z4sQ=s96-c"
     },
@@ -65,7 +65,8 @@
       "phone": "+254722334455",
       "verified": true,
       "authProvider": "local,google",
-      "createdAt": "2026-08-12T11:00:00.000Z"
+      "createdAt": "2026-08-12T11:00:00.000Z",
+      "lastLoginAt": "2026-11-26T17:45:02.670Z"
     },
     {
       "id": "usr-org-3",
@@ -213,14 +214,15 @@
       "role": "student",
       "status": "Active",
       "studentId": "154382",
-      "phone": "+254722112233",
+      "phone": "+254701418501",
       "department": "BSc Computer Networks & Cyber Security",
       "yearOfStudy": 3,
       "authProvider": "local,google",
       "createdAt": "2026-09-02T09:10:00.000Z",
-      "lastLoginAt": "2026-11-06T05:53:00.974Z",
+      "lastLoginAt": "2026-11-26T17:29:04.664Z",
       "smsPriority": 3,
-      "smsOptOut": false
+      "smsOptOut": false,
+      "updatedAt": "2026-11-26T17:40:21.928Z"
     },
     {
       "id": "usr-stud-3",
@@ -522,7 +524,7 @@
       "program": "BSc Computer Networks & Cyber Security",
       "faculty": "SCES",
       "yearOfStudy": 3,
-      "phone": "+254722112233",
+      "phone": "+254701418501",
       "hostelResident": true,
       "pastAttendanceRate": 0.91
     },
@@ -760,7 +762,7 @@
       "venueCapacity": 100,
       "registrationCount": 10,
       "pastAttendanceRate": 0.82,
-      "predictedAttendance": 82,
+      "predictedAttendance": 8,
       "smsPriority": 3,
       "smsMix": {
         "none": 0,
@@ -779,8 +781,8 @@
       "title": "career fare nov 16 7am",
       "category": "Academic",
       "description": "dndnnd",
-      "date": "2026-11-16",
-      "dayOfWeek": "Monday",
+      "date": "2026-11-29",
+      "dayOfWeek": "Sunday",
       "time": "08:00 - 09:00",
       "timeSlot": "Morning",
       "venue": "SCES Lecture Theatre 4 (LT4)",
@@ -805,13 +807,13 @@
       "id": "evt-101",
       "title": "Strathmore AI & Machine Learning Annual Colloquium",
       "category": "Academic",
-      "date": "2026-11-12",
+      "date": "2026-11-30",
       "time": "14:00 - 17:00",
       "timeSlot": "Afternoon",
-      "dayOfWeek": "Thursday",
+      "dayOfWeek": "Monday",
       "venue": "Main Auditorium",
       "venueCapacity": 500,
-      "registrationCount": 412,
+      "registrationCount": 3,
       "smsPriority": 2,
       "featured": true,
       "status": "Upcoming",
@@ -819,7 +821,7 @@
       "organizerName": "Dr. Joseph Orero (SCES Dean's Office)",
       "description": "Keynote research symposium featuring live demonstrations of predictive campus analytics, computer vision, and NLP systems built by Strathmore SCES final-year researchers.",
       "createdAt": "2026-10-01T09:00:00.000Z",
-      "predictedAttendance": 330,
+      "predictedAttendance": 2,
       "smsMix": {
         "none": 0,
         "low": 0,
@@ -831,13 +833,13 @@
       "id": "evt-102",
       "title": "Final Year IS Project Defense & Poster Exhibition",
       "category": "Academic",
-      "date": "2026-11-26",
+      "date": "2026-12-01",
       "time": "08:30 - 13:00",
       "timeSlot": "Morning",
-      "dayOfWeek": "Thursday",
+      "dayOfWeek": "Tuesday",
       "venue": "SCES Lecture Theatre 4 (LT4)",
       "venueCapacity": 180,
-      "registrationCount": 165,
+      "registrationCount": 1,
       "smsPriority": 3,
       "featured": false,
       "status": "Upcoming",
@@ -845,7 +847,7 @@
       "organizerName": "Dr. Joseph Orero (SCES Dean's Office)",
       "description": "Official BSc Informatics & Computer Science project defense showcase evaluated by SCES faculty panels and industry supervisors.",
       "createdAt": "2026-10-02T10:00:00.000Z",
-      "predictedAttendance": 132,
+      "predictedAttendance": 1,
       "smsMix": {
         "none": 0,
         "low": 0,
@@ -857,58 +859,79 @@
       "id": "evt-103",
       "title": "Cybersecurity & Cloud Threat Hunting Bootcamp",
       "category": "Workshop",
-      "date": "2026-11-15",
+      "date": "2026-12-02",
       "time": "09:00 - 13:00",
       "timeSlot": "Morning",
-      "dayOfWeek": "Sunday",
+      "dayOfWeek": "Wednesday",
       "venue": "iLab Africa Innovation Room 302",
       "venueCapacity": 120,
-      "registrationCount": 114,
-      "smsPriority": 3,
+      "registrationCount": 1,
+      "smsPriority": 2,
       "featured": true,
       "status": "Upcoming",
       "organizerId": "usr-org-2",
       "organizerName": "@iLabAfrica Innovation Centre",
       "description": "Intensive hands-on blue-team defense lab covering zero-trust network architecture, SIEM log analysis, and penetration testing.",
-      "createdAt": "2026-10-03T11:30:00.000Z"
+      "createdAt": "2026-10-03T11:30:00.000Z",
+      "predictedAttendance": 1,
+      "smsMix": {
+        "none": 0,
+        "low": 0,
+        "medium": 1,
+        "high": 0
+      }
     },
     {
       "id": "evt-104",
       "title": "Fintech & Africa's Talking API Developer Hackathon",
       "category": "Workshop",
-      "date": "2026-11-21",
+      "date": "2026-12-03",
       "time": "08:30 - 17:30",
       "timeSlot": "Morning",
-      "dayOfWeek": "Saturday",
+      "dayOfWeek": "Thursday",
       "venue": "iLab Africa Innovation Room 302",
       "venueCapacity": 120,
-      "registrationCount": 118,
-      "smsPriority": 3,
+      "registrationCount": 2,
+      "smsPriority": 2,
       "featured": true,
       "status": "Upcoming",
       "organizerId": "usr-org-2",
       "organizerName": "@iLabAfrica Innovation Centre",
       "description": "24-hour sprint building USSD, Priority SMS, and mobile payment solutions using Africa's Talking and Daraja APIs.",
-      "createdAt": "2026-10-04T09:15:00.000Z"
+      "createdAt": "2026-10-04T09:15:00.000Z",
+      "predictedAttendance": 2,
+      "smsMix": {
+        "none": 0,
+        "low": 0,
+        "medium": 2,
+        "high": 0
+      }
     },
     {
       "id": "evt-105",
       "title": "Annual Engineering & Tech Graduate Career Fair",
       "category": "Career Fair",
-      "date": "2026-11-18",
+      "date": "2026-12-04",
       "time": "10:00 - 16:00",
       "timeSlot": "Morning",
-      "dayOfWeek": "Wednesday",
+      "dayOfWeek": "Friday",
       "venue": "Student Center Graduation Square",
       "venueCapacity": 600,
-      "registrationCount": 485,
+      "registrationCount": 1,
       "smsPriority": 2,
       "featured": true,
       "status": "Upcoming",
       "organizerId": "usr-org-3",
       "organizerName": "Strathmore Career Development Services",
       "description": "Connect directly with hiring managers from Safaricom, Microsoft ADC, Google Nairobi, Deloitte, and Equity Bank for internships and graduate roles.",
-      "createdAt": "2026-10-05T14:00:00.000Z"
+      "createdAt": "2026-10-05T14:00:00.000Z",
+      "predictedAttendance": 1,
+      "smsMix": {
+        "none": 0,
+        "low": 0,
+        "medium": 1,
+        "high": 0
+      }
     },
     {
       "id": "evt-106",
@@ -920,14 +943,21 @@
       "dayOfWeek": "Sunday",
       "venue": "SCES Lecture Theatre 4 (LT4)",
       "venueCapacity": 180,
-      "registrationCount": 132,
+      "registrationCount": 0,
       "smsPriority": 2,
       "featured": false,
       "status": "Upcoming",
       "organizerId": "usr-org-3",
       "organizerName": "Strathmore Career Development Services",
       "description": "One-on-one resume reviews and whiteboard data-structure interview coaching with alumni engineers from leading tech firms.",
-      "createdAt": "2026-10-06T12:00:00.000Z"
+      "createdAt": "2026-10-06T12:00:00.000Z",
+      "predictedAttendance": 137,
+      "smsMix": {
+        "none": 0,
+        "low": 0,
+        "medium": 0,
+        "high": 0
+      }
     },
     {
       "id": "evt-107",
@@ -939,26 +969,33 @@
       "dayOfWeek": "Saturday",
       "venue": "Strathmore Sports Complex Main Pitch",
       "venueCapacity": 800,
-      "registrationCount": 640,
+      "registrationCount": 0,
       "smsPriority": 2,
       "featured": false,
       "status": "Upcoming",
       "organizerId": "usr-org-4",
       "organizerName": "Strathmore Sports & Athletics Council",
       "description": "Championship showdown between SCES Titans and SIMS Warriors followed by the trophy presentation at Madaraka grounds.",
-      "createdAt": "2026-10-07T16:10:00.000Z"
+      "createdAt": "2026-10-07T16:10:00.000Z",
+      "predictedAttendance": 608,
+      "smsMix": {
+        "none": 0,
+        "low": 0,
+        "medium": 0,
+        "high": 0
+      }
     },
     {
       "id": "evt-108",
       "title": "East Africa Quantitative Finance & Data Science Summit",
       "category": "Seminar",
-      "date": "2026-11-24",
+      "date": "2026-12-05",
       "time": "14:00 - 16:30",
       "timeSlot": "Afternoon",
-      "dayOfWeek": "Tuesday",
+      "dayOfWeek": "Saturday",
       "venue": "Strathmore Business School (SBS) Auditorium",
       "venueCapacity": 300,
-      "registrationCount": 237,
+      "registrationCount": 0,
       "smsPriority": 2,
       "featured": false,
       "status": "Upcoming",
@@ -966,7 +1003,13 @@
       "organizerName": "Strathmore Business School (SBS) Executive Events",
       "description": "Executive panel exploring algorithmic trading, credit risk modeling, and central bank digital currencies across East African markets.",
       "createdAt": "2026-10-08T10:30:00.000Z",
-      "predictedAttendance": 190
+      "predictedAttendance": 228,
+      "smsMix": {
+        "none": 0,
+        "low": 0,
+        "medium": 0,
+        "high": 0
+      }
     },
     {
       "id": "evt-109",
@@ -978,14 +1021,21 @@
       "dayOfWeek": "Thursday",
       "venue": "Strathmore Business School (SBS) Auditorium",
       "venueCapacity": 300,
-      "registrationCount": 265,
-      "smsPriority": 3,
+      "registrationCount": 1,
+      "smsPriority": 2,
       "featured": true,
       "status": "Upcoming",
       "organizerId": "usr-org-5",
       "organizerName": "Strathmore Business School (SBS) Executive Events",
       "description": "Evening executive leadership dialogue with C-suite leaders on scaling enterprise governance and AI adoption across African corporations.",
-      "createdAt": "2026-10-09T11:00:00.000Z"
+      "createdAt": "2026-10-09T11:00:00.000Z",
+      "predictedAttendance": 1,
+      "smsMix": {
+        "none": 0,
+        "low": 0,
+        "medium": 1,
+        "high": 0
+      }
     },
     {
       "id": "evt-110",
@@ -997,14 +1047,21 @@
       "dayOfWeek": "Tuesday",
       "venue": "SLS Moot Court Chambers",
       "venueCapacity": 150,
-      "registrationCount": 138,
+      "registrationCount": 1,
       "smsPriority": 2,
       "featured": false,
       "status": "Upcoming",
       "organizerId": "usr-org-6",
       "organizerName": "Strathmore Law Clinic & Moot Society",
       "description": "Legal and technical debate with the Office of the Data Protection Commissioner (ODPC) on algorithmic accountability and citizen privacy rights.",
-      "createdAt": "2026-10-10T09:45:00.000Z"
+      "createdAt": "2026-10-10T09:45:00.000Z",
+      "predictedAttendance": 1,
+      "smsMix": {
+        "none": 0,
+        "low": 0,
+        "medium": 1,
+        "high": 0
+      }
     },
     {
       "id": "evt-111",
@@ -1016,26 +1073,33 @@
       "dayOfWeek": "Friday",
       "venue": "Student Center Graduation Square",
       "venueCapacity": 600,
-      "registrationCount": 540,
+      "registrationCount": 0,
       "smsPriority": 1,
       "featured": true,
       "status": "Upcoming",
       "organizerId": "usr-org-7",
       "organizerName": "Strathmore Student Council (SSC)",
       "description": "Celebration of international diversity featuring culinary showcases, traditional performances, and live campus musical acts.",
-      "createdAt": "2026-10-11T15:00:00.000Z"
+      "createdAt": "2026-10-11T15:00:00.000Z",
+      "predictedAttendance": 456,
+      "smsMix": {
+        "none": 0,
+        "low": 0,
+        "medium": 0,
+        "high": 0
+      }
     },
     {
       "id": "evt-112",
       "title": "Student Townhall & Campus Welfare Open Forum",
       "category": "Seminar",
-      "date": "2026-11-19",
+      "date": "2026-12-06",
       "time": "11:00 - 13:00",
       "timeSlot": "Morning",
-      "dayOfWeek": "Thursday",
+      "dayOfWeek": "Sunday",
       "venue": "Main Auditorium",
       "venueCapacity": 500,
-      "registrationCount": 321,
+      "registrationCount": 1,
       "smsPriority": 2,
       "featured": false,
       "status": "Upcoming",
@@ -1043,7 +1107,7 @@
       "organizerName": "Strathmore Student Council (SSC)",
       "description": "Direct Q&A session between the 16th Student Council Executive, Dean of Students, and student body regarding academic policies and campus facilities.",
       "createdAt": "2026-10-12T10:20:00.000Z",
-      "predictedAttendance": 257,
+      "predictedAttendance": 1,
       "smsMix": {
         "none": 0,
         "low": 0,
@@ -1055,13 +1119,13 @@
       "id": "evt-113",
       "title": "Kotlin, Flutter & Gemini Android DevFest Strathmore",
       "category": "Workshop",
-      "date": "2026-11-27",
+      "date": "2026-12-07",
       "time": "09:00 - 15:00",
       "timeSlot": "Morning",
-      "dayOfWeek": "Friday",
+      "dayOfWeek": "Monday",
       "venue": "iLab Africa Innovation Room 302",
       "venueCapacity": 120,
-      "registrationCount": 117,
+      "registrationCount": 2,
       "smsPriority": 2,
       "featured": true,
       "status": "Upcoming",
@@ -1069,7 +1133,7 @@
       "organizerName": "Google Developer Student Club (GDSC Strathmore)",
       "description": "Hands-on mobile engineering codelab building cross-platform apps with on-device Gemini Nano and Firebase Cloud Messaging.",
       "createdAt": "2026-10-13T13:00:00.000Z",
-      "predictedAttendance": 94,
+      "predictedAttendance": 2,
       "smsMix": {
         "none": 0,
         "low": 0,
@@ -1087,14 +1151,21 @@
       "dayOfWeek": "Sunday",
       "venue": "SCES Lecture Theatre 4 (LT4)",
       "venueCapacity": 180,
-      "registrationCount": 149,
+      "registrationCount": 0,
       "smsPriority": 2,
       "featured": false,
       "status": "Upcoming",
       "organizerId": "usr-org-8",
       "organizerName": "Google Developer Student Club (GDSC Strathmore)",
       "description": "Practical container orchestration workshop deploying microservices on Google Kubernetes Engine (GKE) and Docker.",
-      "createdAt": "2026-10-14T14:00:00.000Z"
+      "createdAt": "2026-10-14T14:00:00.000Z",
+      "predictedAttendance": 137,
+      "smsMix": {
+        "none": 0,
+        "low": 0,
+        "medium": 0,
+        "high": 0
+      }
     },
     {
       "id": "evt-115",
@@ -1106,14 +1177,21 @@
       "dayOfWeek": "Tuesday",
       "venue": "Strathmore Business School (SBS) Auditorium",
       "venueCapacity": 300,
-      "registrationCount": 244,
-      "smsPriority": 3,
+      "registrationCount": 1,
+      "smsPriority": 2,
       "featured": true,
       "status": "Upcoming",
       "organizerId": "usr-org-9",
       "organizerName": "Strathmore Enterprise Development Centre (SEDC)",
       "description": "Ten student-founded startups pitch to Nairobi angel investors and VC funds for seed grants up to KES 1,500,000.",
-      "createdAt": "2026-10-15T09:30:00.000Z"
+      "createdAt": "2026-10-15T09:30:00.000Z",
+      "predictedAttendance": 1,
+      "smsMix": {
+        "none": 0,
+        "low": 0,
+        "medium": 1,
+        "high": 0
+      }
     },
     {
       "id": "evt-116",
@@ -1125,14 +1203,21 @@
       "dayOfWeek": "Thursday",
       "venue": "Student Center Graduation Square",
       "venueCapacity": 600,
-      "registrationCount": 385,
+      "registrationCount": 0,
       "smsPriority": 2,
       "featured": false,
       "status": "Upcoming",
       "organizerId": "usr-org-10",
       "organizerName": "Strathmore Community Outreach & Sustainability Club",
       "description": "Campus sustainability drive collecting electronic waste for safe refurbishment and showcasing student clean-energy prototypes.",
-      "createdAt": "2026-10-16T11:15:00.000Z"
+      "createdAt": "2026-10-16T11:15:00.000Z",
+      "predictedAttendance": 456,
+      "smsMix": {
+        "none": 0,
+        "low": 0,
+        "medium": 0,
+        "high": 0
+      }
     }
   ],
   "registrations": [
@@ -1168,9 +1253,11 @@
       "studentId": "154382",
       "studentName": "Amina Hassan",
       "studentEmail": "amina.hassan@strathmore.edu",
-      "phone": "+254722112233",
+      "phone": "+254701418501",
       "status": "Confirmed",
-      "registeredAt": "2026-10-13T12:30:00.000Z"
+      "registeredAt": "2026-10-13T12:30:00.000Z",
+      "smsPriority": 3,
+      "smsPriorityLabel": "HIGH"
     },
     {
       "id": "reg-1005",
@@ -1278,7 +1365,7 @@
       "studentId": "154382",
       "studentName": "Amina Hassan",
       "studentEmail": "amina.hassan@strathmore.edu",
-      "phone": "+254722112233",
+      "phone": "+254701418501",
       "smsPriority": 3,
       "smsPriorityLabel": "HIGH",
       "status": "Confirmed",
@@ -1356,7 +1443,8 @@
       "smsPriority": 3,
       "smsPriorityLabel": "HIGH",
       "status": "Confirmed",
-      "registeredAt": "2026-11-26T08:00:00.000Z"
+      "registeredAt": "2026-11-26T08:00:00.000Z",
+      "lastAutoReminderAt": "2026-11-26T17:17:07.136Z"
     },
     {
       "id": "reg-ilab-demo-2",
@@ -1370,7 +1458,8 @@
       "smsPriority": 3,
       "smsPriorityLabel": "HIGH",
       "status": "Confirmed",
-      "registeredAt": "2026-11-26T08:00:00.000Z"
+      "registeredAt": "2026-11-26T08:00:00.000Z",
+      "lastAutoReminderAt": "2026-11-26T17:17:07.136Z"
     },
     {
       "id": "reg-ilab-demo-3",
@@ -1384,7 +1473,8 @@
       "smsPriority": 3,
       "smsPriorityLabel": "HIGH",
       "status": "Confirmed",
-      "registeredAt": "2026-11-26T08:00:00.000Z"
+      "registeredAt": "2026-11-26T08:00:00.000Z",
+      "lastAutoReminderAt": "2026-11-26T17:17:07.136Z"
     },
     {
       "id": "reg-ilab-demo-4",
@@ -1398,7 +1488,8 @@
       "smsPriority": 3,
       "smsPriorityLabel": "HIGH",
       "status": "Confirmed",
-      "registeredAt": "2026-11-26T08:00:00.000Z"
+      "registeredAt": "2026-11-26T08:00:00.000Z",
+      "lastAutoReminderAt": "2026-11-26T17:17:07.136Z"
     },
     {
       "id": "reg-ilab-demo-5",
@@ -1412,7 +1503,8 @@
       "smsPriority": 3,
       "smsPriorityLabel": "HIGH",
       "status": "Confirmed",
-      "registeredAt": "2026-11-26T08:00:00.000Z"
+      "registeredAt": "2026-11-26T08:00:00.000Z",
+      "lastAutoReminderAt": "2026-11-26T17:17:07.136Z"
     },
     {
       "id": "reg-ilab-demo-6",
@@ -1426,7 +1518,8 @@
       "smsPriority": 3,
       "smsPriorityLabel": "HIGH",
       "status": "Confirmed",
-      "registeredAt": "2026-11-26T08:00:00.000Z"
+      "registeredAt": "2026-11-26T08:00:00.000Z",
+      "lastAutoReminderAt": "2026-11-26T17:17:07.136Z"
     },
     {
       "id": "reg-ilab-demo-7",
@@ -1440,7 +1533,8 @@
       "smsPriority": 3,
       "smsPriorityLabel": "HIGH",
       "status": "Confirmed",
-      "registeredAt": "2026-11-26T08:00:00.000Z"
+      "registeredAt": "2026-11-26T08:00:00.000Z",
+      "lastAutoReminderAt": "2026-11-26T17:17:07.136Z"
     },
     {
       "id": "reg-ilab-demo-8",
@@ -1454,7 +1548,8 @@
       "smsPriority": 3,
       "smsPriorityLabel": "HIGH",
       "status": "Confirmed",
-      "registeredAt": "2026-11-26T08:00:00.000Z"
+      "registeredAt": "2026-11-26T08:00:00.000Z",
+      "lastAutoReminderAt": "2026-11-26T17:17:07.136Z"
     },
     {
       "id": "reg-ilab-demo-9",
@@ -1468,7 +1563,8 @@
       "smsPriority": 3,
       "smsPriorityLabel": "HIGH",
       "status": "Confirmed",
-      "registeredAt": "2026-11-26T08:00:00.000Z"
+      "registeredAt": "2026-11-26T08:00:00.000Z",
+      "lastAutoReminderAt": "2026-11-26T17:17:07.136Z"
     },
     {
       "id": "reg-ilab-demo-10",
@@ -1482,10 +1578,557 @@
       "smsPriority": 3,
       "smsPriorityLabel": "HIGH",
       "status": "Confirmed",
-      "registeredAt": "2026-11-26T08:05:00.000Z"
+      "registeredAt": "2026-11-26T08:05:00.000Z",
+      "lastAutoReminderAt": "2026-11-26T17:17:07.136Z"
     }
   ],
   "smsLogs": [
+    {
+      "id": "sms-1795715035502-0",
+      "batchId": "batch-1795715035502",
+      "eventId": "evt-103",
+      "eventTitle": "Cybersecurity & Cloud Threat Hunting Bootcamp",
+      "userId": "usr-stud-1",
+      "recipient": "+254712345678",
+      "recipientName": "Elvis Wanyama Wafuke",
+      "message": "[SmartEvent REMINDER] Cybersecurity & Cloud Threat Hunting Bootcamp: yojjjj",
+      "kind": "REMINDER",
+      "priority": "MEDIUM",
+      "priorityLevel": 2,
+      "priorityChosenBy": "student",
+      "status": "SENT",
+      "failureReason": "Sent via Africa's Talking Gateway (Safaricom Sender ID pending approval; mirrored to AT Simulator)",
+      "messageId": "ATXid_e1d6aa62f0687d11180f076d8995a0b7",
+      "gatewayMode": "LIVE",
+      "cost": "KES 0.8000",
+      "sentBy": "Elvis Wanyama Wafuke (ADMIN)",
+      "sentById": "usr-admin-1",
+      "sentAt": "2026-11-26T17:43:55.502Z"
+    },
+    {
+      "id": "sms-1795714941116-0",
+      "batchId": "batch-1795714941116",
+      "eventId": "evt-103",
+      "eventTitle": "Cybersecurity & Cloud Threat Hunting Bootcamp",
+      "userId": "usr-stud-1",
+      "recipient": "+254712345678",
+      "recipientName": "Elvis Wanyama Wafuke",
+      "message": "[SmartEvent REMINDER] Cybersecurity & Cloud Threat Hunting Bootcamp: yo",
+      "kind": "REMINDER",
+      "priority": "MEDIUM",
+      "priorityLevel": 2,
+      "priorityChosenBy": "student",
+      "status": "SENT",
+      "failureReason": "Sent via Africa's Talking Gateway (Safaricom Sender ID pending approval; mirrored to AT Simulator)",
+      "messageId": "ATXid_9c75bfaee3c427937d204965553219da",
+      "gatewayMode": "LIVE",
+      "cost": "KES 0.8000",
+      "sentBy": "Elvis Wanyama Wafuke (ADMIN)",
+      "sentById": "usr-admin-1",
+      "sentAt": "2026-11-26T17:42:21.116Z"
+    },
+    {
+      "id": "sms-1795714612665-0",
+      "batchId": "batch-1795714612665",
+      "eventId": "evt-103",
+      "eventTitle": "Cybersecurity & Cloud Threat Hunting Bootcamp",
+      "userId": "usr-stud-1",
+      "recipient": "+254712345678",
+      "recipientName": "Elvis Wanyama Wafuke",
+      "message": "[SmartEvent REMINDER] Cybersecurity & Cloud Threat Hunting Bootcamp: yoh",
+      "kind": "REMINDER",
+      "priority": "MEDIUM",
+      "priorityLevel": 2,
+      "priorityChosenBy": "student",
+      "status": "SENT",
+      "failureReason": "Sent via Africa's Talking Gateway (Safaricom Sender ID pending approval; mirrored to AT Simulator)",
+      "messageId": "ATXid_93abed5059ffabbddc2dd716df7e3119",
+      "gatewayMode": "LIVE",
+      "cost": "KES 0.8000",
+      "sentBy": "@iLabAfrica Innovation Centre (ORGANIZER)",
+      "sentById": "usr-org-2",
+      "sentAt": "2026-11-26T17:36:52.665Z"
+    },
+    {
+      "id": "sms-auto-1795713444656-247",
+      "eventId": "evt-ilab-demo",
+      "eventTitle": "@iLabAfrica AI & Cybersecurity Innovation Workshop",
+      "kind": "AUTO_REMINDER",
+      "kindLabel": "Automatic Reminder",
+      "priority": "HIGH",
+      "minTier": 3,
+      "message": "[SmartEvent HIGH REMINDER] @iLabAfrica AI & Cybersecurity Innovation Workshop is in 13.7 hrs (2026-11-27 10:00 - 12:00) at iLab Africa Innovation Room 302.",
+      "recipient": "+254716443322",
+      "recipientsSample": [
+        "+254716443322"
+      ],
+      "recipientCount": 1,
+      "sentCount": 1,
+      "failedCount": 0,
+      "status": "SENT",
+      "mode": "LIVE",
+      "messageId": "ATXid_0b9eaa4836399481217ff2938e13be95",
+      "cost": "KES 0.8000",
+      "userId": "usr-stud-guest-10",
+      "sentBy": "SmartEvent Auto-Scheduler",
+      "sentAt": "2026-11-26T17:17:07.136Z"
+    },
+    {
+      "id": "sms-auto-1795713444041-188",
+      "eventId": "evt-ilab-demo",
+      "eventTitle": "@iLabAfrica AI & Cybersecurity Innovation Workshop",
+      "kind": "AUTO_REMINDER",
+      "kindLabel": "Automatic Reminder",
+      "priority": "HIGH",
+      "minTier": 3,
+      "message": "[SmartEvent HIGH REMINDER] @iLabAfrica AI & Cybersecurity Innovation Workshop is in 13.7 hrs (2026-11-27 10:00 - 12:00) at iLab Africa Innovation Room 302.",
+      "recipient": "+254719889900",
+      "recipientsSample": [
+        "+254719889900"
+      ],
+      "recipientCount": 1,
+      "sentCount": 1,
+      "failedCount": 0,
+      "status": "SENT",
+      "mode": "LIVE",
+      "messageId": "ATXid_514d9e65bb18504f22406dc7f41d57df",
+      "cost": "KES 0.8000",
+      "userId": "usr-stud-10",
+      "sentBy": "SmartEvent Auto-Scheduler",
+      "sentAt": "2026-11-26T17:17:07.136Z"
+    },
+    {
+      "id": "sms-auto-1795713440470-899",
+      "eventId": "evt-ilab-demo",
+      "eventTitle": "@iLabAfrica AI & Cybersecurity Innovation Workshop",
+      "kind": "AUTO_REMINDER",
+      "kindLabel": "Automatic Reminder",
+      "priority": "HIGH",
+      "minTier": 3,
+      "message": "[SmartEvent HIGH REMINDER] @iLabAfrica AI & Cybersecurity Innovation Workshop is in 13.7 hrs (2026-11-27 10:00 - 12:00) at iLab Africa Innovation Room 302.",
+      "recipient": "+254736778899",
+      "recipientsSample": [
+        "+254736778899"
+      ],
+      "recipientCount": 1,
+      "sentCount": 1,
+      "failedCount": 0,
+      "status": "SENT",
+      "mode": "LIVE",
+      "messageId": "ATXid_19ad96e724cf0589070524ad626dfe35",
+      "cost": "KES 0.8000",
+      "userId": "usr-stud-9",
+      "sentBy": "SmartEvent Auto-Scheduler",
+      "sentAt": "2026-11-26T17:17:07.136Z"
+    },
+    {
+      "id": "sms-auto-1795713439967-316",
+      "eventId": "evt-ilab-demo",
+      "eventTitle": "@iLabAfrica AI & Cybersecurity Innovation Workshop",
+      "kind": "AUTO_REMINDER",
+      "kindLabel": "Automatic Reminder",
+      "priority": "HIGH",
+      "minTier": 3,
+      "message": "[SmartEvent HIGH REMINDER] @iLabAfrica AI & Cybersecurity Innovation Workshop is in 13.7 hrs (2026-11-27 10:00 - 12:00) at iLab Africa Innovation Room 302.",
+      "recipient": "+254725667788",
+      "recipientsSample": [
+        "+254725667788"
+      ],
+      "recipientCount": 1,
+      "sentCount": 1,
+      "failedCount": 0,
+      "status": "SENT",
+      "mode": "LIVE",
+      "messageId": "ATXid_28595e6d02d04df3a083337590c10f66",
+      "cost": "KES 0.8000",
+      "userId": "usr-stud-8",
+      "sentBy": "SmartEvent Auto-Scheduler",
+      "sentAt": "2026-11-26T17:17:07.136Z"
+    },
+    {
+      "id": "sms-auto-1795713436450-488",
+      "eventId": "evt-ilab-demo",
+      "eventTitle": "@iLabAfrica AI & Cybersecurity Innovation Workshop",
+      "kind": "AUTO_REMINDER",
+      "kindLabel": "Automatic Reminder",
+      "priority": "HIGH",
+      "minTier": 3,
+      "message": "[SmartEvent HIGH REMINDER] @iLabAfrica AI & Cybersecurity Innovation Workshop is in 13.7 hrs (2026-11-27 10:00 - 12:00) at iLab Africa Innovation Room 302.",
+      "recipient": "+254714556677",
+      "recipientsSample": [
+        "+254714556677"
+      ],
+      "recipientCount": 1,
+      "sentCount": 1,
+      "failedCount": 0,
+      "status": "SENT",
+      "mode": "LIVE",
+      "messageId": "ATXid_3b87bdb51ba274d0406438f556c23034",
+      "cost": "KES 0.8000",
+      "userId": "usr-stud-7",
+      "sentBy": "SmartEvent Auto-Scheduler",
+      "sentAt": "2026-11-26T17:17:07.136Z"
+    },
+    {
+      "id": "sms-auto-1795713436126-784",
+      "eventId": "evt-ilab-demo",
+      "eventTitle": "@iLabAfrica AI & Cybersecurity Innovation Workshop",
+      "kind": "AUTO_REMINDER",
+      "kindLabel": "Automatic Reminder",
+      "priority": "HIGH",
+      "minTier": 3,
+      "message": "[SmartEvent HIGH REMINDER] @iLabAfrica AI & Cybersecurity Innovation Workshop is in 13.7 hrs (2026-11-27 10:00 - 12:00) at iLab Africa Innovation Room 302.",
+      "recipient": "+254799112244",
+      "recipientsSample": [
+        "+254799112244"
+      ],
+      "recipientCount": 1,
+      "sentCount": 1,
+      "failedCount": 0,
+      "status": "SENT",
+      "mode": "LIVE",
+      "messageId": "ATXid_816c55a36ee6d30b07c5732fca23d239",
+      "cost": "KES 0.8000",
+      "userId": "usr-stud-6",
+      "sentBy": "SmartEvent Auto-Scheduler",
+      "sentAt": "2026-11-26T17:17:07.136Z"
+    },
+    {
+      "id": "sms-auto-1795713435839-191",
+      "eventId": "evt-ilab-demo",
+      "eventTitle": "@iLabAfrica AI & Cybersecurity Innovation Workshop",
+      "kind": "AUTO_REMINDER",
+      "kindLabel": "Automatic Reminder",
+      "priority": "HIGH",
+      "minTier": 3,
+      "message": "[SmartEvent HIGH REMINDER] @iLabAfrica AI & Cybersecurity Innovation Workshop is in 13.7 hrs (2026-11-27 10:00 - 12:00) at iLab Africa Innovation Room 302.",
+      "recipient": "+254728776655",
+      "recipientsSample": [
+        "+254728776655"
+      ],
+      "recipientCount": 1,
+      "sentCount": 1,
+      "failedCount": 0,
+      "status": "SENT",
+      "mode": "LIVE",
+      "messageId": "ATXid_c92225f3e76ebb5b551f821fef87da51",
+      "cost": "KES 0.8000",
+      "userId": "usr-stud-5",
+      "sentBy": "SmartEvent Auto-Scheduler",
+      "sentAt": "2026-11-26T17:17:07.136Z"
+    },
+    {
+      "id": "sms-auto-1795713435052-182",
+      "eventId": "evt-ilab-demo",
+      "eventTitle": "@iLabAfrica AI & Cybersecurity Innovation Workshop",
+      "kind": "AUTO_REMINDER",
+      "kindLabel": "Automatic Reminder",
+      "priority": "HIGH",
+      "minTier": 3,
+      "message": "[SmartEvent HIGH REMINDER] @iLabAfrica AI & Cybersecurity Innovation Workshop is in 13.7 hrs (2026-11-27 10:00 - 12:00) at iLab Africa Innovation Room 302.",
+      "recipient": "+254715998811",
+      "recipientsSample": [
+        "+254715998811"
+      ],
+      "recipientCount": 1,
+      "sentCount": 1,
+      "failedCount": 0,
+      "status": "SENT",
+      "mode": "LIVE",
+      "messageId": "ATXid_52eb3705ee9098d8a30b5dc3830ca20e",
+      "cost": "KES 0.8000",
+      "userId": "usr-stud-4",
+      "sentBy": "SmartEvent Auto-Scheduler",
+      "sentAt": "2026-11-26T17:17:07.136Z"
+    },
+    {
+      "id": "sms-auto-1795713434644-297",
+      "eventId": "evt-ilab-demo",
+      "eventTitle": "@iLabAfrica AI & Cybersecurity Innovation Workshop",
+      "kind": "AUTO_REMINDER",
+      "kindLabel": "Automatic Reminder",
+      "priority": "HIGH",
+      "minTier": 3,
+      "message": "[SmartEvent HIGH REMINDER] @iLabAfrica AI & Cybersecurity Innovation Workshop is in 13.7 hrs (2026-11-27 10:00 - 12:00) at iLab Africa Innovation Room 302.",
+      "recipient": "+254733445566",
+      "recipientsSample": [
+        "+254733445566"
+      ],
+      "recipientCount": 1,
+      "sentCount": 1,
+      "failedCount": 0,
+      "status": "SENT",
+      "mode": "LIVE",
+      "messageId": "ATXid_166c9920ea0b1091328aa7bae81b3847",
+      "cost": "KES 0.8000",
+      "userId": "usr-stud-3",
+      "sentBy": "SmartEvent Auto-Scheduler",
+      "sentAt": "2026-11-26T17:17:07.136Z"
+    },
+    {
+      "id": "sms-auto-1795713430331-186",
+      "eventId": "evt-ilab-demo",
+      "eventTitle": "@iLabAfrica AI & Cybersecurity Innovation Workshop",
+      "kind": "AUTO_REMINDER",
+      "kindLabel": "Automatic Reminder",
+      "priority": "HIGH",
+      "minTier": 3,
+      "message": "[SmartEvent HIGH REMINDER] @iLabAfrica AI & Cybersecurity Innovation Workshop is in 13.7 hrs (2026-11-27 10:00 - 12:00) at iLab Africa Innovation Room 302.",
+      "recipient": "+254712345678",
+      "recipientsSample": [
+        "+254712345678"
+      ],
+      "recipientCount": 1,
+      "sentCount": 0,
+      "failedCount": 1,
+      "status": "FAILED",
+      "mode": "LIVE",
+      "messageId": null,
+      "cost": null,
+      "userId": "usr-stud-1",
+      "sentBy": "SmartEvent Auto-Scheduler",
+      "sentAt": "2026-11-26T17:17:07.136Z"
+    },
+    {
+      "id": "sms-auto-1795708472282-193",
+      "eventId": "evt-ilab-demo",
+      "eventTitle": "@iLabAfrica AI & Cybersecurity Innovation Workshop",
+      "kind": "AUTO_REMINDER",
+      "kindLabel": "Automatic Reminder",
+      "priority": "HIGH",
+      "minTier": 3,
+      "message": "[SmartEvent HIGH REMINDER] @iLabAfrica AI & Cybersecurity Innovation Workshop is in 15.1 hrs (2026-11-27 10:00 - 12:00) at iLab Africa Innovation Room 302.",
+      "recipient": "+254716443322",
+      "recipientsSample": [
+        "+254716443322"
+      ],
+      "recipientCount": 1,
+      "sentCount": 1,
+      "failedCount": 0,
+      "status": "SENT",
+      "mode": "LIVE",
+      "messageId": "ATXid_d96af0349f2093cc039d3189da43162d",
+      "cost": "KES 0.8000",
+      "userId": "usr-stud-guest-10",
+      "sentBy": "SmartEvent Auto-Scheduler",
+      "sentAt": "2026-11-26T15:54:28.373Z"
+    },
+    {
+      "id": "sms-auto-1795708471982-919",
+      "eventId": "evt-ilab-demo",
+      "eventTitle": "@iLabAfrica AI & Cybersecurity Innovation Workshop",
+      "kind": "AUTO_REMINDER",
+      "kindLabel": "Automatic Reminder",
+      "priority": "HIGH",
+      "minTier": 3,
+      "message": "[SmartEvent HIGH REMINDER] @iLabAfrica AI & Cybersecurity Innovation Workshop is in 15.1 hrs (2026-11-27 10:00 - 12:00) at iLab Africa Innovation Room 302.",
+      "recipient": "+254719889900",
+      "recipientsSample": [
+        "+254719889900"
+      ],
+      "recipientCount": 1,
+      "sentCount": 1,
+      "failedCount": 0,
+      "status": "SENT",
+      "mode": "LIVE",
+      "messageId": "ATXid_3c0bf4d156ac2dcaadbff67d4f28c6ca",
+      "cost": "KES 0.8000",
+      "userId": "usr-stud-10",
+      "sentBy": "SmartEvent Auto-Scheduler",
+      "sentAt": "2026-11-26T15:54:28.373Z"
+    },
+    {
+      "id": "sms-auto-1795708471698-844",
+      "eventId": "evt-ilab-demo",
+      "eventTitle": "@iLabAfrica AI & Cybersecurity Innovation Workshop",
+      "kind": "AUTO_REMINDER",
+      "kindLabel": "Automatic Reminder",
+      "priority": "HIGH",
+      "minTier": 3,
+      "message": "[SmartEvent HIGH REMINDER] @iLabAfrica AI & Cybersecurity Innovation Workshop is in 15.1 hrs (2026-11-27 10:00 - 12:00) at iLab Africa Innovation Room 302.",
+      "recipient": "+254736778899",
+      "recipientsSample": [
+        "+254736778899"
+      ],
+      "recipientCount": 1,
+      "sentCount": 1,
+      "failedCount": 0,
+      "status": "SENT",
+      "mode": "LIVE",
+      "messageId": "ATXid_892f5370c02e6e1359d010f1f7715ed1",
+      "cost": "KES 0.8000",
+      "userId": "usr-stud-9",
+      "sentBy": "SmartEvent Auto-Scheduler",
+      "sentAt": "2026-11-26T15:54:28.373Z"
+    },
+    {
+      "id": "sms-auto-1795708471431-829",
+      "eventId": "evt-ilab-demo",
+      "eventTitle": "@iLabAfrica AI & Cybersecurity Innovation Workshop",
+      "kind": "AUTO_REMINDER",
+      "kindLabel": "Automatic Reminder",
+      "priority": "HIGH",
+      "minTier": 3,
+      "message": "[SmartEvent HIGH REMINDER] @iLabAfrica AI & Cybersecurity Innovation Workshop is in 15.1 hrs (2026-11-27 10:00 - 12:00) at iLab Africa Innovation Room 302.",
+      "recipient": "+254725667788",
+      "recipientsSample": [
+        "+254725667788"
+      ],
+      "recipientCount": 1,
+      "sentCount": 1,
+      "failedCount": 0,
+      "status": "SENT",
+      "mode": "LIVE",
+      "messageId": "ATXid_84de7c1d48a881a24a6a9e80125753ef",
+      "cost": "KES 0.8000",
+      "userId": "usr-stud-8",
+      "sentBy": "SmartEvent Auto-Scheduler",
+      "sentAt": "2026-11-26T15:54:28.373Z"
+    },
+    {
+      "id": "sms-auto-1795708471197-783",
+      "eventId": "evt-ilab-demo",
+      "eventTitle": "@iLabAfrica AI & Cybersecurity Innovation Workshop",
+      "kind": "AUTO_REMINDER",
+      "kindLabel": "Automatic Reminder",
+      "priority": "HIGH",
+      "minTier": 3,
+      "message": "[SmartEvent HIGH REMINDER] @iLabAfrica AI & Cybersecurity Innovation Workshop is in 15.1 hrs (2026-11-27 10:00 - 12:00) at iLab Africa Innovation Room 302.",
+      "recipient": "+254714556677",
+      "recipientsSample": [
+        "+254714556677"
+      ],
+      "recipientCount": 1,
+      "sentCount": 1,
+      "failedCount": 0,
+      "status": "SENT",
+      "mode": "LIVE",
+      "messageId": "ATXid_313f4fd3b4cdfbeada23d90cdcfb06a9",
+      "cost": "KES 0.8000",
+      "userId": "usr-stud-7",
+      "sentBy": "SmartEvent Auto-Scheduler",
+      "sentAt": "2026-11-26T15:54:28.373Z"
+    },
+    {
+      "id": "sms-auto-1795708470687-172",
+      "eventId": "evt-ilab-demo",
+      "eventTitle": "@iLabAfrica AI & Cybersecurity Innovation Workshop",
+      "kind": "AUTO_REMINDER",
+      "kindLabel": "Automatic Reminder",
+      "priority": "HIGH",
+      "minTier": 3,
+      "message": "[SmartEvent HIGH REMINDER] @iLabAfrica AI & Cybersecurity Innovation Workshop is in 15.1 hrs (2026-11-27 10:00 - 12:00) at iLab Africa Innovation Room 302.",
+      "recipient": "+254799112244",
+      "recipientsSample": [
+        "+254799112244"
+      ],
+      "recipientCount": 1,
+      "sentCount": 1,
+      "failedCount": 0,
+      "status": "SENT",
+      "mode": "LIVE",
+      "messageId": "ATXid_e79d36f292a9ab20d81502f69b9083af",
+      "cost": "KES 0.8000",
+      "userId": "usr-stud-6",
+      "sentBy": "SmartEvent Auto-Scheduler",
+      "sentAt": "2026-11-26T15:54:28.373Z"
+    },
+    {
+      "id": "sms-auto-1795708470399-944",
+      "eventId": "evt-ilab-demo",
+      "eventTitle": "@iLabAfrica AI & Cybersecurity Innovation Workshop",
+      "kind": "AUTO_REMINDER",
+      "kindLabel": "Automatic Reminder",
+      "priority": "HIGH",
+      "minTier": 3,
+      "message": "[SmartEvent HIGH REMINDER] @iLabAfrica AI & Cybersecurity Innovation Workshop is in 15.1 hrs (2026-11-27 10:00 - 12:00) at iLab Africa Innovation Room 302.",
+      "recipient": "+254728776655",
+      "recipientsSample": [
+        "+254728776655"
+      ],
+      "recipientCount": 1,
+      "sentCount": 1,
+      "failedCount": 0,
+      "status": "SENT",
+      "mode": "LIVE",
+      "messageId": "ATXid_cabc9107c8843b4af00aa69f73f17cc5",
+      "cost": "KES 0.8000",
+      "userId": "usr-stud-5",
+      "sentBy": "SmartEvent Auto-Scheduler",
+      "sentAt": "2026-11-26T15:54:28.373Z"
+    },
+    {
+      "id": "sms-auto-1795708470181-266",
+      "eventId": "evt-ilab-demo",
+      "eventTitle": "@iLabAfrica AI & Cybersecurity Innovation Workshop",
+      "kind": "AUTO_REMINDER",
+      "kindLabel": "Automatic Reminder",
+      "priority": "HIGH",
+      "minTier": 3,
+      "message": "[SmartEvent HIGH REMINDER] @iLabAfrica AI & Cybersecurity Innovation Workshop is in 15.1 hrs (2026-11-27 10:00 - 12:00) at iLab Africa Innovation Room 302.",
+      "recipient": "+254715998811",
+      "recipientsSample": [
+        "+254715998811"
+      ],
+      "recipientCount": 1,
+      "sentCount": 1,
+      "failedCount": 0,
+      "status": "SENT",
+      "mode": "LIVE",
+      "messageId": "ATXid_cb6198a3ba5b728d8a31cb61acadb3c4",
+      "cost": "KES 0.8000",
+      "userId": "usr-stud-4",
+      "sentBy": "SmartEvent Auto-Scheduler",
+      "sentAt": "2026-11-26T15:54:28.373Z"
+    },
+    {
+      "id": "sms-auto-1795708469883-436",
+      "eventId": "evt-ilab-demo",
+      "eventTitle": "@iLabAfrica AI & Cybersecurity Innovation Workshop",
+      "kind": "AUTO_REMINDER",
+      "kindLabel": "Automatic Reminder",
+      "priority": "HIGH",
+      "minTier": 3,
+      "message": "[SmartEvent HIGH REMINDER] @iLabAfrica AI & Cybersecurity Innovation Workshop is in 15.1 hrs (2026-11-27 10:00 - 12:00) at iLab Africa Innovation Room 302.",
+      "recipient": "+254733445566",
+      "recipientsSample": [
+        "+254733445566"
+      ],
+      "recipientCount": 1,
+      "sentCount": 1,
+      "failedCount": 0,
+      "status": "SENT",
+      "mode": "LIVE",
+      "messageId": "ATXid_4d5de3eeb93652ef6d59a8e01d1c30b4",
+      "cost": "KES 0.8000",
+      "userId": "usr-stud-3",
+      "sentBy": "SmartEvent Auto-Scheduler",
+      "sentAt": "2026-11-26T15:54:28.373Z"
+    },
+    {
+      "id": "sms-auto-1795708469633-869",
+      "eventId": "evt-ilab-demo",
+      "eventTitle": "@iLabAfrica AI & Cybersecurity Innovation Workshop",
+      "kind": "AUTO_REMINDER",
+      "kindLabel": "Automatic Reminder",
+      "priority": "HIGH",
+      "minTier": 3,
+      "message": "[SmartEvent HIGH REMINDER] @iLabAfrica AI & Cybersecurity Innovation Workshop is in 15.1 hrs (2026-11-27 10:00 - 12:00) at iLab Africa Innovation Room 302.",
+      "recipient": "+254712345678",
+      "recipientsSample": [
+        "+254712345678"
+      ],
+      "recipientCount": 1,
+      "sentCount": 1,
+      "failedCount": 0,
+      "status": "SENT",
+      "mode": "LIVE",
+      "messageId": "ATXid_6cf593beb61d0e9b9dc8e9250dfceb38",
+      "cost": "KES 0.8000",
+      "userId": "usr-stud-1",
+      "sentBy": "SmartEvent Auto-Scheduler",
+      "sentAt": "2026-11-26T15:54:28.373Z"
+    },
     {
       "id": "sms-auto-1794907960129-951",
       "eventId": "evt-105",
@@ -1997,6 +2640,236 @@
   ],
   "notifications": [
     {
+      "id": "notif-1795715035502-899",
+      "userId": "usr-stud-1",
+      "title": "Reminder: Cybersecurity & Cloud Threat Hunting Bootcamp",
+      "message": "yojjjj",
+      "type": "SMS_PRIORITY",
+      "priority": "MEDIUM",
+      "read": false,
+      "createdAt": "2026-11-26T17:43:55.502Z"
+    },
+    {
+      "id": "notif-1795714941116-579",
+      "userId": "usr-stud-1",
+      "title": "Reminder: Cybersecurity & Cloud Threat Hunting Bootcamp",
+      "message": "yo",
+      "type": "SMS_PRIORITY",
+      "priority": "MEDIUM",
+      "read": false,
+      "createdAt": "2026-11-26T17:42:21.116Z"
+    },
+    {
+      "id": "notif-1795714612666-340",
+      "userId": "usr-stud-1",
+      "title": "Reminder: Cybersecurity & Cloud Threat Hunting Bootcamp",
+      "message": "yoh",
+      "type": "SMS_PRIORITY",
+      "priority": "MEDIUM",
+      "read": false,
+      "createdAt": "2026-11-26T17:36:52.666Z"
+    },
+    {
+      "id": "notif-1795713444656-922",
+      "userId": "usr-stud-guest-10",
+      "title": "Upcoming Event Reminder: @iLabAfrica AI & Cybersecurity Innovation Workshop",
+      "message": "[SmartEvent HIGH REMINDER] @iLabAfrica AI & Cybersecurity Innovation Workshop is in 13.7 hrs (2026-11-27 10:00 - 12:00) at iLab Africa Innovation Room 302.",
+      "type": "SMS_REMINDER",
+      "priority": "HIGH",
+      "read": false,
+      "createdAt": "2026-11-26T17:17:24.656Z"
+    },
+    {
+      "id": "notif-1795713444041-844",
+      "userId": "usr-stud-10",
+      "title": "Upcoming Event Reminder: @iLabAfrica AI & Cybersecurity Innovation Workshop",
+      "message": "[SmartEvent HIGH REMINDER] @iLabAfrica AI & Cybersecurity Innovation Workshop is in 13.7 hrs (2026-11-27 10:00 - 12:00) at iLab Africa Innovation Room 302.",
+      "type": "SMS_REMINDER",
+      "priority": "HIGH",
+      "read": false,
+      "createdAt": "2026-11-26T17:17:24.041Z"
+    },
+    {
+      "id": "notif-1795713440470-78",
+      "userId": "usr-stud-9",
+      "title": "Upcoming Event Reminder: @iLabAfrica AI & Cybersecurity Innovation Workshop",
+      "message": "[SmartEvent HIGH REMINDER] @iLabAfrica AI & Cybersecurity Innovation Workshop is in 13.7 hrs (2026-11-27 10:00 - 12:00) at iLab Africa Innovation Room 302.",
+      "type": "SMS_REMINDER",
+      "priority": "HIGH",
+      "read": false,
+      "createdAt": "2026-11-26T17:17:20.470Z"
+    },
+    {
+      "id": "notif-1795713439967-961",
+      "userId": "usr-stud-8",
+      "title": "Upcoming Event Reminder: @iLabAfrica AI & Cybersecurity Innovation Workshop",
+      "message": "[SmartEvent HIGH REMINDER] @iLabAfrica AI & Cybersecurity Innovation Workshop is in 13.7 hrs (2026-11-27 10:00 - 12:00) at iLab Africa Innovation Room 302.",
+      "type": "SMS_REMINDER",
+      "priority": "HIGH",
+      "read": false,
+      "createdAt": "2026-11-26T17:17:19.968Z"
+    },
+    {
+      "id": "notif-1795713436450-238",
+      "userId": "usr-stud-7",
+      "title": "Upcoming Event Reminder: @iLabAfrica AI & Cybersecurity Innovation Workshop",
+      "message": "[SmartEvent HIGH REMINDER] @iLabAfrica AI & Cybersecurity Innovation Workshop is in 13.7 hrs (2026-11-27 10:00 - 12:00) at iLab Africa Innovation Room 302.",
+      "type": "SMS_REMINDER",
+      "priority": "HIGH",
+      "read": false,
+      "createdAt": "2026-11-26T17:17:16.450Z"
+    },
+    {
+      "id": "notif-1795713436126-303",
+      "userId": "usr-stud-6",
+      "title": "Upcoming Event Reminder: @iLabAfrica AI & Cybersecurity Innovation Workshop",
+      "message": "[SmartEvent HIGH REMINDER] @iLabAfrica AI & Cybersecurity Innovation Workshop is in 13.7 hrs (2026-11-27 10:00 - 12:00) at iLab Africa Innovation Room 302.",
+      "type": "SMS_REMINDER",
+      "priority": "HIGH",
+      "read": false,
+      "createdAt": "2026-11-26T17:17:16.126Z"
+    },
+    {
+      "id": "notif-1795713435839-469",
+      "userId": "usr-stud-5",
+      "title": "Upcoming Event Reminder: @iLabAfrica AI & Cybersecurity Innovation Workshop",
+      "message": "[SmartEvent HIGH REMINDER] @iLabAfrica AI & Cybersecurity Innovation Workshop is in 13.7 hrs (2026-11-27 10:00 - 12:00) at iLab Africa Innovation Room 302.",
+      "type": "SMS_REMINDER",
+      "priority": "HIGH",
+      "read": false,
+      "createdAt": "2026-11-26T17:17:15.839Z"
+    },
+    {
+      "id": "notif-1795713435052-345",
+      "userId": "usr-stud-4",
+      "title": "Upcoming Event Reminder: @iLabAfrica AI & Cybersecurity Innovation Workshop",
+      "message": "[SmartEvent HIGH REMINDER] @iLabAfrica AI & Cybersecurity Innovation Workshop is in 13.7 hrs (2026-11-27 10:00 - 12:00) at iLab Africa Innovation Room 302.",
+      "type": "SMS_REMINDER",
+      "priority": "HIGH",
+      "read": false,
+      "createdAt": "2026-11-26T17:17:15.052Z"
+    },
+    {
+      "id": "notif-1795713434644-903",
+      "userId": "usr-stud-3",
+      "title": "Upcoming Event Reminder: @iLabAfrica AI & Cybersecurity Innovation Workshop",
+      "message": "[SmartEvent HIGH REMINDER] @iLabAfrica AI & Cybersecurity Innovation Workshop is in 13.7 hrs (2026-11-27 10:00 - 12:00) at iLab Africa Innovation Room 302.",
+      "type": "SMS_REMINDER",
+      "priority": "HIGH",
+      "read": false,
+      "createdAt": "2026-11-26T17:17:14.644Z"
+    },
+    {
+      "id": "notif-1795713430332-879",
+      "userId": "usr-stud-1",
+      "title": "Upcoming Event Reminder: @iLabAfrica AI & Cybersecurity Innovation Workshop",
+      "message": "[SmartEvent HIGH REMINDER] @iLabAfrica AI & Cybersecurity Innovation Workshop is in 13.7 hrs (2026-11-27 10:00 - 12:00) at iLab Africa Innovation Room 302.",
+      "type": "SMS_REMINDER",
+      "priority": "HIGH",
+      "read": false,
+      "createdAt": "2026-11-26T17:17:10.332Z"
+    },
+    {
+      "id": "notif-1795708472282-274",
+      "userId": "usr-stud-guest-10",
+      "title": "Upcoming Event Reminder: @iLabAfrica AI & Cybersecurity Innovation Workshop",
+      "message": "[SmartEvent HIGH REMINDER] @iLabAfrica AI & Cybersecurity Innovation Workshop is in 15.1 hrs (2026-11-27 10:00 - 12:00) at iLab Africa Innovation Room 302.",
+      "type": "SMS_REMINDER",
+      "priority": "HIGH",
+      "read": false,
+      "createdAt": "2026-11-26T15:54:32.282Z"
+    },
+    {
+      "id": "notif-1795708471982-868",
+      "userId": "usr-stud-10",
+      "title": "Upcoming Event Reminder: @iLabAfrica AI & Cybersecurity Innovation Workshop",
+      "message": "[SmartEvent HIGH REMINDER] @iLabAfrica AI & Cybersecurity Innovation Workshop is in 15.1 hrs (2026-11-27 10:00 - 12:00) at iLab Africa Innovation Room 302.",
+      "type": "SMS_REMINDER",
+      "priority": "HIGH",
+      "read": false,
+      "createdAt": "2026-11-26T15:54:31.982Z"
+    },
+    {
+      "id": "notif-1795708471698-819",
+      "userId": "usr-stud-9",
+      "title": "Upcoming Event Reminder: @iLabAfrica AI & Cybersecurity Innovation Workshop",
+      "message": "[SmartEvent HIGH REMINDER] @iLabAfrica AI & Cybersecurity Innovation Workshop is in 15.1 hrs (2026-11-27 10:00 - 12:00) at iLab Africa Innovation Room 302.",
+      "type": "SMS_REMINDER",
+      "priority": "HIGH",
+      "read": false,
+      "createdAt": "2026-11-26T15:54:31.698Z"
+    },
+    {
+      "id": "notif-1795708471431-512",
+      "userId": "usr-stud-8",
+      "title": "Upcoming Event Reminder: @iLabAfrica AI & Cybersecurity Innovation Workshop",
+      "message": "[SmartEvent HIGH REMINDER] @iLabAfrica AI & Cybersecurity Innovation Workshop is in 15.1 hrs (2026-11-27 10:00 - 12:00) at iLab Africa Innovation Room 302.",
+      "type": "SMS_REMINDER",
+      "priority": "HIGH",
+      "read": false,
+      "createdAt": "2026-11-26T15:54:31.431Z"
+    },
+    {
+      "id": "notif-1795708471197-397",
+      "userId": "usr-stud-7",
+      "title": "Upcoming Event Reminder: @iLabAfrica AI & Cybersecurity Innovation Workshop",
+      "message": "[SmartEvent HIGH REMINDER] @iLabAfrica AI & Cybersecurity Innovation Workshop is in 15.1 hrs (2026-11-27 10:00 - 12:00) at iLab Africa Innovation Room 302.",
+      "type": "SMS_REMINDER",
+      "priority": "HIGH",
+      "read": false,
+      "createdAt": "2026-11-26T15:54:31.197Z"
+    },
+    {
+      "id": "notif-1795708470687-364",
+      "userId": "usr-stud-6",
+      "title": "Upcoming Event Reminder: @iLabAfrica AI & Cybersecurity Innovation Workshop",
+      "message": "[SmartEvent HIGH REMINDER] @iLabAfrica AI & Cybersecurity Innovation Workshop is in 15.1 hrs (2026-11-27 10:00 - 12:00) at iLab Africa Innovation Room 302.",
+      "type": "SMS_REMINDER",
+      "priority": "HIGH",
+      "read": false,
+      "createdAt": "2026-11-26T15:54:30.687Z"
+    },
+    {
+      "id": "notif-1795708470399-857",
+      "userId": "usr-stud-5",
+      "title": "Upcoming Event Reminder: @iLabAfrica AI & Cybersecurity Innovation Workshop",
+      "message": "[SmartEvent HIGH REMINDER] @iLabAfrica AI & Cybersecurity Innovation Workshop is in 15.1 hrs (2026-11-27 10:00 - 12:00) at iLab Africa Innovation Room 302.",
+      "type": "SMS_REMINDER",
+      "priority": "HIGH",
+      "read": false,
+      "createdAt": "2026-11-26T15:54:30.399Z"
+    },
+    {
+      "id": "notif-1795708470181-440",
+      "userId": "usr-stud-4",
+      "title": "Upcoming Event Reminder: @iLabAfrica AI & Cybersecurity Innovation Workshop",
+      "message": "[SmartEvent HIGH REMINDER] @iLabAfrica AI & Cybersecurity Innovation Workshop is in 15.1 hrs (2026-11-27 10:00 - 12:00) at iLab Africa Innovation Room 302.",
+      "type": "SMS_REMINDER",
+      "priority": "HIGH",
+      "read": false,
+      "createdAt": "2026-11-26T15:54:30.181Z"
+    },
+    {
+      "id": "notif-1795708469883-133",
+      "userId": "usr-stud-3",
+      "title": "Upcoming Event Reminder: @iLabAfrica AI & Cybersecurity Innovation Workshop",
+      "message": "[SmartEvent HIGH REMINDER] @iLabAfrica AI & Cybersecurity Innovation Workshop is in 15.1 hrs (2026-11-27 10:00 - 12:00) at iLab Africa Innovation Room 302.",
+      "type": "SMS_REMINDER",
+      "priority": "HIGH",
+      "read": false,
+      "createdAt": "2026-11-26T15:54:29.883Z"
+    },
+    {
+      "id": "notif-1795708469633-357",
+      "userId": "usr-stud-1",
+      "title": "Upcoming Event Reminder: @iLabAfrica AI & Cybersecurity Innovation Workshop",
+      "message": "[SmartEvent HIGH REMINDER] @iLabAfrica AI & Cybersecurity Innovation Workshop is in 15.1 hrs (2026-11-27 10:00 - 12:00) at iLab Africa Innovation Room 302.",
+      "type": "SMS_REMINDER",
+      "priority": "HIGH",
+      "read": false,
+      "createdAt": "2026-11-26T15:54:29.633Z"
+    },
+    {
       "id": "notif-1794907960130-179",
       "userId": "usr-stud-3",
       "title": "Upcoming Event Reminder: Annual Engineering & Tech Graduate Career Fair",
@@ -2228,6 +3101,30 @@
     }
   ],
   "activity": [
+    {
+      "id": "act-1795715035502-124",
+      "type": "SMS_DISPATCHED",
+      "detail": "Elvis Wanyama Wafuke sent REMINDER SMS \"Cybersecurity & Cloud Threat Hunting Bootcamp\" to 1 recipient(s) [LIVE] - 0 failed, 0 in-app only by student preference",
+      "createdAt": "2026-11-26T17:43:55.502Z"
+    },
+    {
+      "id": "act-1795714941116-798",
+      "type": "SMS_DISPATCHED",
+      "detail": "Elvis Wanyama Wafuke sent REMINDER SMS \"Cybersecurity & Cloud Threat Hunting Bootcamp\" to 1 recipient(s) [LIVE] - 0 failed, 0 in-app only by student preference",
+      "createdAt": "2026-11-26T17:42:21.116Z"
+    },
+    {
+      "id": "act-1795714821929-397",
+      "type": "USER_UPDATED",
+      "detail": "Elvis Wanyama Wafuke updated Amina Hassan",
+      "createdAt": "2026-11-26T17:40:21.929Z"
+    },
+    {
+      "id": "act-1795714612666-228",
+      "type": "SMS_DISPATCHED",
+      "detail": "@iLabAfrica Innovation Centre sent REMINDER SMS \"Cybersecurity & Cloud Threat Hunting Bootcamp\" to 1 recipient(s) [LIVE] - 0 failed, 0 in-app only by student preference",
+      "createdAt": "2026-11-26T17:36:52.666Z"
+    },
     {
       "id": "act-1794834674604-342",
       "type": "SMS_DISPATCHED",

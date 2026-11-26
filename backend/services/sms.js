@@ -180,7 +180,7 @@ async function sendBulk(phones, message) {
 
     const livePromise = axios.post(`${cfg.host}/version1/messaging`, params.toString(), {
       headers: { apiKey: cfg.apiKey, Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
-      timeout: 15000
+      timeout: cfg.mode === 'LIVE' ? 4000 : 10000
     });
     const sandboxPromise = cfg.mode === 'LIVE'
       ? sendToSandbox(chunk, message, sandboxKey)

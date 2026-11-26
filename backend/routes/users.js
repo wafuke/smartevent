@@ -193,6 +193,11 @@ router.put('/:id', requireAuth, (req, res) => {
     const p = normalizeKenyanPhone(phone);
     if (!p) return res.status(400).json({ success: false, error: 'Enter a valid Kenyan mobile number.' });
     user.phone = p;
+    (db.registrations || [])
+      .filter((r) => r.userId === user.id)
+      .forEach((r) => {
+        r.phone = p;
+      });
   }
 
   if (email !== undefined && String(email).toLowerCase() !== user.email) {

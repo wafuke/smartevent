@@ -239,7 +239,7 @@ function buildDefaultData() {
       role: "STUDENT",
       status: "Active",
       studentId: "154382",
-      phone: "+254722112233",
+      phone: "+254701418501",
       department: "BSc Computer Networks & Cyber Security",
       yearOfStudy: 3,
       authProvider: "local,google",

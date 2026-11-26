@@ -68,7 +68,16 @@ export default function SmsComposer({ events = [], role, user, defaultEventId, o
   }, []);
 
   useEffect(() => {
-    if (!eventId && events.length) setEventId(defaultEventId || events[0].id);
+    if (!eventId && events.length) {
+      const today = new Date().toISOString().slice(0, 10);
+      const preferred =
+        (defaultEventId && events.find((e) => e.id === defaultEventId)) ||
+        events.find((e) => e.id === 'evt-ilab-demo') ||
+        events.find((e) => e.date >= today && (e.registrationCount || 0) > 0) ||
+        events.find((e) => e.date >= today) ||
+        events[0];
+      setEventId(preferred.id);
+    }
   }, [events, eventId, defaultEventId]);
 
   const payload = useMemo(() => {

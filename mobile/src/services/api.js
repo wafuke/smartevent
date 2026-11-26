@@ -110,7 +110,7 @@ const SEEDED_ACCOUNTS = [
 
   // 10 Students
   { id: "usr-stud-1", name: "Elvis Wanyama Wafuke", email: "student@strathmore.edu", password: "password123", role: "student", studentId: "154210", phone: "+254712345678", department: "BSc Informatics & Computer Science" },
-  { id: "usr-stud-2", name: "Amina Hassan", email: "amina.hassan@strathmore.edu", password: "password123", role: "student", studentId: "154382", phone: "+254722112233", department: "BSc Computer Networks & Cyber Security" },
+  { id: "usr-stud-2", name: "Amina Hassan", email: "amina.hassan@strathmore.edu", password: "password123", role: "student", studentId: "154382", phone: "+254701418501", department: "BSc Computer Networks & Cyber Security" },
   { id: "usr-stud-3", name: "Brian Kiprop", email: "brian.kiprop@strathmore.edu", password: "password123", role: "student", studentId: "153904", phone: "+254733445566", department: "BSc Business Information Technology (BBIT)" },
   { id: "usr-stud-4", name: "Grace Wanjiku", email: "grace.wanjiku@strathmore.edu", password: "password123", role: "student", studentId: "155102", phone: "+254715998811", department: "Bachelor of Commerce (Finance)" },
   { id: "usr-stud-5", name: "Kevin Omondi", email: "kevin.omondi@strathmore.edu", password: "password123", role: "student", studentId: "154771", phone: "+254728776655", department: "BSc Electrical & Electronics Engineering" },

@@ -197,7 +197,7 @@ function resolveAudience(db, user, body) {
       (db.registrations || []).filter((r) => r.eventId === eventId).forEach((r) => {
         const u = usersById.get(r.userId);
         if (u && u.smsOptOut) return void (out.skippedOptOut += 1);
-        const p = normalizeKenyanPhone(r.phone || (u && u.phone));
+        const p = normalizeKenyanPhone((u && u.phone) || r.phone);
         p ? addByPreference(p, r.studentName, r.userId, r.smsPriority) : out.invalid.push(r.phone || '(empty)');
       });
     }

@@ -65,7 +65,8 @@ router.post('/', requireRole(['student']), (req, res) => {
     return res.status(409).json({ success: false, error: 'Sorry, this event is fully booked.' });
   }
 
-  const phone = normalizeKenyanPhone(req.user.phone);
+  const me = (db.users || []).find((u) => u.id === req.user.id) || {};
+  const phone = normalizeKenyanPhone(me.phone || req.user.phone);
   if (!phone) {
     return res.status(400).json({
       success: false,
@@ -75,7 +76,6 @@ router.post('/', requireRole(['student']), (req, res) => {
 
   // The STUDENT decides how much SMS they want for this event (0 none, 1 low, 2 medium, 3 high).
   // Falls back to their saved default preference, then to MEDIUM.
-  const me = (db.users || []).find((u) => u.id === req.user.id) || {};
   const rawTier = (req.body || {}).smsPriority;
   if (rawTier !== undefined && normalizeTier(rawTier, -1) === -1) {
     return res.status(400).json({ success: false, error: 'SMS priority must be NONE, LOW, MEDIUM or HIGH.' });
