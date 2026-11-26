@@ -15,6 +15,14 @@ if (process.env.TRUST_PROXY) app.set('trust proxy', process.env.TRUST_PROXY === 
 app.disable('x-powered-by');
 
 // ---------------------------------------------------------------- security
+// Allow HTTPS origins (e.g. https://wafuke.github.io/smartevent/) on the presenter's laptop to reach http://localhost:5000
+app.use((req, res, next) => {
+  if (req.headers['access-control-request-private-network']) {
+    res.setHeader('Access-Control-Allow-Private-Network', 'true');
+  }
+  next();
+});
+
 const corsOrigins = (process.env.CORS_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean);
 app.use(
   cors({

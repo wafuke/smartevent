@@ -58,7 +58,7 @@ router.get('/status', requireRole(['admin', 'organizer']), async (req, res) => {
     mode: cfg.mode,
     modeDescription,
     username: cfg.username || null,
-    maskedApiKey: cfg.maskedApiKey || null,
+    maskedApiKey: null,
     hasApiKey: cfg.hasApiKey,
     senderId: cfg.senderId || null,
     balance,

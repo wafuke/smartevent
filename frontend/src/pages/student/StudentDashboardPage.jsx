@@ -88,7 +88,7 @@ export default function StudentDashboardPage() {
     applyToRegistrations: false
   });
   const [registerTarget, setRegisterTarget] = useState(null);
-  const [registerTier, setRegisterTier] = useState(2);
+  const [registerTier, setRegisterTier] = useState(3);
   const [registering, setRegistering] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
 
@@ -165,7 +165,7 @@ export default function StudentDashboardPage() {
   // The student picks their own SMS priority for every event they register for.
   const handleRegister = (eventId) => {
     const evt = events.find((e) => e.id === eventId);
-    setRegisterTier(Number(user?.smsPriority ?? 2));
+    setRegisterTier(Number(user?.smsPriority ?? 3));
     setRegisterTarget(evt || { id: eventId, title: 'this event' });
   };
 

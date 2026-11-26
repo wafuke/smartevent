@@ -11,7 +11,7 @@ const SEEDED_USERS = [
 
   // 10 Organizers
   { id: 'usr-org-1', name: "Dr. Joseph Orero (SCES Dean's Office)", email: 'organizer@strathmore.edu', password: 'password123', role: 'organizer', organizerCode: 'ORG-001', organizationName: 'SCES Academic & Research Colloquium', phone: '+254711223344', department: 'School of Computing & Engineering Sciences', isActive: true, createdAt: '2026-08-02T09:00:00.000Z' },
-  { id: 'usr-org-2', name: '@iLabAfrica Innovation Centre', email: 'ilab@strathmore.edu', password: 'password123', role: 'organizer', organizerCode: 'ORG-002', organizationName: '@iLabAfrica Research & Incubation Hub', phone: '+254722334455', department: 'Directorate of Research & Tech Innovation', isActive: true, createdAt: '2026-08-02T09:10:00.000Z' },
+  { id: 'usr-org-2', name: '@iLabAfrica Innovation Centre', email: 'ilab@strathmore.edu', password: 'password123', role: 'organizer', organizerCode: 'ORG-002', organizationName: '@iLabAfrica Research & Incubation Hub', phone: '+254722334455', department: 'Directorate of Research & Tech Innovation', verified: true, isActive: true, createdAt: '2026-08-02T09:10:00.000Z' },
   { id: 'usr-org-3', name: 'Strathmore Career Development Services', email: 'careers@strathmore.edu', password: 'password123', role: 'organizer', organizerCode: 'ORG-003', organizationName: 'Strathmore Career & Industry Liaison Office', phone: '+254733556677', department: 'Career Placement & Alumni Relations', isActive: true, createdAt: '2026-08-02T09:20:00.000Z' },
   { id: 'usr-org-4', name: 'Strathmore Sports & Athletics Council', email: 'sports@strathmore.edu', password: 'password123', role: 'organizer', organizerCode: 'ORG-004', organizationName: 'Strathmore Blades & Scorpions Sports Directorate', phone: '+254710887766', department: 'Sports & Student Welfare Department', isActive: true, createdAt: '2026-08-02T09:30:00.000Z' },
   { id: 'usr-org-5', name: 'Strathmore Business School (SBS) Executive Events', email: 'sbs.events@strathmore.edu', password: 'password123', role: 'organizer', organizerCode: 'ORG-005', organizationName: 'Strathmore Business School Leadership Forum', phone: '+254721445566', department: 'Strathmore Business School (SBS)', isActive: true, createdAt: '2026-08-02T09:40:00.000Z' },
@@ -23,7 +23,7 @@ const SEEDED_USERS = [
 
   // 10 Students
   { id: 'usr-stud-1', name: 'Elvis Wanyama Wafuke', email: 'student@strathmore.edu', password: 'password123', role: 'student', studentId: '154210', phone: '+254712345678', department: 'BSc Informatics & Computer Science', yearOfStudy: 4, isActive: true, createdAt: '2026-08-05T08:00:00.000Z' },
-  { id: 'usr-stud-2', name: 'Amina Hassan', email: 'amina.hassan@strathmore.edu', password: 'password123', role: 'student', studentId: '154382', phone: '+254722112233', department: 'BSc Computer Networks & Cyber Security', yearOfStudy: 3, isActive: true, createdAt: '2026-08-05T08:10:00.000Z' },
+  { id: 'usr-stud-2', name: 'Amina Hassan', email: 'amina.hassan@strathmore.edu', password: 'password123', role: 'student', studentId: '154382', phone: '+254722112233', smsPriority: 3, department: 'BSc Computer Networks & Cyber Security', yearOfStudy: 3, isActive: true, createdAt: '2026-08-05T08:10:00.000Z' },
   { id: 'usr-stud-3', name: 'Brian Kiprop', email: 'brian.kiprop@strathmore.edu', password: 'password123', role: 'student', studentId: '153904', phone: '+254733445566', department: 'BSc Business Information Technology (BBIT)', yearOfStudy: 4, isActive: true, createdAt: '2026-08-05T08:20:00.000Z' },
   { id: 'usr-stud-4', name: 'Grace Wanjiku', email: 'grace.wanjiku@strathmore.edu', password: 'password123', role: 'student', studentId: '155102', phone: '+254715998811', department: 'Bachelor of Commerce (Finance)', yearOfStudy: 2, isActive: true, createdAt: '2026-08-05T08:30:00.000Z' },
   { id: 'usr-stud-5', name: 'Kevin Omondi', email: 'kevin.omondi@strathmore.edu', password: 'password123', role: 'student', studentId: '154771', phone: '+254728776655', department: 'BSc Electrical & Electronics Engineering', yearOfStudy: 3, isActive: true, createdAt: '2026-08-05T08:40:00.000Z' },
@@ -35,6 +35,7 @@ const SEEDED_USERS = [
 ];
 
 const SEEDED_EVENTS = [
+  { id: 'evt-ilab-demo', title: '@iLabAfrica AI & Cybersecurity Innovation Workshop', category: 'Workshop', date: '2026-11-27', time: '10:00 - 12:00', timeSlot: 'Morning', venue: 'iLab Africa Innovation Room 302', venueCapacity: 100, registrationCount: 10, predictedAttendance: 82, smsPriority: 3, status: 'Upcoming', featured: true, organizerId: 'usr-org-2', organizerName: '@iLabAfrica Innovation Centre', description: 'Hands-on @iLabAfrica technical workshop on applied AI security, cloud defense, and campus innovation prototyping.' },
   { id: 'evt-101', title: 'Strathmore AI & Machine Learning Annual Colloquium', category: 'Academic', date: '2026-11-12', time: '14:00 - 17:00', timeSlot: 'Afternoon', venue: 'Main Auditorium', venueCapacity: 500, registrationCount: 412, predictedAttendance: 348, smsPriority: 3, status: 'Upcoming', featured: true, organizerId: 'usr-org-1', organizerName: "Dr. Joseph Orero (SCES Dean's Office)", description: 'Keynote research symposium featuring live demonstrations of predictive campus analytics, computer vision, and NLP systems.' },
   { id: 'evt-102', title: 'Final Year IS Project Defense & Poster Exhibition', category: 'Academic', date: '2026-11-26', time: '08:30 - 13:00', timeSlot: 'Morning', venue: 'SCES Lecture Theatre 4 (LT4)', venueCapacity: 180, registrationCount: 164, predictedAttendance: 151, smsPriority: 3, status: 'Upcoming', featured: false, organizerId: 'usr-org-1', organizerName: "Dr. Joseph Orero (SCES Dean's Office)", description: 'Official BSc Informatics & Computer Science project defense showcase evaluated by SCES faculty panels.' },
   { id: 'evt-103', title: 'Cybersecurity & Cloud Threat Hunting Bootcamp', category: 'Workshop', date: '2026-11-15', time: '09:00 - 13:00', timeSlot: 'Morning', venue: 'iLab Africa Innovation Room 302', venueCapacity: 120, registrationCount: 114, predictedAttendance: 98, smsPriority: 3, status: 'Upcoming', featured: true, organizerId: 'usr-org-2', organizerName: '@iLabAfrica Innovation Centre', description: 'Intensive hands-on blue-team defense lab covering zero-trust network architecture and SIEM log analysis.' },
@@ -74,11 +75,10 @@ const SEEDED_VENUES = [
 
 function getOfflineStore() {
   try {
-    const raw = localStorage.getItem('smartevent_offline_store_v2');
+    const raw = localStorage.getItem('smartevent_offline_store_v3');
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed && Array.isArray(parsed.users) && Array.isArray(parsed.events)) {
-        // Ensure elvis.wafuke@strathmore.edu is always present as admin
         const hasElvis = parsed.users.some((u) => u.email === 'elvis.wafuke@strathmore.edu');
         if (!hasElvis) {
           parsed.users.unshift(SEEDED_USERS[0]);
@@ -89,14 +89,48 @@ function getOfflineStore() {
   } catch (e) {
     // ignore
   }
+  const nineOtherStudents = SEEDED_USERS.filter((u) => u.role === 'student' && u.email !== 'amina.hassan@strathmore.edu');
+  const demoRegs = [
+    ...nineOtherStudents.map((s, idx) => ({
+      id: `reg-ilab-demo-${idx + 1}`,
+      eventId: 'evt-ilab-demo',
+      eventTitle: '@iLabAfrica AI & Cybersecurity Innovation Workshop',
+      studentId: s.studentId,
+      userId: s.id,
+      studentName: s.name,
+      studentEmail: s.email,
+      phone: s.phone,
+      smsPriority: 3,
+      smsPriorityLabel: 'HIGH',
+      registeredAt: '2026-11-26T08:00:00Z',
+      status: 'Confirmed',
+      checkedIn: false
+    })),
+    {
+      id: 'reg-ilab-demo-10',
+      eventId: 'evt-ilab-demo',
+      eventTitle: '@iLabAfrica AI & Cybersecurity Innovation Workshop',
+      studentId: '154890',
+      userId: 'usr-stud-guest-10',
+      studentName: 'Daniel Mutuku',
+      studentEmail: 'daniel.mutuku@strathmore.edu',
+      phone: '+254716443322',
+      smsPriority: 3,
+      smsPriorityLabel: 'HIGH',
+      registeredAt: '2026-11-26T08:05:00Z',
+      status: 'Confirmed',
+      checkedIn: false
+    }
+  ];
   const initial = {
     users: [...SEEDED_USERS],
     events: [...SEEDED_EVENTS],
     categories: [...SEEDED_CATEGORIES],
     venues: [...SEEDED_VENUES],
     registrations: [
-      { id: 'reg-501', eventId: 'evt-101', studentId: '154210', userId: 'usr-stud-1', studentName: 'Elvis Wanyama Wafuke', studentEmail: 'student@strathmore.edu', phone: '+254712345678', registeredAt: '2026-10-14T10:15:00Z', status: 'Confirmed', checkedIn: true, checkedInAt: '2026-10-14T13:50:00Z' },
-      { id: 'reg-502', eventId: 'evt-103', studentId: '154210', userId: 'usr-stud-1', studentName: 'Elvis Wanyama Wafuke', studentEmail: 'student@strathmore.edu', phone: '+254712345678', registeredAt: '2026-10-15T11:30:00Z', status: 'Confirmed', checkedIn: false }
+      ...demoRegs,
+      { id: 'reg-501', eventId: 'evt-101', studentId: '154210', userId: 'usr-stud-1', studentName: 'Elvis Wanyama Wafuke', studentEmail: 'student@strathmore.edu', phone: '+254712345678', smsPriority: 3, registeredAt: '2026-10-14T10:15:00Z', status: 'Confirmed', checkedIn: true, checkedInAt: '2026-10-14T13:50:00Z' },
+      { id: 'reg-502', eventId: 'evt-103', studentId: '154210', userId: 'usr-stud-1', studentName: 'Elvis Wanyama Wafuke', studentEmail: 'student@strathmore.edu', phone: '+254712345678', smsPriority: 3, registeredAt: '2026-10-15T11:30:00Z', status: 'Confirmed', checkedIn: false }
     ],
     favorites: ['evt-101', 'evt-103', 'evt-105'],
     smsLogs: [
@@ -110,7 +144,7 @@ function getOfflineStore() {
 
 function saveOfflineStore(store) {
   try {
-    localStorage.setItem('smartevent_offline_store_v2', JSON.stringify(store));
+    localStorage.setItem('smartevent_offline_store_v3', JSON.stringify(store));
   } catch (e) {
     // ignore
   }
@@ -479,16 +513,16 @@ async function handleOfflineFallback(endpoint, options = {}) {
     return {
       success: true,
       mode: 'SANDBOX',
-      modeDescription: "Africa's Talking sandbox - API key configured; enter your Live App Username in Option B to send to real phones.",
+      modeDescription: "Africa's Talking gateway ready.",
       username: 'sandbox',
-      maskedApiKey: 'atsk_6d94...c370',
+      maskedApiKey: null,
       hasApiKey: true,
       data: {
         provider: "Africa's Talking",
         mode: 'SANDBOX',
-        modeDescription: "Africa's Talking sandbox - API key configured; enter your Live App Username in Option B to send to real phones.",
+        modeDescription: "Africa's Talking gateway ready.",
         username: 'sandbox',
-        maskedApiKey: 'atsk_6d94...c370',
+        maskedApiKey: null,
         hasApiKey: true,
         liveSmsConfigured: true,
         senderId: ''
@@ -502,7 +536,7 @@ async function handleOfflineFallback(endpoint, options = {}) {
       message: `Africa's Talking gateway updated (${body.mode || 'SANDBOX'} mode).`,
       mode: body.mode || 'SANDBOX',
       username: body.username || 'sandbox',
-      maskedApiKey: 'atsk_6d94...c370',
+      maskedApiKey: null,
       hasApiKey: true
     };
   }
@@ -512,35 +546,69 @@ async function handleOfflineFallback(endpoint, options = {}) {
   }
 
   if (cleanPath === '/sms/preview' && method === 'POST') {
+    const kind = String(body.kind || 'REMINDER').toUpperCase();
+    const minTier = kind === 'URGENT' ? 1 : kind === 'REMINDER' ? 2 : 3;
+    const regs = (store.registrations || []).filter(
+      (r) => r.eventId === body.eventId && Number(r.smsPriority ?? 3) >= minTier
+    );
+    const count = body.testToMe ? 1 : regs.length;
+    const cost = Math.round(count * 0.8 * 10) / 10;
+    const byTier = {
+      high: regs.filter((r) => Number(r.smsPriority ?? 3) === 3).length,
+      medium: regs.filter((r) => Number(r.smsPriority ?? 3) === 2).length,
+      low: regs.filter((r) => Number(r.smsPriority ?? 3) === 1).length
+    };
     return {
       success: true,
+      recipientCount: count,
+      estimatedCost: cost,
+      byTier,
       data: {
-        recipientCount: 12,
+        recipientCount: count,
         charCount: String(body.message || '').length,
         segments: 1,
-        estimatedCostKes: 9.6,
-        mode: 'SIMULATION',
-        recipientsPreview: [{ name: 'Elvis Wanyama Wafuke', phone: '+254712345678' }]
+        estimatedCost: cost,
+        estimatedCostKes: cost,
+        byTier,
+        mode: 'SIMULATION'
       }
     };
   }
 
   if (cleanPath === '/sms/send' && method === 'POST') {
+    const kind = String(body.kind || 'REMINDER').toUpperCase();
+    const minTier = kind === 'URGENT' ? 1 : kind === 'REMINDER' ? 2 : 3;
+    const ev = (store.events || []).find((e) => e.id === body.eventId);
+    const regs = (store.registrations || []).filter(
+      (r) => r.eventId === body.eventId && Number(r.smsPriority ?? 3) >= minTier
+    );
+    const count = body.testToMe ? 1 : Math.max(1, regs.length);
     const entry = {
       id: `sms-${Date.now()}`,
-      eventId: body.eventId || 'evt-101',
-      eventTitle: body.eventTitle || 'Strathmore Campus Notice',
-      recipientCount: Array.isArray(body.phoneNumbers) && body.phoneNumbers.length ? body.phoneNumbers.length : 1,
+      eventId: body.eventId || 'evt-ilab-demo',
+      eventTitle: (ev && ev.title) || body.eventTitle || '@iLabAfrica AI & Cybersecurity Innovation Workshop',
+      recipientCount: count,
+      sentCount: count,
+      failedCount: 0,
       message: body.message,
-      kind: body.kind || 'REMINDER',
-      priority: 'MEDIUM',
-      status: 'DELIVERED',
-      provider: "Africa's Talking (Simulated)",
+      kind,
+      priority: 'HIGH',
+      status: 'SENT',
+      gatewayMode: 'SIMULATION',
+      provider: "Africa's Talking (Offline Fallback - start backend server.js for live AT Simulator)",
       sentAt: new Date().toISOString()
     };
     store.smsLogs.unshift(entry);
     saveOfflineStore(store);
-    return { success: true, data: entry };
+    return {
+      success: true,
+      mode: 'SIMULATION',
+      sent: count,
+      failed: 0,
+      recipientCount: count,
+      message: `${count} of ${count} SMS recorded locally (start backend server on port 5000 to dispatch to Africa's Talking Simulator).`,
+      data: entry
+    };
   }
 
   if (cleanPath === '/predict') {
