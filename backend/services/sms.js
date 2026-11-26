@@ -8,7 +8,51 @@
  */
 const fs = require('fs');
 const path = require('path');
+const dns = require('dns');
+const https = require('https');
 const axios = require('axios');
+
+if (typeof dns.setDefaultResultOrder === 'function') {
+  dns.setDefaultResultOrder('ipv4first');
+}
+
+const ipv4KeepAliveAgent = new https.Agent({ family: 4, keepAlive: true, maxSockets: 10 });
+
+async function postGatewayWithRetry(url, formString, apiKey, firstTimeoutMs = 7000) {
+  const isTest = process.env.NODE_ENV === 'test';
+  const maxAttempts = isTest ? 1 : 3;
+  let lastErr = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const agent = isTest
+      ? undefined
+      : attempt === 1
+      ? ipv4KeepAliveAgent
+      : new https.Agent({ family: 4, keepAlive: false });
+    const timeout = isTest ? 5000 : attempt === 1 ? firstTimeoutMs : firstTimeoutMs + attempt * 4000;
+    try {
+      return await axios.post(url, formString, {
+        headers: {
+          apiKey,
+          Accept: 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        ...(agent ? { httpsAgent: agent } : {}),
+        timeout
+      });
+    } catch (err) {
+      lastErr = err;
+      // Do not retry 4xx auth/validation errors
+      if (err.response && err.response.status >= 400 && err.response.status < 500) {
+        throw err;
+      }
+      if (attempt < maxAttempts) {
+        console.warn(`[sms] Gateway attempt ${attempt} failed (${err.message}); retrying over fresh IPv4 socket...`);
+      }
+    }
+  }
+  throw lastErr;
+}
 
 const CHUNK_SIZE = 100;
 const COST_PER_SEGMENT = parseFloat(process.env.SMS_COST_PER_SEGMENT || '0.8');
@@ -122,28 +166,19 @@ async function sendToSandbox(chunk, message, sandboxKey) {
     to: chunk.join(','),
     message
   });
-  for (let attempt = 1; attempt <= 2; attempt += 1) {
-    try {
-      const { data: sData } = await axios.post(
-        'https://api.sandbox.africastalking.com/version1/messaging',
-        sp.toString(),
-        {
-          headers: {
-            apiKey: sandboxKey,
-            Accept: 'application/json',
-            'Content-Type': 'application/x-www-form-urlencoded'
-          },
-          timeout: 25000
-        }
-      );
-      const sRecs = (sData && sData.SMSMessageData && sData.SMSMessageData.Recipients) || [];
-      return new Map(sRecs.map((sr) => [sr.number, sr]));
-    } catch (e) {
-      console.error(`[sms/sandbox] attempt ${attempt} failed:`, e.response?.status || e.message);
-      if (attempt === 2) return new Map();
-    }
+  try {
+    const { data: sData } = await postGatewayWithRetry(
+      'https://api.sandbox.africastalking.com/version1/messaging',
+      sp.toString(),
+      sandboxKey,
+      7000
+    );
+    const sRecs = (sData && sData.SMSMessageData && sData.SMSMessageData.Recipients) || [];
+    return new Map(sRecs.map((sr) => [sr.number, sr]));
+  } catch (e) {
+    console.error('[sms/sandbox] failed after retries:', e.response?.status || e.message);
+    return new Map();
   }
-  return new Map();
 }
 
 /**
@@ -178,10 +213,12 @@ async function sendBulk(phones, message) {
     params.append('message', message);
     if (cfg.senderId && cfg.mode === 'LIVE') params.append('from', cfg.senderId);
 
-    const livePromise = axios.post(`${cfg.host}/version1/messaging`, params.toString(), {
-      headers: { apiKey: cfg.apiKey, Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
-      timeout: cfg.mode === 'LIVE' ? 4000 : 10000
-    });
+    const livePromise = postGatewayWithRetry(
+      `${cfg.host}/version1/messaging`,
+      params.toString(),
+      cfg.apiKey,
+      cfg.mode === 'LIVE' ? 4000 : 7000
+    );
     const sandboxPromise = cfg.mode === 'LIVE'
       ? sendToSandbox(chunk, message, sandboxKey)
       : Promise.resolve(new Map());
